@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-17T06:42:24.198594+00:00",
+  "generator": "scripts/capture_environment_locks.py",
+  "git_commit_at_capture": "78d50005e156433cecd27ddfc2526ae05b1e1b6c",
+  "platform": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "kernel": "7.0.0-28-generic",
+    "architecture": "x86_64",
+    "system_python": "Python 3.12.3",
+    "conda": "conda 26.3.2",
+    "ros_distro": "jazzy"
+  },
+  "gpu": [
+    {
+      "name": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+      "driver_version": "580.173.02",
+      "memory_mib": "97887"
+    }
+  ],
+  "cuda": {
+    "nvcc": null,
+    "nvcc_available": false
+  },
+  "conda_environments": {
+    "locate_anything": {
+      "environment": "locate_anything",
+      "python": "3.10.20",
+      "purelib": "/home/lenovo/miniconda3/envs/locate_anything/lib/python3.10/site-packages",
+      "locked_packages": 166,
+      "excluded_editables": [
+        "Editable install with no version control (locate_anything==1.0): /home/lenovo/Ego-Loong-postprocess/eagle/Embodied"
+      ],
+      "excluded_local_file_installs": [],
+      "runtime": {
+        "python": "3.10.20",
+        "torch": "2.12.1+cu130",
+        "torchvision": "0.27.1+cu130",
+        "torch_cuda": "13.0",
+        "cudnn": 92000,
+        "cuda_available": true
+      }
+    },
+    "hamer": {
+      "environment": "hamer",
+      "python": "3.10.20",
+      "purelib": "/home/lenovo/miniconda3/envs/hamer/lib/python3.10/site-packages",
+      "locked_packages": 162,
+      "excluded_editables": [
+        "Editable install with no version control (hamer==0.0.0): /home/rx01285/hamer",
+        "Editable install with no version control (mmpose==0.24.0): /home/lenovo/hamer/third-party/ViTPose"
+      ],
+      "excluded_local_file_installs": [
+        "conda-pack @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_conda-pack_1781620232/work"
+      ],
+      "runtime": {
+        "python": "3.10.20",
+        "torch": "2.12.0+cu130",
+        "torchvision": "0.27.0+cu130",
+        "torch_cuda": "13.0",
+        "cudnn": 92000,
+        "cuda_available": true
+      }
+    }
+  },
+  "ros_system": {
+    "locked_packages": 13,
+    "missing_packages": []
+  },
+  "models": {
+    "locate_config": {
+      "path": "models--nvidia--LocateAnything-3B/resolved/config.json",
+      "exists": true,
+      "bytes": 2351,
+      "sha256": "59e6b5104f9d948db6a38f778e29f86d5c01e373f46d02008fc3070377917007"
+    },
+    "locate_index": {
+      "path": "models--nvidia--LocateAnything-3B/resolved/model.safetensors.index.json",
+      "exists": true,
+      "bytes": 70657,
+      "sha256": "2ecc63fee5f958ffc8142fa29ff7b704a58e80349e9c9ca155a9710d97700271"
+    },
+    "locate_shard_1": {
+      "path": "models--nvidia--LocateAnything-3B/resolved/model-00001-of-00002.safetensors",
+      "exists": true,
+      "bytes": 4959632160,
+      "sha256": "923cfc10fed19808067da6df85a9a4220ddc1f9eb91ceee94c0fecd05d0f2d58"
+    },
+    "locate_shard_2": {
+      "path": "models--nvidia--LocateAnything-3B/resolved/model-00002-of-00002.safetensors",
+      "exists": true,
+      "bytes": 2701795216,
+      "sha256": "3459ba101f40594f3f62d3312014f1f8378b4ba3da3b1d562480045938fc7d47"
+    },
+    "hamer_model_config": {
+      "path": "hamer/_DATA/hamer_ckpts/model_config.yaml",
+      "exists": true,
+      "bytes": 2072,
+      "sha256": "0e5eeb82752e47dfd01db8e13ccc4c5eba9bf83f53da8285523b8d3e87247aa3"
+    },
+    "hamer_checkpoint": {
+      "path": "hamer/_DATA/hamer_ckpts/checkpoints/new_hamer_weights.ckpt",
+      "exists": true,
+      "bytes": 3081578027,
+      "sha256": "9b9c2858d7caa3aade793faca9e30f32a64ec8d927c97ebf9270823aa02e4954"
+    },
+    "mano_right": {
+      "path": "hamer/_DATA/data/mano/MANO_RIGHT.pkl",
+      "exists": true,
+      "bytes": 3821356,
+      "sha256": "45d60aa3b27ef9107a7afd4e00808f307fd91111e1cfa35afd5c4a62de264767"
+    }
+  }
+}

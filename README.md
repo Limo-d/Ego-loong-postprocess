@@ -63,6 +63,8 @@ hand_msg_ws/install/setup.bash
 bash setup.sh
 ```
 
+默认安装各自的精确 lock；仅在有意测试新版依赖时，才使用 `USE_LOCKS=0 bash setup.sh` 回到宽松版本约束。
+
 只检查已有环境，不安装依赖：
 
 ```bash
@@ -76,6 +78,37 @@ SKIP_INSTALL=1 bash setup.sh
 ```bash
 RUN_SMOKE=1 SMOKE_BAG_SESSION=/path/to/session-or-data bash setup.sh
 ```
+
+### 依赖锁和环境快照
+
+`requirements.txt` 只描述宽松的安装需求；以下文件记录当前已验证机器上的精确运行环境，三个运行环境不会混装：
+
+```text
+requirements-locate.lock      LocateAnything Conda 环境的精确 Python 包版本
+requirements-hamer.lock       HaMeR Conda 环境的精确 Python 包版本
+requirements-ros-system.txt   ROS2/系统 Python 的精确 apt 包版本
+environment-info.json         OS、GPU、驱动、CUDA、PyTorch、ROS、模型 SHA-256
+```
+
+Python lock 可分别用于对应的 Python 3.10 Conda 环境。PyTorch wheel 为 CUDA 13.0 构建，重建时需要使用兼容的 PyTorch wheel 源：
+
+```bash
+conda create -n locate_anything python=3.10.20 pip
+conda run -n locate_anything python -m pip install --extra-index-url https://download.pytorch.org/whl/cu130 -r requirements-locate.lock
+
+conda create -n hamer python=3.10.20 pip
+conda run -n hamer python -m pip install --extra-index-url https://download.pytorch.org/whl/cu130 -r requirements-hamer.lock
+```
+
+`requirements-ros-system.txt` 是 apt/ROS 审计清单，不建议交给 pip；精确 apt 版本能否重装取决于对应 Ubuntu/ROS 软件源快照仍然可用。模型文件不放入 Git，`environment-info.json` 用路径、大小和 SHA-256 验证其版本。
+
+环境或模型更新后，在仓库根目录重新生成全部快照：
+
+```bash
+python3 scripts/capture_environment_locks.py
+```
+
+只做快速环境检查、暂时不读取数 GB 模型时可加 `--skip_model_hashes`；该模式生成的模型哈希为空，不能作为正式发布快照。
 
 ## 模型路径
 

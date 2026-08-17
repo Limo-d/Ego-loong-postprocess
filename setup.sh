@@ -16,6 +16,7 @@ set -euo pipefail
 #   LOCATE_ENV=locate_anything
 #   HAMER_ENV=hamer
 #   CUDA_WHEEL_INDEX=https://download.pytorch.org/whl/cu130
+#   USE_LOCKS=1           install the validated per-environment lock files (default)
 #   SKIP_INSTALL=1        only verify existing envs and paths
 #   SKIP_ROS_BUILD=1      skip hand_msg_ws colcon build
 #   RUN_SMOKE=1           run a 1-frame end-to-end smoke test after setup
@@ -28,6 +29,7 @@ LOCATE_ENV="${LOCATE_ENV:-locate_anything}"
 HAMER_ENV="${HAMER_ENV:-hamer}"
 CONDA_BIN="${CONDA_BIN:-conda}"
 CUDA_WHEEL_INDEX="${CUDA_WHEEL_INDEX:-https://download.pytorch.org/whl/cu130}"
+USE_LOCKS="${USE_LOCKS:-1}"
 ROS_SETUP="${ROS_SETUP:-/opt/ros/jazzy/setup.bash}"
 HAND_MSG_WS="${HAND_MSG_WS:-${ROOT}/hand_msg_ws}"
 LOCATE_MODEL="${LOCATE_MODEL:-${ROOT}/models--nvidia--LocateAnything-3B/resolved}"
@@ -88,6 +90,13 @@ install_locate_env() {
     return
   fi
 
+  if [[ "${USE_LOCKS}" == "1" ]]; then
+    [[ -f "${ROOT}/requirements-locate.lock" ]] || fail "missing requirements-locate.lock"
+    info "Installing locked LocateAnything environment into ${LOCATE_ENV}"
+    pip_install "${LOCATE_ENV}" --extra-index-url "${CUDA_WHEEL_INDEX}" -r "${ROOT}/requirements-locate.lock"
+    return
+  fi
+
   info "Installing LocateAnything runtime packages into ${LOCATE_ENV}"
   pip_install "${LOCATE_ENV}" --upgrade pip setuptools wheel
   pip_install "${LOCATE_ENV}" --index-url "${CUDA_WHEEL_INDEX}" torch torchvision
@@ -106,6 +115,13 @@ install_hamer_env() {
   ensure_conda_env "${HAMER_ENV}"
   if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
     info "SKIP_INSTALL=1: not installing HaMeR/FK packages"
+    return
+  fi
+
+  if [[ "${USE_LOCKS}" == "1" ]]; then
+    [[ -f "${ROOT}/requirements-hamer.lock" ]] || fail "missing requirements-hamer.lock"
+    info "Installing locked HaMeR/FK environment into ${HAMER_ENV}"
+    pip_install "${HAMER_ENV}" --extra-index-url "${CUDA_WHEEL_INDEX}" -r "${ROOT}/requirements-hamer.lock"
     return
   fi
 
