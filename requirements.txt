@@ -1,0 +1,46 @@
+# Ego-loong postprocess runtime requirements
+#
+# This repository currently uses three Python contexts:
+#   1. ROS 2 Jazzy system Python (/usr/bin/python3) for rosbag extraction.
+#   2. Conda env `locate_anything` for LocateAnything bbox detection.
+#   3. Conda env `hamer` for bbox tracking, HaMeR, fusion, glove FK, and visualization.
+#
+# `setup.sh` installs the env-specific package groups below. This file keeps the
+# runtime Python dependencies in one place; ROS packages are installed by apt/ROS,
+# not pip.
+
+# Shared runtime utilities
+numpy
+scipy
+opencv-python
+pillow
+tqdm
+pyyaml
+matplotlib
+imageio
+imageio-ffmpeg
+
+# LocateAnything environment
+transformers>=4.57
+huggingface-hub>=0.36
+accelerate>=1.5
+safetensors>=0.8
+
+# HaMeR / MANO / 3D environment
+pytorch-lightning>=2.6
+timm>=1.0
+einops>=0.8
+yacs>=0.1.8
+smplx>=0.1.28
+pyrender>=0.1.45
+trimesh>=4.0
+scikit-image>=0.25
+braceexpand>=0.1
+webdataset>=1.0
+mediapipe>=0.10
+python-box>=7.0
+chumpy>=0.70
+
+# PyTorch is installed by setup.sh per conda environment so CUDA wheels can match
+# the machine. Current validated envs use torch/torchvision cu130 builds.
+# If installing manually, install torch + torchvision before the packages above.

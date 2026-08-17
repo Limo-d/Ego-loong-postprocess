@@ -1,0 +1,51 @@
+# Local agent/editor state
+.agents/
+.codex/
+.vscode/
+.idea/
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# ROS/colcon build products
+/hand_msg_ws/build/
+/hand_msg_ws/install/
+/hand_msg_ws/log/
+
+# Datasets, generated sessions, and pipeline caches
+/datatsets/
+/postprocess_data/
+**/.pipeline_cache/
+
+# Downloaded model weights and proprietary MANO/SMPL assets
+/models--*/
+*.ckpt
+*.safetensors
+*.pkl
+/hamer/_DATA/data/*.npz
+
+# Generated/bulk artifacts
+*.db3
+*.mcap
+*.bag
+*.mp4
+*.avi
+*.zip
+*.tar
+*.tar.gz
+*.log
+
+# Local scratch and backup files
+*.bak
+*.bak_*
+*~
+.DS_Store
+._*
