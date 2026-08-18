@@ -205,6 +205,8 @@ def select_detections(
                 "bbox": bbox[:4],
                 "score": score,
                 "label": det.get("label", "hand"),
+                "side": det.get("side"),
+                "track_id": det.get("track_id"),
             }
         )
 
@@ -247,6 +249,20 @@ def assign_handedness(
     prev_anchors: Dict[str, Optional[np.ndarray]],
     track_max_jump: float,
 ) -> List[Optional[bool]]:
+    explicit: List[Optional[bool]] = []
+    has_explicit = False
+    for det in detections:
+        side = str(det.get("side") or "").lower()
+        if side in ("right", "hand_r"):
+            explicit.append(True)
+            has_explicit = True
+        elif side in ("left", "hand_l"):
+            explicit.append(False)
+            has_explicit = True
+        else:
+            explicit.append(None)
+    if has_explicit and all(side is not None for side in explicit):
+        return explicit
     if handedness != "track":
         return [infer_is_right(det["bbox"], image_width, handedness) for det in detections]
 
@@ -412,7 +428,7 @@ def pack_hand(hand: Optional[HandData]) -> Optional[Dict[str, Any]]:
 
 
 def write_frame_json(
-    session_path: Path,
+    output_dir: Path,
     frame_idx: int,
     frame_key: str,
     ts: int,
@@ -420,7 +436,7 @@ def write_frame_json(
     hand_l: Optional[HandData],
     filename: str,
 ) -> None:
-    frame_dir = session_path / "preprocess" / "all_data" / frame_key
+    frame_dir = output_dir / frame_key
     frame_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         "idx": frame_idx,
@@ -441,6 +457,11 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     out_video = Path(args.out_video).expanduser().resolve() if args.out_video else (
         session_path / "preprocess" / "vis" / "locate_hamer_21kpts_vis.mp4"
     )
+    per_frame_output_dir = (
+        Path(args.per_frame_output_dir).expanduser().resolve()
+        if args.per_frame_output_dir
+        else session_path / "preprocess" / "all_data"
+    )
 
     bbox_by_frame: Dict[str, List[Dict[str, Any]]] = {}
     bbox_source_by_frame: Dict[str, str] = {}
@@ -455,7 +476,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
             bbox_source_by_frame[frame_key] = str(path)
     frame_digits = infer_frame_digits(session_path, bbox_by_frame)
 
-    aria_cam = _build_aria_cam_from_disk(str(session_path))
+    aria_cam = _build_aria_cam_from_disk(str(session_path), args.camera_json_dir)
 
     cam_frames = aria_cam.cam
     if args.frame_start is not None:
@@ -638,7 +659,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
 
         if not args.no_per_frame:
             write_frame_json(
-                session_path=session_path,
+                output_dir=per_frame_output_dir,
                 frame_idx=cam_data.idx,
                 frame_key=frame_key,
                 ts=cam_data.ts,
@@ -662,6 +683,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         "bbox_json": str(bbox_json),
         "fallback_bbox_json": str(fallback_bbox_json) if fallback_bbox_json is not None else None,
         "per_frame_json_name": None if args.no_per_frame else args.out_json_name,
+        "per_frame_output_dir": None if args.no_per_frame else str(per_frame_output_dir),
         "frame_digits": frame_digits,
         "handedness": args.handedness,
         "track_max_jump": args.track_max_jump,
@@ -746,6 +768,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Estimate HaMeR 21 hand keypoints from LocateAnything/GroundingDINO bboxes."
     )
     parser.add_argument("--session_path", default=str(default_session), help="Session root, e.g. .../white_glove_high")
+    parser.add_argument("--camera_json_dir", default=None, help="Optional per-frame camera metadata root, e.g. RTAB-Map pose output.")
     parser.add_argument(
         "--bbox_json",
         default=str(data_preprocess_dir / "vis_output" / "locateanything_gray_glove_bboxes.json"),
@@ -758,6 +781,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--aggregate_json", default=str(data_preprocess_dir / "locate_gray_glove_hamer_21kpts.json"))
     parser.add_argument("--out_json_name", default="locate_gray_glove_hamer_hands.json")
+    parser.add_argument(
+        "--per_frame_output_dir",
+        default=None,
+        help="Directory containing one subdirectory per frame for derived JSON output. Defaults to preprocess/all_data for backward compatibility.",
+    )
     parser.add_argument(
         "--out_video",
         default=str(data_preprocess_dir / "vis" / "locate_gray_glove_hamer_21kpts_vis.mp4"),

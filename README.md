@@ -204,11 +204,14 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `HAMER_HANDEDNESS` | `all_left` | HaMeR 手性策略 |
 | `VISUAL_SIDE` | `hand_l` | 视觉手侧 |
 | `GLOVE_SIDE` | `left` | 手套数据侧 |
+| `ESTIMATE_SCALE` | `1` | 标定时估计并应用 glove FK 到视觉手的尺度；设为 `0` 仅用于固定尺度 1.0 的对照实验 |
 | `FPS` | 自动 | 主流程忽略固定覆盖值，始终从 `rgb_stamp_ns` 估计真实 RGB 标称帧率 |
 | `TIME_FILTER_REFERENCE_FPS` | `30` | 旧版每帧 alpha、最大步长和确认帧数的参考语义；实际计算按真实 `dt` 换算 |
 | `OVERWRITE` | `0` | `1` 时忽略阶段缓存并强制重算 |
 | `MAX_FRAMES` | 空 | 限制处理帧数，调试用 |
-| `COMPACT_OUTPUTS` | `0` | 是否在质量检查通过后精简输出包；默认保留完整中间产物 |
+| `RUN_QUALITY_CHECK` | `1` | 主流程结束前运行硬性质量门禁；失败时脚本返回非零状态 |
+| `QUALITY_MAX_WRIST_RESIDUAL_P95_M` | `0.070` | 腕部跟踪残差 P95 上限，单位米 |
+| `COMPACT_OUTPUTS` | `0` | 是否在质量检查通过后精简输出包；设为 `1` 时要求 `RUN_QUALITY_CHECK=1` |
 
 深度和轨迹平滑相关参数：
 
@@ -234,11 +237,12 @@ postprocess_data/${SESSION_NAME}/
 主要目录：
 
 ```text
-preprocess/                                      ROS2 bag 提取的逐帧 RGB/depth/hand_frame/tf
-rtabmap_pose/                                    RTAB-Map 相机位姿导出和应用摘要
+preprocess/                                      只读的 ROS2 bag 提取结果：逐帧 RGB/depth、hand_frame、tf
+rtabmap_pose/camera_frames/                      应用 RTAB-Map 后的逐帧相机 JSON，不回写 preprocess/all_data
 locateanything_white_glove_with_imu/             LocateAnything 原始 bbox
 locateanything_white_glove_with_imu_stable/      稳定 bbox
-hamer_from_stable_locateanything_.../            HaMeR 结果
+hamer_from_stable_locateanything_.../per_frame/  HaMeR 逐帧派生 JSON
+depth_correct_hamer_force_right/per_frame/       深度修正后的逐帧派生 JSON
 fusion_input_force_right_depthroot/              视觉+手套融合输入
 glove_fk21_visual_bones_smooth_solve045/         glove FK、标定、wrist tracking 和轨迹
 outputs/                                         用户主要查看和交付结果
@@ -393,7 +397,7 @@ scripts/compact_postprocess_session.py
 
 ## 阶段缓存
 
-主入口为每个阶段在 session 的 `.pipeline_cache/` 下写入 manifest。manifest 包含输入内容哈希、阶段参数、相关代码文件哈希、输出完整性和完成时间。只有这些指纹与当前运行完全一致且要求的输出仍完整时，阶段才会命中缓存；输入 bag、标定、参数或代码变化会使该阶段以及引用其 manifest 的下游阶段重新计算。
+主入口为每个阶段在 session 的 `.pipeline_cache/` 下写入 manifest。manifest 包含输入内容哈希、阶段参数、相关代码文件哈希、输出完整性和完成时间。下游依赖 manifest 的稳定语义指纹，不受 `completed_at` 或 JSON 排版变化影响。提取、RTAB 相机元数据、HaMeR 和深度修正分别拥有独立输出目录，后续阶段不会修改提取目录。只有内容、参数、代码或要求的输出发生变化时才重新计算。
 
 网页阶段显式依赖收集阶段 manifest 和最终轨迹文件，因此轨迹变化后不会静默复用旧网页。需要无条件重算全部阶段时使用 `OVERWRITE=1`。
 
@@ -500,6 +504,6 @@ outputs/web/traj_frames/00000.jpg
 - 主入口优先改 `scripts/run_sampler_bag_to_glove_trajectory.sh`。
 - 单阶段逻辑在 `preprocess/` 下。
 - 用户交付结果集中在 `outputs/`。
-- 主流程默认保留完整输出；只有显式设置 `COMPACT_OUTPUTS=1` 且质量检查通过时才会精简。
+- 主流程默认运行质量门禁并保留完整输出；门禁失败时返回非零状态。只有显式设置 `COMPACT_OUTPUTS=1` 且质量检查通过时才会精简。
 - `REVIEW_HAND_DISPLAY_ROTATE_DEG`、`hand_display_scale`、`scene_display_scale`、`align_middle_vertical` 都只影响网页 3D 显示，不修改轨迹 JSON。
 - `rgb_stamp_ns` 是统一时间真值：网页按逐帧真实时间播放；EMA、步长上限和确认逻辑按 `dt` 换算；恒定帧率 MP4 使用真实标称帧率并对采集停顿重复帧，以保持时间长度。

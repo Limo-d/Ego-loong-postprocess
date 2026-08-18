@@ -14,8 +14,8 @@ HAMER_PYTHON="${HAMER_PYTHON:-/home/lenovo/miniconda3/envs/hamer/bin/python}"
 export PYTHONPATH="${ROOT}/hamer:${ROOT}:${PYTHONPATH:-}"
 
 LOCATE_MODEL="${LOCATE_MODEL:-${ROOT}/models--nvidia--LocateAnything-3B/resolved}"
-PROMPT="${PROMPT:-white glove with imu}"
-PROMPT_TAG="${PROMPT_TAG:-white_glove_with_imu}"
+PROMPT="${PROMPT:-white tactile glove with an IMU module worn on a hand}"
+PROMPT_TAG="${PROMPT_TAG:-white_tactile_glove_with_imu}"
 LOCATE_DTYPE="${LOCATE_DTYPE:-fp32}"
 LOCATE_DEVICE="${LOCATE_DEVICE:-cuda}"
 HAMER_DEVICE="${HAMER_DEVICE:-cuda}"
@@ -47,7 +47,8 @@ LOCATE_DIR="${CALIB_SESSION}/locateanything_${PROMPT_TAG}"
 STABLE_BBOX_DIR="${CALIB_SESSION}/locateanything_${PROMPT_TAG}_stable"
 HAMER_DIR="${CALIB_SESSION}/hamer_from_stable_locateanything_${PROMPT_TAG}_force_right"
 DEPTH_DIR="${CALIB_SESSION}/depth_correct_hamer_force_right"
-FUSION_DIR="${CALIB_SESSION}/fusion_input_force_right_depthroot"
+FUSION_LEFT_DIR="${CALIB_SESSION}/fusion_input_left_depthroot"
+FUSION_RIGHT_DIR="${CALIB_SESSION}/fusion_input_right_depthroot"
 
 LOCATE_JSON="${LOCATE_DIR}/bboxes.json"
 LOCATE_MP4="${LOCATE_DIR}/bboxes.mp4"
@@ -58,10 +59,14 @@ HAMER_DEPTH_JSON_NAME="hamer_${PROMPT_TAG}_stablebbox_force_right_depthroot.json
 HAMER_AGG_JSON="${HAMER_DIR}/hamer_${PROMPT_TAG}_stablebbox_force_right_aggregate.json"
 HAMER_MP4="${HAMER_DIR}/hamer_21kpts_stablebbox_force_right.mp4"
 DEPTH_SUMMARY="${DEPTH_DIR}/depthroot_summary.json"
-FUSION_JSONL="${FUSION_DIR}/fusion_frames.jsonl"
-FUSION_SUMMARY="${FUSION_DIR}/fusion_summary.json"
+FUSION_LEFT_JSONL="${FUSION_LEFT_DIR}/fusion_frames.jsonl"
+FUSION_RIGHT_JSONL="${FUSION_RIGHT_DIR}/fusion_frames.jsonl"
+FUSION_LEFT_SUMMARY="${FUSION_LEFT_DIR}/fusion_summary.json"
+FUSION_RIGHT_SUMMARY="${FUSION_RIGHT_DIR}/fusion_summary.json"
+HAMER_FRAME_DIR="${HAMER_DIR}/per_frame"
+DEPTH_FRAME_DIR="${DEPTH_DIR}/per_frame"
 
-mkdir -p "${CALIB_SESSION}" "${LOCATE_DIR}" "${STABLE_BBOX_DIR}" "${HAMER_DIR}" "${DEPTH_DIR}" "${FUSION_DIR}"
+mkdir -p "${CALIB_SESSION}" "${LOCATE_DIR}" "${STABLE_BBOX_DIR}" "${HAMER_DIR}" "${DEPTH_DIR}" "${FUSION_LEFT_DIR}" "${FUSION_RIGHT_DIR}"
 
 has_output() {
   [[ -s "$1" && "${OVERWRITE}" != "1" ]]
@@ -130,7 +135,7 @@ printf '\n[calib 3/6] Track/stabilize calibration bbox\n'
 if has_output "${STABLE_BBOX_JSON}"; then
   printf '  skip existing: %s\n' "${STABLE_BBOX_JSON}"
 else
-  "${HAMER_PYTHON}" "${ROOT}/preprocess/TrackSingleHandBboxes.py" \
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/TrackDualHandBboxes.py" \
     --session_path "${CALIB_SESSION}" \
     --input_json "${LOCATE_JSON}" \
     --output_json "${STABLE_BBOX_JSON}" \
@@ -147,7 +152,7 @@ else
 fi
 
 printf '\n[calib 4/6] HaMeR from calibration bbox\n'
-if has_output "${CALIB_SESSION}/preprocess/all_data/00000/${HAMER_JSON_NAME}"; then
+if has_output "${HAMER_FRAME_DIR}/00000/${HAMER_JSON_NAME}"; then
   printf '  skip existing per-frame HaMeR json: %s\n' "${HAMER_JSON_NAME}"
 else
   "${HAMER_PYTHON}" "${ROOT}/preprocess/run_hamer_from_locate_bboxes.py" \
@@ -155,23 +160,26 @@ else
     --bbox_json "${STABLE_BBOX_JSON}" \
     --fallback_bbox_json "" \
     --aggregate_json "${HAMER_AGG_JSON}" \
+    --per_frame_output_dir "${HAMER_FRAME_DIR}" \
     --out_json_name "${HAMER_JSON_NAME}" \
     --out_video "${HAMER_MP4}" \
     --device "${HAMER_DEVICE}" \
-    --max_boxes 1 \
+    --max_boxes 2 \
     --handedness "${HAMER_HANDEDNESS}" \
     --fps "${FPS}" \
     "${max_frames_args[@]}"
 fi
 
 printf '\n[calib 5/6] Correct calibration HaMeR wrist root with aligned depth\n'
-if has_output "${CALIB_SESSION}/preprocess/all_data/00000/${HAMER_DEPTH_JSON_NAME}"; then
+if has_output "${DEPTH_FRAME_DIR}/00000/${HAMER_DEPTH_JSON_NAME}"; then
   printf '  skip existing per-frame depth-root json: %s\n' "${HAMER_DEPTH_JSON_NAME}"
 else
   "${HAMER_PYTHON}" "${ROOT}/preprocess/DepthCorrectHandKpts.py" \
     --session_path "${CALIB_SESSION}" \
     --input_json_name "${HAMER_JSON_NAME}" \
     --output_json_name "${HAMER_DEPTH_JSON_NAME}" \
+    --input_json_dir "${HAMER_FRAME_DIR}" \
+    --output_json_dir "${DEPTH_FRAME_DIR}" \
     --summary_json "${DEPTH_SUMMARY}" \
     --depth_name depth_aligned.png \
     --root_idx 0 \
@@ -184,21 +192,34 @@ else
     "${max_frames_args[@]}"
 fi
 
-printf '\n[calib 6/6] Build calibration visual + /hand_frame fusion input\n'
-if has_output "${FUSION_JSONL}"; then
-  printf '  skip existing: %s\n' "${FUSION_JSONL}"
-else
+printf '\n[calib 6/6] Build left/right calibration visual + /hand_frame fusion inputs\n'
+for side in left right; do
+  if [[ "${side}" == "left" ]]; then
+    visual_side=hand_l
+    fusion_jsonl="${FUSION_LEFT_JSONL}"
+    fusion_summary="${FUSION_LEFT_SUMMARY}"
+  else
+    visual_side=hand_r
+    fusion_jsonl="${FUSION_RIGHT_JSONL}"
+    fusion_summary="${FUSION_RIGHT_SUMMARY}"
+  fi
+  if has_output "${fusion_jsonl}"; then
+    printf '  skip existing: %s\n' "${fusion_jsonl}"
+    continue
+  fi
   "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildHandFusionInput.py" \
     --session_path "${CALIB_SESSION}" \
     --rgbd_subdir preprocess \
     --visual_json_name "${HAMER_DEPTH_JSON_NAME}" \
-    --output_jsonl "${FUSION_JSONL}" \
-    --summary_json "${FUSION_SUMMARY}" \
-    --visual_side "${VISUAL_SIDE}" \
-    --glove_side "${GLOVE_SIDE}" \
+    --visual_json_dir "${DEPTH_FRAME_DIR}" \
+    --output_jsonl "${fusion_jsonl}" \
+    --summary_json "${fusion_summary}" \
+    --visual_side "${visual_side}" \
+    --glove_side "${side}" \
     --hand_sync_key bag_time_ns
-fi
+done
 
 printf '\n[calib] Done\n'
 printf '  calibration session: %s\n' "${CALIB_SESSION}"
-printf '  calibration fusion:  %s\n' "${FUSION_JSONL}"
+printf '  left calibration fusion:  %s\n' "${FUSION_LEFT_JSONL}"
+printf '  right calibration fusion: %s\n' "${FUSION_RIGHT_JSONL}"

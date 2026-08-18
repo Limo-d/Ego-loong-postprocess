@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 CHUNK_SIZE = 1024 * 1024
 
 
@@ -32,6 +32,32 @@ def fingerprint_path(raw_path: str, previous: Mapping[str, Any] | None = None) -
     if not path.exists():
         return {"path": str(path), "kind": "missing"}
     if path.is_file():
+        # Downstream stages consume the stable meaning of an upstream stage
+        # manifest, not volatile metadata such as completed_at or JSON spacing.
+        payload = None
+        if path.suffix.lower() == ".json":
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError, OSError):
+                payload = None
+        if (
+            isinstance(payload, dict)
+            and isinstance(payload.get("signature"), str)
+            and isinstance(payload.get("stage"), str)
+            and isinstance(payload.get("outputs"), list)
+        ):
+            dependency = {
+                "stage": payload["stage"],
+                "signature": payload["signature"],
+                "status": payload.get("status"),
+                "outputs": payload["outputs"],
+            }
+            encoded = json.dumps(dependency, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            return {
+                "path": str(path),
+                "kind": "stage_manifest",
+                "sha256": hashlib.sha256(encoded).hexdigest(),
+            }
         stat = path.stat()
         size = int(stat.st_size)
         mtime_ns = int(stat.st_mtime_ns)
@@ -59,11 +85,35 @@ def fingerprint_path(raw_path: str, previous: Mapping[str, Any] | None = None) -
     if path.is_dir():
         entries: List[Dict[str, Any]] = []
         digest = hashlib.sha256()
+        previous_entries = {
+            entry["relative_path"]: entry
+            for entry in (previous or {}).get("_cache_entries", [])
+            if isinstance(entry, dict) and isinstance(entry.get("relative_path"), str)
+        }
         for item in sorted(p for p in path.rglob("*") if p.is_file()):
             rel = item.relative_to(path).as_posix()
             stat = item.stat()
-            file_hash = sha256_file(item)
-            entry = {"relative_path": rel, "size": int(stat.st_size), "sha256": file_hash}
+            size = int(stat.st_size)
+            mtime_ns = int(stat.st_mtime_ns)
+            ctime_ns = int(stat.st_ctime_ns)
+            old = previous_entries.get(rel)
+            if (
+                old
+                and old.get("size") == size
+                and old.get("mtime_ns") == mtime_ns
+                and old.get("ctime_ns") == ctime_ns
+                and isinstance(old.get("sha256"), str)
+            ):
+                file_hash = old["sha256"]
+            else:
+                file_hash = sha256_file(item)
+            entry = {
+                "relative_path": rel,
+                "size": size,
+                "mtime_ns": mtime_ns,
+                "ctime_ns": ctime_ns,
+                "sha256": file_hash,
+            }
             entries.append(entry)
             digest.update(rel.encode("utf-8"))
             digest.update(b"\0")
@@ -76,6 +126,7 @@ def fingerprint_path(raw_path: str, previous: Mapping[str, Any] | None = None) -
             "kind": "directory",
             "file_count": len(entries),
             "sha256": digest.hexdigest(),
+            "_cache_entries": entries,
         }
     return {"path": str(path), "kind": "other"}
 
@@ -124,7 +175,14 @@ def build_identity(args: argparse.Namespace, previous: Mapping[str, Any] | None 
 
 
 def identity_signature(identity: Dict[str, Any]) -> str:
-    encoded = json.dumps(identity, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    def stable(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {key: stable(item) for key, item in value.items() if not key.startswith("_cache_")}
+        if isinstance(value, list):
+            return [stable(item) for item in value]
+        return value
+
+    encoded = json.dumps(stable(identity), sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -194,6 +252,16 @@ def check(args: argparse.Namespace) -> int:
     if not outputs_match_manifest(states, manifest.get("outputs")):
         print(f"[cache] MISS {args.stage}: output size or file count changed")
         return 1
+    # Persist reusable per-file directory hash metadata without changing the
+    # stage signature or completion time. Downstream semantic fingerprints
+    # intentionally ignore these private cache fields.
+    if manifest.get("inputs") != identity["inputs"] or manifest.get("code") != identity["code"]:
+        refreshed = dict(manifest)
+        refreshed["inputs"] = identity["inputs"]
+        refreshed["code"] = identity["code"]
+        temp_path = manifest_path.with_name(f".{manifest_path.name}.{os.getpid()}.tmp")
+        temp_path.write_text(json.dumps(refreshed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        temp_path.replace(manifest_path)
     print(f"[cache] HIT  {args.stage}: {manifest_path}")
     return 0
 

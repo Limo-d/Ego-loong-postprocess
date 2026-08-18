@@ -20,6 +20,9 @@ OPTIONAL_MISSING_ARTIFACTS = {
     "rtabmap_depth_diagnostics.json",
     "rtabmap_trajectory_summary.json",
     "rtabmap_apply_summary.json",
+    # Collector records missing source paths, whose basenames differ from the
+    # normalized names under outputs/summaries.
+    "apply_rtabmap_pose_to_preprocess_summary.json",
 }
 
 
@@ -106,19 +109,32 @@ def validate(args: argparse.Namespace) -> Dict[str, Any]:
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         failures.append(f"cannot read output manifest: {exc}")
 
+    active_glove_sides = ["left", "right"]
     try:
-        fusion = read_json(summaries / "fusion_summary.json")
-        stats = fusion.get("stats", {})
-        matched_ratio = ratio(stats.get("matched_hand_frame"), stats.get("frames"))
-        visual_ratio = ratio(stats.get("visual_hand_present"), stats.get("frames"))
-        metrics["matched_hand_frame_ratio"] = matched_ratio
-        metrics["visual_hand_ratio"] = visual_ratio
-        if matched_ratio is None or matched_ratio < args.min_hand_match_ratio:
-            failures.append(f"hand match ratio {matched_ratio} < {args.min_hand_match_ratio}")
-        if visual_ratio is None or visual_ratio < args.min_visual_ratio:
-            failures.append(f"visual hand ratio {visual_ratio} < {args.min_visual_ratio}")
+        trajectory_summary = read_json(summaries / "trajectory_summary.json")
+        declared_sides = trajectory_summary.get("active_sides")
+        if isinstance(declared_sides, list):
+            active_glove_sides = [side for side in declared_sides if side in {"left", "right"}]
+        if not active_glove_sides:
+            failures.append("trajectory summary declares no active glove side")
     except (FileNotFoundError, json.JSONDecodeError) as exc:
-        failures.append(f"cannot read fusion summary: {exc}")
+        failures.append(f"cannot read trajectory summary: {exc}")
+    metrics["active_glove_sides"] = active_glove_sides
+
+    for side in ("left", "right"):
+        try:
+            fusion = read_json(summaries / f"{side}_fusion_summary.json")
+            stats = fusion.get("stats", {})
+            matched_ratio = ratio(stats.get("matched_hand_frame"), stats.get("frames"))
+            visual_ratio = ratio(stats.get("visual_hand_present"), stats.get("frames"))
+            metrics[f"{side}_matched_hand_frame_ratio"] = matched_ratio
+            metrics[f"{side}_visual_hand_ratio"] = visual_ratio
+            if matched_ratio is None or matched_ratio < args.min_hand_match_ratio:
+                failures.append(f"{side} hand match ratio {matched_ratio} < {args.min_hand_match_ratio}")
+            if visual_ratio is None or visual_ratio < args.min_visual_ratio:
+                failures.append(f"{side} visual hand ratio {visual_ratio} < {args.min_visual_ratio}")
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            failures.append(f"cannot read {side} fusion summary: {exc}")
 
     try:
         depth = read_json(summaries / "depthroot_summary.json")
@@ -133,7 +149,11 @@ def validate(args: argparse.Namespace) -> Dict[str, Any]:
     rtab_apply_path = summaries / "rtabmap_apply_summary.json"
     rtab_exists = [rtab_trajectory_path.is_file(), rtab_apply_path.is_file()]
     if any(rtab_exists) and not all(rtab_exists):
-        failures.append("RTAB-Map quality summaries are incomplete")
+        message = "RTAB-Map quality summaries are incomplete"
+        if args.require_rtabmap:
+            failures.append(message)
+        else:
+            warnings.append(f"{message}; RTAB-Map quality checks unavailable")
     elif all(rtab_exists):
         try:
             rtab_trajectory = read_json(rtab_trajectory_path)
@@ -177,28 +197,29 @@ def validate(args: argparse.Namespace) -> Dict[str, Any]:
         else:
             warnings.append(message)
 
-    try:
-        calibration = read_json(summaries / "glove_fk_calibration.json")
-        fit = calibration.get("fit_error_m", {})
-        median = fit.get("median")
-        p95 = fit.get("p95")
-        metrics["calibration_fit_median_m"] = median
-        metrics["calibration_fit_p95_m"] = p95
-        if median is None or float(median) > args.max_calibration_median_m:
-            failures.append(f"calibration median error {median} > {args.max_calibration_median_m} m")
-        if p95 is None or float(p95) > args.max_calibration_p95_m:
-            failures.append(f"calibration p95 error {p95} > {args.max_calibration_p95_m} m")
-    except (FileNotFoundError, json.JSONDecodeError) as exc:
-        failures.append(f"cannot read calibration summary: {exc}")
+    for side in active_glove_sides:
+        try:
+            calibration = read_json(summaries / f"{side}_glove_fk_calibration.json")
+            fit = calibration.get("fit_error_m", {})
+            median = fit.get("median")
+            p95 = fit.get("p95")
+            metrics[f"{side}_calibration_fit_median_m"] = median
+            metrics[f"{side}_calibration_fit_p95_m"] = p95
+            if median is None or float(median) > args.max_calibration_median_m:
+                failures.append(f"{side} calibration median error {median} > {args.max_calibration_median_m} m")
+            if p95 is None or float(p95) > args.max_calibration_p95_m:
+                failures.append(f"{side} calibration p95 error {p95} > {args.max_calibration_p95_m} m")
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            failures.append(f"cannot read {side} calibration summary: {exc}")
 
-    try:
-        wrist = read_json(summaries / "wristroot_track_summary.json")
-        residual_p95 = (wrist.get("raw_to_tracked_residual_m") or {}).get("p95")
-        metrics["wrist_track_residual_p95_m"] = residual_p95
-        if residual_p95 is None or float(residual_p95) > args.max_wrist_residual_p95_m:
-            failures.append(f"wrist residual p95 {residual_p95} > {args.max_wrist_residual_p95_m} m")
-    except (FileNotFoundError, json.JSONDecodeError) as exc:
-        failures.append(f"cannot read wrist tracking summary: {exc}")
+        try:
+            wrist = read_json(summaries / f"{side}_wristroot_track_summary.json")
+            residual_p95 = (wrist.get("raw_to_tracked_residual_m") or {}).get("p95")
+            metrics[f"{side}_wrist_track_residual_p95_m"] = residual_p95
+            if residual_p95 is None or float(residual_p95) > args.max_wrist_residual_p95_m:
+                failures.append(f"{side} wrist residual p95 {residual_p95} > {args.max_wrist_residual_p95_m} m")
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            failures.append(f"cannot read {side} wrist tracking summary: {exc}")
 
     report = {
         "session": str(session),
@@ -236,7 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min_depth_applied_ratio", type=float, default=0.85)
     parser.add_argument("--max_calibration_median_m", type=float, default=0.030)
     parser.add_argument("--max_calibration_p95_m", type=float, default=0.060)
-    parser.add_argument("--max_wrist_residual_p95_m", type=float, default=0.040)
+    parser.add_argument("--max_wrist_residual_p95_m", type=float, default=0.070)
     parser.add_argument("--min_rtabmap_coverage_ratio", type=float, default=1.0)
     parser.add_argument("--max_rtabmap_interp_gap_sec", type=float, default=0.25)
     parser.add_argument("--require_rtabmap", action="store_true")

@@ -92,6 +92,16 @@ def build(args: argparse.Namespace) -> Dict:
     session = Path(args.session_path).expanduser().resolve()
     rgbd_dir = session / args.rgbd_subdir
     all_data = rgbd_dir / "all_data"
+    visual_json_dir = (
+        Path(args.visual_json_dir).expanduser().resolve()
+        if args.visual_json_dir
+        else all_data
+    )
+    camera_json_dir = (
+        Path(args.camera_json_dir).expanduser().resolve()
+        if args.camera_json_dir
+        else all_data
+    )
     timestamps = read_jsonl(rgbd_dir / "timestamps.jsonl")
     odom_rows = {r["frame"]: r for r in read_jsonl(rgbd_dir / "odom.jsonl")}
     hand_rows = read_jsonl(rgbd_dir / "hand_frame.jsonl")
@@ -122,11 +132,11 @@ def build(args: argparse.Namespace) -> Dict:
     for t in timestamps:
         frame = t["frame"]
         rgb_stamp = int(t["rgb_stamp_ns"])
-        cam_json = load_json(all_data / frame / "aria_cam_rgb.json")
+        cam_json = load_json(camera_json_dir / frame / "aria_cam_rgb.json")
         rgb_bag_time_ns = int(cam_json.get("sync", {}).get("rgb_bag_time_ns") or t.get("rgb_bag_time_ns") or rgb_stamp)
         target_stamp = rgb_bag_time_ns if hand_sync_key == "bag_time_ns" else rgb_stamp
         hand_row, dt_ns = nearest(hand_rows, hand_stamps, target_stamp, max_dt_ns)
-        visual_json = load_json(all_data / frame / args.visual_json_name)
+        visual_json = load_json(visual_json_dir / frame / args.visual_json_name)
         visual_hand, visual_side = pick_visual_hand(visual_json, args.visual_side)
         odom = odom_rows.get(frame)
 
@@ -206,6 +216,8 @@ def build(args: argparse.Namespace) -> Dict:
         "session_path": str(session),
         "rgbd_dir": str(rgbd_dir),
         "visual_json_name": args.visual_json_name,
+        "visual_json_dir": str(visual_json_dir),
+        "camera_json_dir": str(camera_json_dir),
         "hand_sync_key": hand_sync_key,
         "max_dt_ms": args.max_dt_ms,
         "stats": stats,
@@ -229,6 +241,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--session_path", required=True)
     parser.add_argument("--rgbd_subdir", default="rosbag_rgbd_handframe")
     parser.add_argument("--visual_json_name", required=True)
+    parser.add_argument("--visual_json_dir", default=None, help="Per-frame visual JSON root; defaults to <rgbd_subdir>/all_data.")
+    parser.add_argument("--camera_json_dir", default=None, help="Per-frame camera metadata root; defaults to <rgbd_subdir>/all_data.")
     parser.add_argument("--output_jsonl", required=True)
     parser.add_argument("--summary_json", default=None)
     parser.add_argument("--hand_sync_key", default="bag_time_ns", choices=["imu_stamp_left_ns", "bag_time_ns", "pressure_stamp_left_ns"])

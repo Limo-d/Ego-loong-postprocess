@@ -197,10 +197,20 @@ def correct_hand(hand: Dict, k: np.ndarray, depth: np.ndarray, args: argparse.Na
 def process(args: argparse.Namespace) -> Dict:
     session = Path(args.session_path).expanduser().resolve()
     frames = frame_dirs(session, args.max_frames)
+    input_json_dir = (
+        Path(args.input_json_dir).expanduser().resolve()
+        if args.input_json_dir
+        else session / "preprocess" / "all_data"
+    )
+    output_json_dir = (
+        Path(args.output_json_dir).expanduser().resolve()
+        if args.output_json_dir
+        else session / "preprocess" / "all_data"
+    )
     stats = {"frames": 0, "hands": 0, "applied": 0, "no_depth": 0, "depth_out_of_range": 0, "bad_shape": 0, "missing_depth": 0, "too_few_depth_candidates": 0}
 
     for frame in tqdm(frames, desc="Depth correcting hand kpts"):
-        data = load_json(frame / args.input_json_name)
+        data = load_json(input_json_dir / frame.name / args.input_json_name)
         if not data:
             data = {"idx": int(frame.name), "ts": None, "hand_r": None, "hand_l": None}
         cam = load_json(frame / "aria_cam_rgb.json")
@@ -210,7 +220,7 @@ def process(args: argparse.Namespace) -> Dict:
         stats["frames"] += 1
         if depth is None or k.shape != (3, 3):
             stats["missing_depth"] += 1
-            save_json(frame / args.output_json_name, data)
+            save_json(output_json_dir / frame.name / args.output_json_name, data)
             continue
 
         for key in ("hand_r", "hand_l"):
@@ -221,7 +231,7 @@ def process(args: argparse.Namespace) -> Dict:
             corrected, status = correct_hand(hand, k, depth, args)
             stats[status] = stats.get(status, 0) + 1
             data[key] = corrected
-        save_json(frame / args.output_json_name, data)
+        save_json(output_json_dir / frame.name / args.output_json_name, data)
 
     if args.summary_json:
         save_json(Path(args.summary_json).expanduser().resolve(), stats)
@@ -233,6 +243,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--session_path", required=True)
     parser.add_argument("--input_json_name", required=True)
     parser.add_argument("--output_json_name", required=True)
+    parser.add_argument("--input_json_dir", default=None, help="Per-frame derived JSON root; defaults to preprocess/all_data.")
+    parser.add_argument("--output_json_dir", default=None, help="Per-frame corrected JSON root; defaults to preprocess/all_data.")
     parser.add_argument("--summary_json", default=None)
     parser.add_argument("--depth_name", default="depth_aligned.png")
     parser.add_argument("--root_idx", type=int, default=0)

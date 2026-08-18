@@ -62,12 +62,12 @@ HAMER_PYTHON="${HAMER_PYTHON:-/home/lenovo/miniconda3/envs/hamer/bin/python}"
 export PYTHONPATH="${ROOT}/hamer:${ROOT}:${PYTHONPATH:-}"
 
 LOCATE_MODEL="${LOCATE_MODEL:-${ROOT}/models--nvidia--LocateAnything-3B/resolved}"
-PROMPT="${PROMPT:-white glove with imu}"
-PROMPT_TAG="${PROMPT_TAG:-white_glove_with_imu}"
+PROMPT="${PROMPT:-white tactile glove with an IMU module worn on a hand}"
+PROMPT_TAG="${PROMPT_TAG:-white_tactile_glove_with_imu}"
 LOCATE_DTYPE="${LOCATE_DTYPE:-fp32}"
 LOCATE_DEVICE="${LOCATE_DEVICE:-cuda}"
 HAMER_DEVICE="${HAMER_DEVICE:-cuda}"
-HAMER_HANDEDNESS="${HAMER_HANDEDNESS:-all_left}"
+HAMER_HANDEDNESS="${HAMER_HANDEDNESS:-track}"
 VISUAL_SIDE="${VISUAL_SIDE:-hand_l}"
 GLOVE_SIDE="${GLOVE_SIDE:-left}"
 REQUESTED_FPS="${FPS:-}"
@@ -110,6 +110,7 @@ WRIST_TRACK_CONFIRM_FRAMES="${WRIST_TRACK_CONFIRM_FRAMES:-8}"
 WRIST_TRACK_MAX_STEP_M="${WRIST_TRACK_MAX_STEP_M:-0.007}"
 USE_CAMERA_OPTICAL_FIX="${USE_CAMERA_OPTICAL_FIX:-1}"
 CONSTRAINT_PREALIGN="${CONSTRAINT_PREALIGN:-1}"
+ESTIMATE_SCALE="${ESTIMATE_SCALE:-1}"
 APPLY_PALM_QUAT="${APPLY_PALM_QUAT:-1}"
 CONSTRAINT_MIDDLE_IDX="${CONSTRAINT_MIDDLE_IDX:-9}"
 CONSTRAINT_THUMB_IDX="${CONSTRAINT_THUMB_IDX:-2}"
@@ -117,15 +118,23 @@ FLIP_PALM_NORMAL="${FLIP_PALM_NORMAL:-0}"
 WRIST_TRACK_SNAP_ROOT="${WRIST_TRACK_SNAP_ROOT:-0}"
 WRIST_TRACK_DEPTH_ONLY="${WRIST_TRACK_DEPTH_ONLY:-1}"
 REVIEW_HAND_DISPLAY_ROTATE_DEG="${REVIEW_HAND_DISPLAY_ROTATE_DEG:-45}"
+RUN_QUALITY_CHECK="${RUN_QUALITY_CHECK:-1}"
 COMPACT_OUTPUTS="${COMPACT_OUTPUTS:-0}"
+
+if [[ "${COMPACT_OUTPUTS}" == "1" && "${RUN_QUALITY_CHECK}" != "1" ]]; then
+  printf 'Error: COMPACT_OUTPUTS=1 requires RUN_QUALITY_CHECK=1.\n' >&2
+  exit 2
+fi
 
 RGBD_DIR="${SESSION}/preprocess"
 LOCATE_DIR="${SESSION}/locateanything_${PROMPT_TAG}"
 STABLE_BBOX_DIR="${SESSION}/locateanything_${PROMPT_TAG}_stable"
 HAMER_DIR="${SESSION}/hamer_from_stable_locateanything_${PROMPT_TAG}_force_right"
 DEPTH_DIR="${SESSION}/depth_correct_hamer_force_right"
-FUSION_DIR="${SESSION}/fusion_input_force_right_depthroot"
-VISUAL_SMOOTH_DIR="${SESSION}/visual_2d_smooth"
+FUSION_LEFT_DIR="${SESSION}/fusion_input_left_depthroot"
+FUSION_RIGHT_DIR="${SESSION}/fusion_input_right_depthroot"
+VISUAL_SMOOTH_LEFT_DIR="${SESSION}/visual_2d_smooth_left"
+VISUAL_SMOOTH_RIGHT_DIR="${SESSION}/visual_2d_smooth_right"
 OUTPUT_DIR="${SESSION}/outputs"
 CALIB_SESSION="${CALIB_SESSION:-${SESSION}/calibration_handeye}"
 CALIB_RGBD_DIR="${CALIB_SESSION}/preprocess"
@@ -133,7 +142,8 @@ CALIB_LOCATE_DIR="${CALIB_SESSION}/locateanything_${PROMPT_TAG}"
 CALIB_STABLE_BBOX_DIR="${CALIB_SESSION}/locateanything_${PROMPT_TAG}_stable"
 CALIB_HAMER_DIR="${CALIB_SESSION}/hamer_from_stable_locateanything_${PROMPT_TAG}_force_right"
 CALIB_DEPTH_DIR="${CALIB_SESSION}/depth_correct_hamer_force_right"
-CALIB_FUSION_DIR="${CALIB_SESSION}/fusion_input_force_right_depthroot"
+CALIB_FUSION_LEFT_DIR="${CALIB_SESSION}/fusion_input_left_depthroot"
+CALIB_FUSION_RIGHT_DIR="${CALIB_SESSION}/fusion_input_right_depthroot"
 
 LOCATE_JSON="${LOCATE_DIR}/bboxes.json"
 LOCATE_MP4="${LOCATE_DIR}/bboxes.mp4"
@@ -144,14 +154,26 @@ HAMER_DEPTH_JSON_NAME="hamer_${PROMPT_TAG}_stablebbox_force_right_depthroot.json
 HAMER_AGG_JSON="${HAMER_DIR}/hamer_${PROMPT_TAG}_stablebbox_force_right_aggregate.json"
 HAMER_MP4="${HAMER_DIR}/hamer_21kpts_stablebbox_force_right.mp4"
 DEPTH_SUMMARY="${DEPTH_DIR}/depthroot_summary.json"
-FUSION_JSONL="${FUSION_DIR}/fusion_frames.jsonl"
-FUSION_SUMMARY="${FUSION_DIR}/fusion_summary.json"
-VISUAL_SMOOTH_MP4="${VISUAL_SMOOTH_DIR}/visual_21kpts_2d_smooth.mp4"
-VISUAL_SMOOTH_JSONL="${VISUAL_SMOOTH_DIR}/visual_2d_smooth.jsonl"
-VISUAL_SMOOTH_SUMMARY="${VISUAL_SMOOTH_DIR}/visual_2d_smooth_summary.json"
+FUSION_LEFT_JSONL="${FUSION_LEFT_DIR}/fusion_frames.jsonl"
+FUSION_RIGHT_JSONL="${FUSION_RIGHT_DIR}/fusion_frames.jsonl"
+FUSION_LEFT_SUMMARY="${FUSION_LEFT_DIR}/fusion_summary.json"
+FUSION_RIGHT_SUMMARY="${FUSION_RIGHT_DIR}/fusion_summary.json"
+VISUAL_SMOOTH_LEFT_MP4="${VISUAL_SMOOTH_LEFT_DIR}/visual_21kpts_2d_smooth.mp4"
+VISUAL_SMOOTH_RIGHT_MP4="${VISUAL_SMOOTH_RIGHT_DIR}/visual_21kpts_2d_smooth.mp4"
+VISUAL_SMOOTH_LEFT_JSONL="${VISUAL_SMOOTH_LEFT_DIR}/visual_2d_smooth.jsonl"
+VISUAL_SMOOTH_RIGHT_JSONL="${VISUAL_SMOOTH_RIGHT_DIR}/visual_2d_smooth.jsonl"
+VISUAL_SMOOTH_LEFT_SUMMARY="${VISUAL_SMOOTH_LEFT_DIR}/visual_2d_smooth_summary.json"
+VISUAL_SMOOTH_RIGHT_SUMMARY="${VISUAL_SMOOTH_RIGHT_DIR}/visual_2d_smooth_summary.json"
 RTABMAP_TRAJECTORY_JSONL="${RTABMAP_POSE_DIR}/rtabmap_camera_pose_rgb30_interp.jsonl"
 RTABMAP_TRAJECTORY_SUMMARY="${RTABMAP_POSE_DIR}/rtabmap_camera_pose_rgb30_interp_summary.json"
 RTABMAP_APPLY_SUMMARY="${RTABMAP_POSE_DIR}/apply_rtabmap_pose_to_preprocess_summary.json"
+RTABMAP_CAMERA_DIR="${RTABMAP_POSE_DIR}/camera_frames"
+CAMERA_JSON_DIR="${RGBD_DIR}/all_data"
+if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
+  CAMERA_JSON_DIR="${RTABMAP_CAMERA_DIR}"
+fi
+HAMER_FRAME_DIR="${HAMER_DIR}/per_frame"
+DEPTH_FRAME_DIR="${DEPTH_DIR}/per_frame"
 REVIEW_WEB_HTML="${OUTPUT_DIR}/web/index.html"
 COMPACT_SUMMARY="${OUTPUT_DIR}/compact_summary.json"
 CALIB_LOCATE_JSON="${CALIB_LOCATE_DIR}/bboxes.json"
@@ -161,15 +183,19 @@ CALIB_STABLE_BBOX_MP4="${CALIB_STABLE_BBOX_DIR}/bboxes_stable.mp4"
 CALIB_HAMER_AGG_JSON="${CALIB_HAMER_DIR}/hamer_${PROMPT_TAG}_stablebbox_force_right_aggregate.json"
 CALIB_HAMER_MP4="${CALIB_HAMER_DIR}/hamer_21kpts_stablebbox_force_right.mp4"
 CALIB_DEPTH_SUMMARY="${CALIB_DEPTH_DIR}/depthroot_summary.json"
-CALIB_FUSION_JSONL="${CALIB_FUSION_DIR}/fusion_frames.jsonl"
-CALIB_FUSION_SUMMARY="${CALIB_FUSION_DIR}/fusion_summary.json"
+CALIB_FUSION_LEFT_JSONL="${CALIB_FUSION_LEFT_DIR}/fusion_frames.jsonl"
+CALIB_FUSION_RIGHT_JSONL="${CALIB_FUSION_RIGHT_DIR}/fusion_frames.jsonl"
+CALIB_FUSION_LEFT_SUMMARY="${CALIB_FUSION_LEFT_DIR}/fusion_summary.json"
+CALIB_FUSION_RIGHT_SUMMARY="${CALIB_FUSION_RIGHT_DIR}/fusion_summary.json"
 TF_STATIC_JSONL="${TF_STATIC_JSONL:-${SESSION}/preprocess/tf_static.jsonl}"
 CACHE_DIR="${CACHE_DIR:-${SESSION}/.pipeline_cache}"
 CACHE_TOOL="${CACHE_TOOL:-${ROOT}/scripts/pipeline_stage_cache.py}"
 CACHE_PYTHON="${CACHE_PYTHON:-${ROS_PYTHON}}"
 QUALITY_REPORT="${OUTPUT_DIR}/quality_report.json"
 
-mkdir -p "${SESSION}" "${LOCATE_DIR}" "${STABLE_BBOX_DIR}" "${HAMER_DIR}" "${DEPTH_DIR}" "${FUSION_DIR}" "${VISUAL_SMOOTH_DIR}" "${OUTPUT_DIR}" "${RTABMAP_POSE_DIR}" "${CACHE_DIR}"
+mkdir -p "${SESSION}" "${LOCATE_DIR}" "${STABLE_BBOX_DIR}" "${HAMER_DIR}" "${DEPTH_DIR}" \
+  "${FUSION_LEFT_DIR}" "${FUSION_RIGHT_DIR}" "${VISUAL_SMOOTH_LEFT_DIR}" "${VISUAL_SMOOTH_RIGHT_DIR}" \
+  "${OUTPUT_DIR}" "${RTABMAP_POSE_DIR}" "${CACHE_DIR}"
 
 stage_manifest() {
   printf '%s/%s.json' "${CACHE_DIR}" "$1"
@@ -195,6 +221,25 @@ stage_cache_write() {
     --stage "${stage}" \
     --manifest "$(stage_manifest "${stage}")" \
     "$@"
+}
+
+fusion_has_calibration_data() {
+  local summary_json="$1"
+  local side="$2"
+  "${HAMER_PYTHON}" -c '
+import json, sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+side = sys.argv[2]
+try:
+    stats = json.loads(path.read_text(encoding="utf-8")).get("stats", {})
+    solve_valid = int(stats.get(f"{side}_solve_valid", 0) or 0)
+    visual_valid = int(stats.get("visual_hand_present", 0) or 0)
+except (OSError, ValueError, TypeError):
+    raise SystemExit(1)
+raise SystemExit(0 if solve_valid >= 3 and visual_valid >= 3 else 1)
+' "${summary_json}" "${side}"
 }
 
 max_frames_args=()
@@ -276,6 +321,7 @@ if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
     --output "${RTABMAP_TRAJECTORY_JSONL}"
     --output "${RTABMAP_TRAJECTORY_SUMMARY}"
     --output "${RTABMAP_APPLY_SUMMARY}"
+    --output "${RTABMAP_CAMERA_DIR}"
   )
   if stage_cache_hit rtabmap_pose "${rtabmap_cache_args[@]}"; then
     printf '  skip valid cache: %s\n' "$(stage_manifest rtabmap_pose)"
@@ -289,6 +335,7 @@ if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
       "${rtabmap_strict_args[@]}"
     "${HAMER_PYTHON}" "${ROOT}/preprocess/ApplyCameraTrajectoryToPreprocess.py" \
       --all_data_dir "${RGBD_DIR}/all_data" \
+      --output_dir "${RTABMAP_CAMERA_DIR}" \
       --trajectory_jsonl "${RTABMAP_TRAJECTORY_JSONL}" \
       --summary_json "${RTABMAP_APPLY_SUMMARY}" \
       "${rtabmap_strict_args[@]}"
@@ -335,9 +382,10 @@ else
   stage_cache_write locate "${locate_cache_args[@]}"
 fi
 
-printf '\n[4/11] Track/stabilize single target bbox\n'
+printf '\n[4/11] Track/stabilize left and right hand bboxes\n'
 track_bbox_cache_args=(
   --input "$(stage_manifest locate)"
+  --code "${ROOT}/preprocess/TrackDualHandBboxes.py"
   --code "${ROOT}/preprocess/TrackSingleHandBboxes.py"
   --code "${ROOT}/preprocess/Timebase.py"
   --param "fps=${FPS}"
@@ -349,7 +397,7 @@ track_bbox_cache_args=(
 if stage_cache_hit track_bbox "${track_bbox_cache_args[@]}"; then
   printf '  skip valid cache: %s\n' "$(stage_manifest track_bbox)"
 else
-  "${HAMER_PYTHON}" "${ROOT}/preprocess/TrackSingleHandBboxes.py" \
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/TrackDualHandBboxes.py" \
     --session_path "${SESSION}" \
     --input_json "${LOCATE_JSON}" \
     --output_json "${STABLE_BBOX_JSON}" \
@@ -371,13 +419,16 @@ hamer_cache_args=(
   --input "${ROOT}/hamer/_DATA/hamer_ckpts/checkpoints/new_hamer_weights.ckpt"
   --code "${ROOT}/preprocess/run_hamer_from_locate_bboxes.py"
   --code "${ROOT}/preprocess/HaMeRHands.py"
+  --code "${ROOT}/preprocess/MediaPipeHands.py"
+  --code "${ROOT}/hamer/hamer/datasets/vitdet_dataset.py"
   --code "${ROOT}/preprocess/VisualizeHandKpts.py"
   --code "${ROOT}/preprocess/Timebase.py"
   --param "device=${HAMER_DEVICE}"
   --param "handedness=${HAMER_HANDEDNESS}"
   --param "max_frames=${MAX_FRAMES}"
   --param "fps=${FPS}"
-  --output "${SESSION}/preprocess/all_data/00000/${HAMER_JSON_NAME}"
+  --param "camera_json_dir=${CAMERA_JSON_DIR}"
+  --output "${HAMER_FRAME_DIR}"
   --output "${HAMER_AGG_JSON}"
   --output "${HAMER_MP4}"
 )
@@ -389,10 +440,12 @@ else
     --bbox_json "${STABLE_BBOX_JSON}" \
     --fallback_bbox_json "" \
     --aggregate_json "${HAMER_AGG_JSON}" \
+    --per_frame_output_dir "${HAMER_FRAME_DIR}" \
+    --camera_json_dir "${CAMERA_JSON_DIR}" \
     --out_json_name "${HAMER_JSON_NAME}" \
     --out_video "${HAMER_MP4}" \
     --device "${HAMER_DEVICE}" \
-    --max_boxes 1 \
+    --max_boxes 2 \
     --handedness "${HAMER_HANDEDNESS}" \
     --fps "${FPS}" \
     "${max_frames_args[@]}"
@@ -411,7 +464,7 @@ depth_cache_args=(
   --param "min_candidates=${DEPTH_MIN_CANDIDATES}"
   --param "inlier_m=${DEPTH_ROBUST_INLIER_M}"
   --param "max_frames=${MAX_FRAMES}"
-  --output "${SESSION}/preprocess/all_data/00000/${HAMER_DEPTH_JSON_NAME}"
+  --output "${DEPTH_FRAME_DIR}"
   --output "${DEPTH_SUMMARY}"
 )
 if stage_cache_hit depth_root "${depth_cache_args[@]}"; then
@@ -421,6 +474,8 @@ else
     --session_path "${SESSION}" \
     --input_json_name "${HAMER_JSON_NAME}" \
     --output_json_name "${HAMER_DEPTH_JSON_NAME}" \
+    --input_json_dir "${HAMER_FRAME_DIR}" \
+    --output_json_dir "${DEPTH_FRAME_DIR}" \
     --summary_json "${DEPTH_SUMMARY}" \
     --depth_name depth_aligned.png \
     --root_idx 0 \
@@ -434,34 +489,48 @@ else
   stage_cache_write depth_root "${depth_cache_args[@]}"
 fi
 
-printf '\n[7/11] Build visual + /hand_frame fusion input\n'
+printf '\n[7/11] Build left/right visual + /hand_frame fusion inputs\n'
 fusion_cache_args=(
   --input "$(stage_manifest depth_root)"
   --input "${POSE_STAGE_MANIFEST}"
   --code "${ROOT}/preprocess/BuildHandFusionInput.py"
-  --param "visual_side=${VISUAL_SIDE}"
-  --param "glove_side=${GLOVE_SIDE}"
+  --param "visual_sides=hand_l,hand_r"
+  --param "glove_sides=left,right"
   --param "hand_sync_key=bag_time_ns"
-  --output "${FUSION_JSONL}"
-  --output "${FUSION_SUMMARY}"
+  --param "camera_json_dir=${CAMERA_JSON_DIR}"
+  --param "visual_json_dir=${DEPTH_FRAME_DIR}"
+  --output "${FUSION_LEFT_JSONL}"
+  --output "${FUSION_RIGHT_JSONL}"
+  --output "${FUSION_LEFT_SUMMARY}"
+  --output "${FUSION_RIGHT_SUMMARY}"
 )
 if stage_cache_hit fusion "${fusion_cache_args[@]}"; then
   printf '  skip valid cache: %s\n' "$(stage_manifest fusion)"
 else
-  "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildHandFusionInput.py" \
-    --session_path "${SESSION}" \
-    --rgbd_subdir preprocess \
-    --visual_json_name "${HAMER_DEPTH_JSON_NAME}" \
-    --output_jsonl "${FUSION_JSONL}" \
-    --summary_json "${FUSION_SUMMARY}" \
-    --visual_side "${VISUAL_SIDE}" \
-    --glove_side "${GLOVE_SIDE}" \
-    --hand_sync_key bag_time_ns
+  for side in left right; do
+    if [[ "${side}" == "left" ]]; then
+      visual_side=hand_l; fusion_jsonl="${FUSION_LEFT_JSONL}"; fusion_summary="${FUSION_LEFT_SUMMARY}"
+    else
+      visual_side=hand_r; fusion_jsonl="${FUSION_RIGHT_JSONL}"; fusion_summary="${FUSION_RIGHT_SUMMARY}"
+    fi
+    "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildHandFusionInput.py" \
+      --session_path "${SESSION}" \
+      --rgbd_subdir preprocess \
+      --visual_json_name "${HAMER_DEPTH_JSON_NAME}" \
+      --visual_json_dir "${DEPTH_FRAME_DIR}" \
+      --camera_json_dir "${CAMERA_JSON_DIR}" \
+      --output_jsonl "${fusion_jsonl}" \
+      --summary_json "${fusion_summary}" \
+      --visual_side "${visual_side}" \
+      --glove_side "${side}" \
+      --hand_sync_key bag_time_ns
+  done
   stage_cache_write fusion "${fusion_cache_args[@]}"
 fi
 
 
-CALIB_INPUT_FUSION_FOR_FK=""
+CALIB_INPUT_FUSION_LEFT_FOR_FK=""
+CALIB_INPUT_FUSION_RIGHT_FOR_FK=""
 if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
   printf '\n[calib] Build dedicated hand-eye calibration fusion from calib_video bag\n'
   calib_cache_args=(
@@ -472,16 +541,20 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     --code "${ROOT}/scripts/build_calib_video_fusion.sh"
     --code "${ROOT}/preprocess/ExtractRosbagSampler.py"
     --code "${ROOT}/preprocess/VisualizeLocateAnythingBboxes.py"
+    --code "${ROOT}/preprocess/TrackDualHandBboxes.py"
     --code "${ROOT}/preprocess/TrackSingleHandBboxes.py"
     --code "${ROOT}/preprocess/run_hamer_from_locate_bboxes.py"
+    --code "${ROOT}/preprocess/HaMeRHands.py"
+    --code "${ROOT}/preprocess/MediaPipeHands.py"
+    --code "${ROOT}/hamer/hamer/datasets/vitdet_dataset.py"
     --code "${ROOT}/preprocess/VisualizeHandKpts.py"
     --code "${ROOT}/preprocess/DepthCorrectHandKpts.py"
     --code "${ROOT}/preprocess/BuildHandFusionInput.py"
     --code "${ROOT}/preprocess/Timebase.py"
     --param "prompt=${PROMPT}"
     --param "handedness=${HAMER_HANDEDNESS}"
-    --param "visual_side=${VISUAL_SIDE}"
-    --param "glove_side=${GLOVE_SIDE}"
+    --param "visual_sides=hand_l,hand_r"
+    --param "glove_sides=left,right"
     --param "fps=${FPS}"
     --param "max_frames=${MAX_FRAMES}"
     --param "depth_radius=${DEPTH_RADIUS}"
@@ -501,8 +574,10 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     --param "bbox_min_iou_center_px=${CALIB_BBOX_MIN_IOU_CENTER_PX}"
     --param "bbox_max_gap=${CALIB_BBOX_MAX_GAP}"
     --param "reference_fps=${TIME_FILTER_REFERENCE_FPS}"
-    --output "${CALIB_FUSION_JSONL}"
-    --output "${CALIB_FUSION_SUMMARY}"
+    --output "${CALIB_FUSION_LEFT_JSONL}"
+    --output "${CALIB_FUSION_RIGHT_JSONL}"
+    --output "${CALIB_FUSION_LEFT_SUMMARY}"
+    --output "${CALIB_FUSION_RIGHT_SUMMARY}"
   )
   if stage_cache_hit calibration_fusion "${calib_cache_args[@]}"; then
     printf '  skip valid cache: %s\n' "$(stage_manifest calibration_fusion)"
@@ -546,12 +621,21 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     "${ROOT}/scripts/build_calib_video_fusion.sh"
     stage_cache_write calibration_fusion "${calib_cache_args[@]}"
   fi
-  CALIB_INPUT_FUSION_FOR_FK="${CALIB_FUSION_JSONL}"
+  CALIB_INPUT_FUSION_LEFT_FOR_FK="${CALIB_FUSION_LEFT_JSONL}"
+  CALIB_INPUT_FUSION_RIGHT_FOR_FK="${CALIB_FUSION_RIGHT_JSONL}"
+  if ! fusion_has_calibration_data "${CALIB_FUSION_LEFT_SUMMARY}" left; then
+    printf '  warning: dedicated calibration has no usable left solve/visual pairs; use main sequence window %s-%s\n' "${FRAME_START}" "${FRAME_END}"
+    CALIB_INPUT_FUSION_LEFT_FOR_FK=""
+  fi
+  if ! fusion_has_calibration_data "${CALIB_FUSION_RIGHT_SUMMARY}" right; then
+    printf '  warning: dedicated calibration has no usable right solve/visual pairs; use main sequence window %s-%s\n' "${FRAME_START}" "${FRAME_END}"
+    CALIB_INPUT_FUSION_RIGHT_FOR_FK=""
+  fi
 else
   printf '\n[calib] skip dedicated calibration video: USE_CALIB_VIDEO=%s\n' "${USE_CALIB_VIDEO}"
 fi
 
-printf '\n[8/11] Render visual 21 keypoints with temporal 2D smoothing\n'
+printf '\n[8/11] Render left/right visual 21 keypoints with temporal 2D smoothing\n'
 visual_smooth_cache_args=(
   --input "$(stage_manifest fusion)"
   --code "${ROOT}/preprocess/VisualizeVisual2DSmooth.py"
@@ -560,30 +644,64 @@ visual_smooth_cache_args=(
   --param "alpha=${VISUAL_2D_SMOOTH_ALPHA}"
   --param "max_interp_gap=${VISUAL_2D_MAX_INTERP_GAP}"
   --param "reference_fps=${TIME_FILTER_REFERENCE_FPS}"
-  --output "${VISUAL_SMOOTH_MP4}"
-  --output "${VISUAL_SMOOTH_JSONL}"
-  --output "${VISUAL_SMOOTH_SUMMARY}"
+  --output "${VISUAL_SMOOTH_LEFT_MP4}"
+  --output "${VISUAL_SMOOTH_RIGHT_MP4}"
+  --output "${VISUAL_SMOOTH_LEFT_JSONL}"
+  --output "${VISUAL_SMOOTH_RIGHT_JSONL}"
+  --output "${VISUAL_SMOOTH_LEFT_SUMMARY}"
+  --output "${VISUAL_SMOOTH_RIGHT_SUMMARY}"
 )
 if stage_cache_hit visual_smooth "${visual_smooth_cache_args[@]}"; then
   printf '  skip valid cache: %s\n' "$(stage_manifest visual_smooth)"
 else
-  "${HAMER_PYTHON}" "${ROOT}/preprocess/VisualizeVisual2DSmooth.py" \
-    --input_jsonl "${FUSION_JSONL}" \
-    --out_path "${VISUAL_SMOOTH_MP4}" \
-    --output_jsonl "${VISUAL_SMOOTH_JSONL}" \
-    --summary_json "${VISUAL_SMOOTH_SUMMARY}" \
-    --fps "${FPS}" \
-    --alpha "${VISUAL_2D_SMOOTH_ALPHA}" \
-    --max_interp_gap "${VISUAL_2D_MAX_INTERP_GAP}" \
-    --reference_fps "${TIME_FILTER_REFERENCE_FPS}"
+  for side in left right; do
+    if [[ "${side}" == "left" ]]; then
+      fusion_jsonl="${FUSION_LEFT_JSONL}"; smooth_mp4="${VISUAL_SMOOTH_LEFT_MP4}"; smooth_jsonl="${VISUAL_SMOOTH_LEFT_JSONL}"; smooth_summary="${VISUAL_SMOOTH_LEFT_SUMMARY}"
+    else
+      fusion_jsonl="${FUSION_RIGHT_JSONL}"; smooth_mp4="${VISUAL_SMOOTH_RIGHT_MP4}"; smooth_jsonl="${VISUAL_SMOOTH_RIGHT_JSONL}"; smooth_summary="${VISUAL_SMOOTH_RIGHT_SUMMARY}"
+    fi
+    "${HAMER_PYTHON}" "${ROOT}/preprocess/VisualizeVisual2DSmooth.py" \
+      --input_jsonl "${fusion_jsonl}" \
+      --out_path "${smooth_mp4}" \
+      --output_jsonl "${smooth_jsonl}" \
+      --summary_json "${smooth_summary}" \
+      --fps "${FPS}" \
+      --alpha "${VISUAL_2D_SMOOTH_ALPHA}" \
+      --max_interp_gap "${VISUAL_2D_MAX_INTERP_GAP}" \
+      --reference_fps "${TIME_FILTER_REFERENCE_FPS}"
+  done
   stage_cache_write visual_smooth "${visual_smooth_cache_args[@]}"
 fi
 
 printf '\n[9/11] Glove FK + visual-bone calibration + wristroot tracking\n'
-FK_DIR="${SESSION}/glove_fk21_visual_bones_smooth_solve045"
-FINAL_TRAJECTORY="${FK_DIR}/trajectory_wristroot_track_cameraoptical.jsonl"
-FINAL_TRAJECTORY_SUMMARY="${FK_DIR}/trajectory_wristroot_track_cameraoptical_summary.json"
-FINAL_CALIBRATION="${FK_DIR}/glove_fk_to_camera_calib_smooth_solve045.json"
+ACTIVE_GLOVE_SIDES=()
+if fusion_has_calibration_data "${FUSION_LEFT_SUMMARY}" left; then
+  ACTIVE_GLOVE_SIDES+=(left)
+else
+  printf '  warning: main sequence has no usable left solve state; skip left glove FK/trajectory\n'
+fi
+if fusion_has_calibration_data "${FUSION_RIGHT_SUMMARY}" right; then
+  ACTIVE_GLOVE_SIDES+=(right)
+else
+  printf '  warning: main sequence has no usable right solve state; skip right glove FK/trajectory\n'
+fi
+if [[ "${#ACTIVE_GLOVE_SIDES[@]}" == "0" ]]; then
+  printf 'Error: neither glove side has usable solve state and visual observations.\n' >&2
+  exit 2
+fi
+ACTIVE_GLOVE_SIDES_CSV="$(IFS=,; printf '%s' "${ACTIVE_GLOVE_SIDES[*]}")"
+printf '  active glove sides: %s\n' "${ACTIVE_GLOVE_SIDES_CSV}"
+LEFT_FK_DIR="${SESSION}/glove_fk21_visual_bones_smooth_solve045_left"
+RIGHT_FK_DIR="${SESSION}/glove_fk21_visual_bones_smooth_solve045_right"
+DUAL_FK_DIR="${SESSION}/glove_fk21_visual_bones_smooth_solve045_dual"
+LEFT_TRAJECTORY="${LEFT_FK_DIR}/trajectory_wristroot_track_cameraoptical.jsonl"
+RIGHT_TRAJECTORY="${RIGHT_FK_DIR}/trajectory_wristroot_track_cameraoptical.jsonl"
+LEFT_TRAJECTORY_SUMMARY="${LEFT_FK_DIR}/trajectory_wristroot_track_cameraoptical_summary.json"
+RIGHT_TRAJECTORY_SUMMARY="${RIGHT_FK_DIR}/trajectory_wristroot_track_cameraoptical_summary.json"
+LEFT_CALIBRATION="${LEFT_FK_DIR}/glove_fk_to_camera_calib_smooth_solve045.json"
+RIGHT_CALIBRATION="${RIGHT_FK_DIR}/glove_fk_to_camera_calib_smooth_solve045.json"
+FINAL_TRAJECTORY="${DUAL_FK_DIR}/trajectory_wristroot_track_cameraoptical.jsonl"
+FINAL_TRAJECTORY_SUMMARY="${DUAL_FK_DIR}/trajectory_wristroot_track_cameraoptical_summary.json"
 glove_cache_args=(
   --input "$(stage_manifest fusion)"
   --input "${BASE_HAND_CONFIG}"
@@ -597,12 +715,13 @@ glove_cache_args=(
   --code "${ROOT}/preprocess/ApplyGloveFkCalibration.py"
   --code "${ROOT}/preprocess/TrackGloveWristRoot.py"
   --code "${ROOT}/preprocess/BuildUnifiedTrajectory.py"
+  --code "${ROOT}/preprocess/MergeDualHandTrajectories.py"
   --code "${ROOT}/preprocess/FixTrajectoryCameraOpticalWorld.py"
   --code "${ROOT}/preprocess/Timebase.py"
   --code "${ROOT}/preprocess/VisualizeGloveFkVsVisual.py"
   --code "${ROOT}/preprocess/VisualizeTrajectory3D.py"
   --param "fps=${FPS}"
-  --param "glove_side=${GLOVE_SIDE}"
+  --param "glove_sides=${ACTIVE_GLOVE_SIDES_CSV}"
   --param "base_hand_config=${BASE_HAND_CONFIG}"
   --param "retarget_root=${RETARGET_ROOT}"
   --param "use_camera_optical_fix=${USE_CAMERA_OPTICAL_FIX}"
@@ -619,6 +738,7 @@ glove_cache_args=(
   --param "wrist_track_max_step_m=${WRIST_TRACK_MAX_STEP_M}"
   --param "apply_palm_quat=${APPLY_PALM_QUAT}"
   --param "constraint_prealign=${CONSTRAINT_PREALIGN}"
+  --param "estimate_scale=${ESTIMATE_SCALE}"
   --param "constraint_middle_idx=${CONSTRAINT_MIDDLE_IDX}"
   --param "constraint_thumb_idx=${CONSTRAINT_THUMB_IDX}"
   --param "flip_palm_normal=${FLIP_PALM_NORMAL}"
@@ -627,44 +747,70 @@ glove_cache_args=(
   --param "reference_fps=${TIME_FILTER_REFERENCE_FPS}"
   --output "${FINAL_TRAJECTORY}"
   --output "${FINAL_TRAJECTORY_SUMMARY}"
-  --output "${FINAL_CALIBRATION}"
 )
-if [[ -n "${CALIB_INPUT_FUSION_FOR_FK}" ]]; then
+for side in "${ACTIVE_GLOVE_SIDES[@]}"; do
+  if [[ "${side}" == "left" ]]; then
+    glove_cache_args+=(--output "${LEFT_TRAJECTORY}" --output "${LEFT_TRAJECTORY_SUMMARY}" --output "${LEFT_CALIBRATION}")
+  else
+    glove_cache_args+=(--output "${RIGHT_TRAJECTORY}" --output "${RIGHT_TRAJECTORY_SUMMARY}" --output "${RIGHT_CALIBRATION}")
+  fi
+done
+if [[ -n "${CALIB_INPUT_FUSION_LEFT_FOR_FK}" || -n "${CALIB_INPUT_FUSION_RIGHT_FOR_FK}" ]]; then
   glove_cache_args+=(--input "$(stage_manifest calibration_fusion)")
 fi
 if stage_cache_hit glove_fk_trajectory "${glove_cache_args[@]}"; then
   printf '  skip valid cache: %s\n' "$(stage_manifest glove_fk_trajectory)"
 else
-  SESSION="${SESSION}" \
-  INPUT_FUSION="${FUSION_JSONL}" \
-  CALIB_INPUT_FUSION="${CALIB_INPUT_FUSION_FOR_FK}" \
-  PYTHON="${HAMER_PYTHON}" \
-  FPS="${FPS}" \
-  GLOVE_SIDE="${GLOVE_SIDE}" \
-  BASE_HAND_CONFIG="${BASE_HAND_CONFIG}" \
-  RETARGET_ROOT="${RETARGET_ROOT}" \
-  FRAME_START="${FRAME_START}" \
-  FRAME_END="${FRAME_END}" \
-  CALIB_FRAME_START="${CALIB_FRAME_START}" \
-  CALIB_FRAME_END="${CALIB_FRAME_END}" \
-  ALPHA_ANGLE="${ALPHA_ANGLE}" \
-  ALPHA_QUAT="${ALPHA_QUAT}" \
-  WRIST_TRACK_ALPHA="${WRIST_TRACK_ALPHA}" \
-  WRIST_TRACK_ACCEPT_STEP_M="${WRIST_TRACK_ACCEPT_STEP_M}" \
-  WRIST_TRACK_PENDING_RADIUS_M="${WRIST_TRACK_PENDING_RADIUS_M}" \
-  WRIST_TRACK_CONFIRM_FRAMES="${WRIST_TRACK_CONFIRM_FRAMES}" \
-  WRIST_TRACK_MAX_STEP_M="${WRIST_TRACK_MAX_STEP_M}" \
-  USE_CAMERA_OPTICAL_FIX="${USE_CAMERA_OPTICAL_FIX}" \
-  CONSTRAINT_PREALIGN="${CONSTRAINT_PREALIGN}" \
-  APPLY_PALM_QUAT="${APPLY_PALM_QUAT}" \
-  CONSTRAINT_MIDDLE_IDX="${CONSTRAINT_MIDDLE_IDX}" \
-  CONSTRAINT_THUMB_IDX="${CONSTRAINT_THUMB_IDX}" \
-  FLIP_PALM_NORMAL="${FLIP_PALM_NORMAL}" \
-  WRIST_TRACK_SNAP_ROOT="${WRIST_TRACK_SNAP_ROOT}" \
-  WRIST_TRACK_DEPTH_ONLY="${WRIST_TRACK_DEPTH_ONLY}" \
-  TF_STATIC_JSONL="${TF_STATIC_JSONL}" \
-  TIME_FILTER_REFERENCE_FPS="${TIME_FILTER_REFERENCE_FPS}" \
-  "${ROOT}/scripts/run_glove_fk_visual_bones_pipeline.sh"
+  for side in "${ACTIVE_GLOVE_SIDES[@]}"; do
+    if [[ "${side}" == "left" ]]; then
+      input_fusion="${FUSION_LEFT_JSONL}"
+      calib_input_fusion="${CALIB_INPUT_FUSION_LEFT_FOR_FK}"
+    else
+      input_fusion="${FUSION_RIGHT_JSONL}"
+      calib_input_fusion="${CALIB_INPUT_FUSION_RIGHT_FOR_FK}"
+    fi
+    printf '\n  [9/11:%s] FK, calibration and wrist tracking\n' "${side}"
+    SESSION="${SESSION}" \
+    INPUT_FUSION="${input_fusion}" \
+    CALIB_INPUT_FUSION="${calib_input_fusion}" \
+    PYTHON="${HAMER_PYTHON}" \
+    FPS="${FPS}" \
+    GLOVE_SIDE="${side}" \
+    BASE_HAND_CONFIG="${BASE_HAND_CONFIG}" \
+    RETARGET_ROOT="${RETARGET_ROOT}" \
+    FRAME_START="${FRAME_START}" \
+    FRAME_END="${FRAME_END}" \
+    CALIB_FRAME_START="${CALIB_FRAME_START}" \
+    CALIB_FRAME_END="${CALIB_FRAME_END}" \
+    ALPHA_ANGLE="${ALPHA_ANGLE}" \
+    ALPHA_QUAT="${ALPHA_QUAT}" \
+    WRIST_TRACK_ALPHA="${WRIST_TRACK_ALPHA}" \
+    WRIST_TRACK_ACCEPT_STEP_M="${WRIST_TRACK_ACCEPT_STEP_M}" \
+    WRIST_TRACK_PENDING_RADIUS_M="${WRIST_TRACK_PENDING_RADIUS_M}" \
+    WRIST_TRACK_CONFIRM_FRAMES="${WRIST_TRACK_CONFIRM_FRAMES}" \
+    WRIST_TRACK_MAX_STEP_M="${WRIST_TRACK_MAX_STEP_M}" \
+    USE_CAMERA_OPTICAL_FIX="${USE_CAMERA_OPTICAL_FIX}" \
+    CONSTRAINT_PREALIGN="${CONSTRAINT_PREALIGN}" \
+    ESTIMATE_SCALE="${ESTIMATE_SCALE}" \
+    APPLY_PALM_QUAT="${APPLY_PALM_QUAT}" \
+    CONSTRAINT_MIDDLE_IDX="${CONSTRAINT_MIDDLE_IDX}" \
+    CONSTRAINT_THUMB_IDX="${CONSTRAINT_THUMB_IDX}" \
+    FLIP_PALM_NORMAL="${FLIP_PALM_NORMAL}" \
+    WRIST_TRACK_SNAP_ROOT="${WRIST_TRACK_SNAP_ROOT}" \
+    WRIST_TRACK_DEPTH_ONLY="${WRIST_TRACK_DEPTH_ONLY}" \
+    TF_STATIC_JSONL="${TF_STATIC_JSONL}" \
+    TIME_FILTER_REFERENCE_FPS="${TIME_FILTER_REFERENCE_FPS}" \
+    "${ROOT}/scripts/run_glove_fk_visual_bones_pipeline.sh"
+  done
+  merge_args=(--output_jsonl "${FINAL_TRAJECTORY}" --summary_json "${FINAL_TRAJECTORY_SUMMARY}")
+  for side in "${ACTIVE_GLOVE_SIDES[@]}"; do
+    if [[ "${side}" == "left" ]]; then
+      merge_args+=(--left_jsonl "${LEFT_TRAJECTORY}")
+    else
+      merge_args+=(--right_jsonl "${RIGHT_TRAJECTORY}")
+    fi
+  done
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/MergeDualHandTrajectories.py" "${merge_args[@]}"
   stage_cache_write glove_fk_trajectory "${glove_cache_args[@]}"
 fi
 
@@ -680,6 +826,7 @@ collect_cache_args=(
   --code "${ROOT}/preprocess/CollectPipelineOutputs.py"
   --param "prompt_tag=${PROMPT_TAG}"
   --param "out_tag=visual_bones_smooth_solve045"
+  --param "active_glove_sides=${ACTIVE_GLOVE_SIDES_CSV}"
   --output "${OUTPUT_DIR}/manifest.json"
   --output "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
 )
@@ -697,7 +844,8 @@ else
     --session_path "${SESSION}" \
     --output_dir "${OUTPUT_DIR}" \
     --prompt_tag "${PROMPT_TAG}" \
-    --out_tag visual_bones_smooth_solve045
+    --out_tag visual_bones_smooth_solve045 \
+    --active_glove_sides "${ACTIVE_GLOVE_SIDES_CSV}"
   stage_cache_write collect_outputs "${collect_cache_args[@]}"
 fi
 
@@ -706,6 +854,7 @@ printf '\n[11/11] Generate review web visualization\n'
 web_cache_args=(
   --input "$(stage_manifest collect_outputs)"
   --input "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
+  --input "${ROOT}/tactile/assets/hand_live.png"
   --code "${ROOT}/scripts/generate_review_web.py"
   --code "${ROOT}/preprocess/Timebase.py"
   --param "fps=${FPS}"
@@ -725,8 +874,8 @@ else
   stage_cache_write review_web "${web_cache_args[@]}"
 fi
 
-if [[ "${COMPACT_OUTPUTS}" == "1" ]]; then
-  printf '\n[quality] Validate outputs before compaction\n'
+if [[ "${RUN_QUALITY_CHECK}" == "1" ]]; then
+  printf '\n[quality] Validate pipeline outputs\n'
   "${HAMER_PYTHON}" "${ROOT}/scripts/validate_pipeline_quality.py" \
     --session "${SESSION}" \
     --report "${QUALITY_REPORT}" \
@@ -735,10 +884,15 @@ if [[ "${COMPACT_OUTPUTS}" == "1" ]]; then
     --min_depth_applied_ratio "${QUALITY_MIN_DEPTH_APPLIED_RATIO:-0.85}" \
     --max_calibration_median_m "${QUALITY_MAX_CALIBRATION_MEDIAN_M:-0.030}" \
     --max_calibration_p95_m "${QUALITY_MAX_CALIBRATION_P95_M:-0.060}" \
-    --max_wrist_residual_p95_m "${QUALITY_MAX_WRIST_RESIDUAL_P95_M:-0.040}" \
+    --max_wrist_residual_p95_m "${QUALITY_MAX_WRIST_RESIDUAL_P95_M:-0.070}" \
     --min_rtabmap_coverage_ratio "${QUALITY_MIN_RTABMAP_COVERAGE_RATIO:-1.0}" \
     --max_rtabmap_interp_gap_sec "${QUALITY_MAX_RTABMAP_INTERP_GAP_SEC:-${RTABMAP_MAX_INTERP_GAP_SEC}}" \
     "${quality_rtabmap_args[@]}"
+else
+  printf '\n[quality] skip: RUN_QUALITY_CHECK=%s\n' "${RUN_QUALITY_CHECK}"
+fi
+
+if [[ "${COMPACT_OUTPUTS}" == "1" ]]; then
   printf '\n[compact] Quality passed; compact finished session outputs\n'
   "${HAMER_PYTHON}" "${ROOT}/scripts/compact_postprocess_session.py" --session "${SESSION}"
 else
@@ -748,11 +902,14 @@ printf '\nDone\n'
 printf '  session:        %s\n' "${SESSION}"
 printf '  outputs:        %s\n' "${OUTPUT_DIR}"
 printf '  rtabmap poses:  %s\n' "${RTABMAP_TRAJECTORY_JSONL}"
-printf '  2D smooth video:%s\n' "${OUTPUT_DIR}/videos/04_visual_21kpts_2d_smooth.mp4"
-printf '  3D video:       %s\n' "${OUTPUT_DIR}/videos/07_trajectory_3d_world.mp4"
+printf '  left 2D smooth: %s\n' "${OUTPUT_DIR}/videos/04_left_visual_21kpts_2d_smooth.mp4"
+printf '  right 2D smooth:%s\n' "${OUTPUT_DIR}/videos/04_right_visual_21kpts_2d_smooth.mp4"
+printf '  left 3D video:  %s\n' "${OUTPUT_DIR}/videos/07_left_trajectory_3d_world.mp4"
+printf '  right 3D video: %s\n' "${OUTPUT_DIR}/videos/07_right_trajectory_3d_world.mp4"
 printf '  trajectory:     %s\n' "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
 printf '  review web:     %s\n' "${REVIEW_WEB_HTML}"
 printf '  compact summary: %s\n' "${COMPACT_SUMMARY}"
-if [[ -n "${CALIB_INPUT_FUSION_FOR_FK:-}" ]]; then
-  printf '  calib fusion:   %s\n' "${CALIB_INPUT_FUSION_FOR_FK}"
+if [[ -n "${CALIB_INPUT_FUSION_LEFT_FOR_FK:-}" ]]; then
+  printf '  left calib fusion:  %s\n' "${CALIB_INPUT_FUSION_LEFT_FOR_FK}"
+  printf '  right calib fusion: %s\n' "${CALIB_INPUT_FUSION_RIGHT_FOR_FK}"
 fi

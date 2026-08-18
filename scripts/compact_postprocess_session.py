@@ -29,15 +29,23 @@ TOP_LEVEL_REMOVE_NAMES = {"preprocess", "rtabmap_pose", "calibration_handeye"}
 
 KEEP_OUTPUT_VIDEOS = {
     "00_rgb_raw.mp4",
-    "04_visual_21kpts_2d_smooth.mp4",
-    "06_glove_fk_overlay_wristroot_track.mp4",
-    "07_trajectory_3d_world.mp4",
+    "04_left_visual_21kpts_2d_smooth.mp4",
+    "04_right_visual_21kpts_2d_smooth.mp4",
+    "06_left_glove_fk_overlay_wristroot_track.mp4",
+    "06_right_glove_fk_overlay_wristroot_track.mp4",
+    "07_left_trajectory_3d_world.mp4",
+    "07_right_trajectory_3d_world.mp4",
     "07b_trajectory_3d_camera_frame.mp4",
 }
 REMOVE_OUTPUT_DATA = {
-    "glove_fk21_wristroot_track_frames.jsonl",
-    "glove_fk21_calibrated_frames.jsonl",
-    "fusion_frames.jsonl",
+    "left_glove_fk21_wristroot_track_frames.jsonl",
+    "right_glove_fk21_wristroot_track_frames.jsonl",
+    "left_glove_fk21_calibrated_frames.jsonl",
+    "right_glove_fk21_calibrated_frames.jsonl",
+    "left_fusion_frames.jsonl",
+    "right_fusion_frames.jsonl",
+    "left_visual_2d_smooth.jsonl",
+    "right_visual_2d_smooth.jsonl",
 }
 REMOVE_OUTPUT_SUMMARIES = {"hamer_aggregate.json"}
 
@@ -114,7 +122,7 @@ def write_summary(session: Path, rows: List[Dict[str, Any]], dry_run: bool) -> P
         "kept": {
             "web": "outputs/web/index.html plus web/rgb_frames and web/traj_frames",
             "videos": sorted(KEEP_OUTPUT_VIDEOS),
-            "data": ["trajectory_wristroot_track_cameraoptical.jsonl", "locate_bboxes.json", "stable_bboxes.json", "visual_2d_smooth.jsonl"],
+            "data": ["trajectory_wristroot_track_cameraoptical.jsonl", "locate_bboxes.json", "stable_bboxes.json"],
         },
     }
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

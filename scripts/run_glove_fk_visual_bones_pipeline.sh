@@ -29,6 +29,7 @@ WRIST_TRACK_CONFIRM_FRAMES="${WRIST_TRACK_CONFIRM_FRAMES:-8}"
 WRIST_TRACK_MAX_STEP_M="${WRIST_TRACK_MAX_STEP_M:-0.007}"
 USE_CAMERA_OPTICAL_FIX="${USE_CAMERA_OPTICAL_FIX:-1}"
 CONSTRAINT_PREALIGN="${CONSTRAINT_PREALIGN:-1}"
+ESTIMATE_SCALE="${ESTIMATE_SCALE:-1}"
 APPLY_PALM_QUAT="${APPLY_PALM_QUAT:-1}"
 CONSTRAINT_MIDDLE_IDX="${CONSTRAINT_MIDDLE_IDX:-9}"
 CONSTRAINT_THUMB_IDX="${CONSTRAINT_THUMB_IDX:-2}"
@@ -38,18 +39,19 @@ WRIST_TRACK_DEPTH_ONLY="${WRIST_TRACK_DEPTH_ONLY:-1}"
 TIME_FILTER_REFERENCE_FPS="${TIME_FILTER_REFERENCE_FPS:-30}"
 
 OUT_TAG="visual_bones_smooth_solve045"
+SIDE_TAG="${GLOVE_SIDE}"
 if [[ -n "${CALIB_INPUT_FUSION}" ]]; then
-  CONFIG_DIR="${SESSION}/hand_config_visual_bones_calib_video"
-  VISUAL_CONFIG="${CONFIG_DIR}/hand_config_visual_bones_calib_video.json"
-  VISUAL_CONFIG_SUMMARY="${CONFIG_DIR}/hand_config_visual_bones_calib_video_summary.json"
+  CONFIG_DIR="${SESSION}/hand_config_visual_bones_calib_video_${SIDE_TAG}"
+  VISUAL_CONFIG="${CONFIG_DIR}/hand_config_visual_bones_calib_video_${SIDE_TAG}.json"
+  VISUAL_CONFIG_SUMMARY="${CONFIG_DIR}/hand_config_visual_bones_calib_video_${SIDE_TAG}_summary.json"
 else
-  CONFIG_DIR="${SESSION}/hand_config_visual_bones_${FRAME_START}_${FRAME_END}"
-  VISUAL_CONFIG="${CONFIG_DIR}/hand_config_visual_bones_${FRAME_START}_${FRAME_END}.json"
-  VISUAL_CONFIG_SUMMARY="${CONFIG_DIR}/hand_config_visual_bones_${FRAME_START}_${FRAME_END}_summary.json"
+  CONFIG_DIR="${SESSION}/hand_config_visual_bones_${FRAME_START}_${FRAME_END}_${SIDE_TAG}"
+  VISUAL_CONFIG="${CONFIG_DIR}/hand_config_visual_bones_${FRAME_START}_${FRAME_END}_${SIDE_TAG}.json"
+  VISUAL_CONFIG_SUMMARY="${CONFIG_DIR}/hand_config_visual_bones_${FRAME_START}_${FRAME_END}_${SIDE_TAG}_summary.json"
 fi
-SMOOTH_DIR="${SESSION}/fusion_input_force_right_depthroot_smooth_solve045"
-FK_DIR="${SESSION}/glove_fk21_${OUT_TAG}"
-CALIB_WORK_DIR="${SESSION}/handeye_calibration_${OUT_TAG}"
+SMOOTH_DIR="${SESSION}/fusion_input_${SIDE_TAG}_depthroot_smooth_solve045"
+FK_DIR="${SESSION}/glove_fk21_${OUT_TAG}_${SIDE_TAG}"
+CALIB_WORK_DIR="${SESSION}/handeye_calibration_${OUT_TAG}_${SIDE_TAG}"
 
 SMOOTH_FUSION="${SMOOTH_DIR}/fusion_frames_smooth_solve045.jsonl"
 SMOOTH_SUMMARY="${SMOOTH_DIR}/smooth_solve045_summary.json"
@@ -185,8 +187,13 @@ if [[ "${CONSTRAINT_PREALIGN}" == "1" ]]; then
     --thumb_idx "${CONSTRAINT_THUMB_IDX}"
   )
 fi
+if [[ "${ESTIMATE_SCALE}" == "1" ]]; then
+  CALIB_ARGS+=(--estimate_scale)
+else
+  CALIB_ARGS+=(--no-estimate_scale)
+fi
 
-printf '\n[5/13] Calibrate fixed R_cam_glove from %s (constraint_prealign=%s, middle=%s, thumb=%s)\n' "${CALIB_SOURCE_LABEL}" "${CONSTRAINT_PREALIGN}" "${CONSTRAINT_MIDDLE_IDX}" "${CONSTRAINT_THUMB_IDX}"
+printf '\n[5/13] Calibrate glove-to-camera transform from %s (constraint_prealign=%s, estimate_scale=%s, middle=%s, thumb=%s)\n' "${CALIB_SOURCE_LABEL}" "${CONSTRAINT_PREALIGN}" "${ESTIMATE_SCALE}" "${CONSTRAINT_MIDDLE_IDX}" "${CONSTRAINT_THUMB_IDX}"
 printf '  input: %s\n' "${CALIB_FK_FOR_ROTATION}"
 "${PYTHON}" "${ROOT}/preprocess/CalibrateGloveFkToCamera.py" "${CALIB_ARGS[@]}"
 

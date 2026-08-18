@@ -74,7 +74,9 @@ def build(args: argparse.Namespace) -> Dict:
         "visual_prior_valid": 0,
         "hand_frame_present": 0,
         "imu_left_present": 0,
+        "imu_right_present": 0,
         "solve_state_left_present": 0,
+        "solve_state_right_present": 0,
     }
 
     for fk_row in fk_rows:
@@ -103,8 +105,12 @@ def build(args: argparse.Namespace) -> Dict:
             stats["hand_frame_present"] += 1
             if hand_frame.get("imu_left"):
                 stats["imu_left_present"] += 1
+            if hand_frame.get("imu_right"):
+                stats["imu_right_present"] += 1
             if hand_frame.get("solve_state_left"):
                 stats["solve_state_left_present"] += 1
+            if hand_frame.get("solve_state_right"):
+                stats["solve_state_right_present"] += 1
 
         out_rows.append({
             "frame": frame,
@@ -145,12 +151,17 @@ def build(args: argparse.Namespace) -> Dict:
             "hand_frame": {
                 "bag_time_ns": hand_frame.get("bag_time_ns"),
                 "imu_stamp_left_ns": hand_frame.get("imu_stamp_left_ns"),
+                "imu_stamp_right_ns": hand_frame.get("imu_stamp_right_ns"),
                 "pressure_stamp_left_ns": hand_frame.get("pressure_stamp_left_ns"),
+                "pressure_stamp_right_ns": hand_frame.get("pressure_stamp_right_ns"),
                 "imu_left": hand_frame.get("imu_left"),
+                "imu_right": hand_frame.get("imu_right"),
                 "pressure_left": hand_frame.get("pressure_left"),
                 "pressure_right": hand_frame.get("pressure_right"),
                 "solve_state_left": hand_frame.get("solve_state_left"),
+                "solve_state_right": hand_frame.get("solve_state_right"),
                 "solve_state_left_raw_before_smooth": hand_frame.get("solve_state_left_raw_before_smooth"),
+                "solve_state_right_raw_before_smooth": hand_frame.get("solve_state_right_raw_before_smooth"),
                 "valid": hand_frame.get("valid"),
             },
             "processing": {
@@ -197,7 +208,7 @@ def main() -> None:
     args = build_parser().parse_args()
     summary = build(args)
     print(f"[BuildUnifiedTrajectory] output: {args.output_jsonl}")
-    print(f"[BuildUnifiedTrajectory] summary: {json.dumps(summary, ensure_ascii=False)}")
+    print(f"[BuildUnifiedTrajectory] stats: {json.dumps(summary['stats'], ensure_ascii=False)}")
 
 
 if __name__ == "__main__":

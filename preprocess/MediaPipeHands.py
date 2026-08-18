@@ -688,7 +688,7 @@ class MediaPipeHandsGenerator:
 # Standalone runner
 # ==================================================================
 
-def _build_aria_cam_from_disk(mps_path: str):
+def _build_aria_cam_from_disk(mps_path: str, camera_json_dir: str = None):
     """
     Reconstruct a lightweight Cam object from per-frame JSON files on disk.
     This allows running MediaPipeHands standalone (without the full Preprocess pipeline).
@@ -698,6 +698,7 @@ def _build_aria_cam_from_disk(mps_path: str):
     import cv2
 
     all_data_dir = os.path.join(mps_path, "preprocess", "all_data")
+    camera_json_dir = camera_json_dir or all_data_dir
     if not os.path.isdir(all_data_dir):
         raise FileNotFoundError(f"all_data directory not found: {all_data_dir}")
 
@@ -710,7 +711,7 @@ def _build_aria_cam_from_disk(mps_path: str):
 
     for fn in frame_dirs:
         frame_dir = os.path.join(all_data_dir, fn)
-        cam_json_path = os.path.join(frame_dir, "aria_cam_rgb.json")
+        cam_json_path = os.path.join(camera_json_dir, fn, "aria_cam_rgb.json")
         rgb_path = os.path.join(frame_dir, "rgb.png")
 
         if not os.path.exists(cam_json_path) or not os.path.exists(rgb_path):
@@ -743,7 +744,7 @@ def _build_aria_cam_from_disk(mps_path: str):
         cam.w = cam.cam[0].w
         cam.fps = 30  # Default Aria RGB FPS; overridden if aria_cam_rgb.json has fps field
         if len(cam.cam) > 0:
-            first_cam_json = os.path.join(all_data_dir, frame_dirs[0], "aria_cam_rgb.json")
+            first_cam_json = os.path.join(camera_json_dir, frame_dirs[0], "aria_cam_rgb.json")
             if os.path.exists(first_cam_json):
                 with open(first_cam_json, 'r') as f:
                     first_d = json.load(f)

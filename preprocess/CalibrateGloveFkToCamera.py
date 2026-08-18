@@ -325,7 +325,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--frame_start", type=int, default=None)
     parser.add_argument("--frame_end", type=int, default=None)
     parser.add_argument("--indices", default=",".join(str(i) for i in DEFAULT_INDICES))
-    parser.add_argument("--estimate_scale", action="store_true")
+    parser.add_argument(
+        "--estimate_scale",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Estimate and apply glove-to-visual scale (default: enabled). Use --no-estimate_scale only for controlled comparisons.",
+    )
     parser.add_argument("--constraint_prealign", action="store_true")
     parser.add_argument("--middle_idx", type=int, default=9)
     parser.add_argument("--thumb_idx", type=int, default=2)
@@ -337,7 +342,12 @@ def main() -> None:
     args = build_parser().parse_args()
     summary = build(args)
     print(f"[CalibrateGloveFkToCamera] output: {args.output_json}")
-    print(f"[CalibrateGloveFkToCamera] summary: {json.dumps(summary, ensure_ascii=False)}")
+    fit = summary["fit_error_m"]
+    print(
+        "[CalibrateGloveFkToCamera] "
+        f"frames={summary['used_frame_count']} points={summary['point_pair_count']} "
+        f"scale={summary['scale']:.6f} median={fit['median']:.6f}m p95={fit['p95']:.6f}m"
+    )
 
 
 if __name__ == "__main__":

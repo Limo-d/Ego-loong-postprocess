@@ -38,6 +38,7 @@ def read_jsonl(path: Path) -> List[Dict]:
 
 def build(args: argparse.Namespace) -> Dict:
     all_data_dir = Path(args.all_data_dir).expanduser().resolve()
+    output_dir = Path(args.output_dir).expanduser().resolve() if args.output_dir else all_data_dir
     trajectory_jsonl = Path(args.trajectory_jsonl).expanduser().resolve()
     pose_rows = {str(row["frame"]): row for row in read_jsonl(trajectory_jsonl)}
 
@@ -81,11 +82,12 @@ def build(args: argparse.Namespace) -> Dict:
         sync["rtabmap_pose_stamp_ns"] = int(pose_row["rgb_stamp_ns"])
         sync["rtabmap_pose_stamp_sec"] = float(pose_row["stamp"])
         cam["sync"] = sync
-        pending.append((cam_path, cam))
+        pending.append((output_dir / frame / args.camera_json_name, cam))
 
     total_frames = len(frame_dirs)
     summary = {
         "all_data_dir": str(all_data_dir),
+        "output_dir": str(output_dir),
         "trajectory_jsonl": str(trajectory_jsonl),
         "camera_json_name": args.camera_json_name,
         "trajectory_frames": len(pose_rows),
@@ -121,6 +123,7 @@ def build(args: argparse.Namespace) -> Dict:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Apply interpolated camera c2w poses to preprocess/all_data frame JSON files.")
     parser.add_argument("--all_data_dir", required=True)
+    parser.add_argument("--output_dir", default=None, help="Write updated camera JSON under this per-frame root; defaults to in-place for backward compatibility.")
     parser.add_argument("--trajectory_jsonl", required=True)
     parser.add_argument("--summary_json", default=None)
     parser.add_argument("--camera_json_name", default="aria_cam_rgb.json")

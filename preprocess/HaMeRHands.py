@@ -38,6 +38,8 @@ Requirements:
 ====================================================================================================
 """
 
+import contextlib
+import io
 import os
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 os.environ.setdefault("YOLO_CONFIG_DIR", "/tmp/ultralytics")
@@ -345,7 +347,11 @@ class HaMeRModel:
             # Ensure checkpoint + MANO files are present (download from HF if needed)
             ckpt_path = _ensure_hamer_ckpts()
             self.checkpoint_path = ckpt_path
-            self.model, self.cfg = load_hamer(ckpt_path)
+            # Lightning prints thousands of expected key mismatches for this
+            # inference-only checkpoint load. Real load failures are still
+            # surfaced by the exception handler below.
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                self.model, self.cfg = load_hamer(ckpt_path)
             self.model = self.model.to(self.device)
             self.model.eval()
             self.faces = np.asarray(self.model.mano.faces, dtype=np.int32)

@@ -57,17 +57,16 @@ TRAJECTORY_FRAME_H = 328
 TACTILE_BASELINE_FRAMES = 24
 TACTILE_MIN_SCALE = 0.02
 TACTILE_DISPLAY_SCALE_MULTIPLIER = 1.60
-TACTILE_RESPONSE_GAMMA = 0.78
 TACTILE_SENSOR_DEADZONE_PERCENTILE = 60.0
 TACTILE_SENSOR_DEADZONE_MIN = 0.08
-TACTILE_BG_TOP_BGR = (252, 248, 242)
+TACTILE_BG_TOP_BGR = (250, 245, 237)  # Live UI #edf5fa, stored as BGR.
 TACTILE_BG_BOTTOM_BGR = (246, 238, 228)
 TACTILE_CANVAS_BG = "#e4eef6"
 TRAJECTORY_CANVAS_BG = "#e4eef6"
 TRAJECTORY_BG_TOP_BGR = (252, 248, 242)
 TRAJECTORY_BG_BOTTOM_BGR = (246, 238, 228)
 TRAJECTORY_MIRROR_LEFT_HAND = False
-TACTILE_HAND_ASSET = Path("/home/lenovo/Downloads/ourhost/assets/hand_live.png")
+TACTILE_HAND_ASSET = ROOT / "tactile" / "assets" / "hand_live.png"
 
 TACTILE_FINGER_POINTS = {
     "A": [(0.876, 0.518), (0.909, 0.502), (0.815, 0.607), (0.850, 0.586)],
@@ -85,18 +84,32 @@ TACTILE_PALM_ROWS = [
     (0.855, 0.289, 0.570),
 ]
 TACTILE_COLOR_STOPS = [
-    (0.00, (170, 108, 35)),
-    (0.45, (220, 210, 44)),
-    (0.70, (205, 230, 65)),
-    (0.86, (64, 178, 255)),
-    (1.00, (76, 76, 255)),
+    # Exact Live UI RGB ramp converted to OpenCV BGR.
+    (0.00, (220, 179, 112)),
+    (0.45, (200, 191, 71)),
+    (0.70, (91, 196, 240)),
+    (0.86, (67, 144, 238)),
+    (1.00, (83, 83, 211)),
 ]
+
+# Visual slot -> incoming sensor index. This is the same left-glove correction
+# used by Ego-Loong-Live: the two physical wrist rows arrive exchanged.
+TACTILE_LEFT_VISUAL_SOURCE = np.arange(TACTILE_SENSOR_COUNT, dtype=np.int64)
+TACTILE_LEFT_VISUAL_SOURCE[36:44] = np.arange(60, 68)
+TACTILE_LEFT_VISUAL_SOURCE[60:68] = np.arange(36, 44)
 
 
 def read_json(path: Path, default: Dict[str, Any]) -> Dict[str, Any]:
     if not path.exists():
         return default
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def checked_imwrite(path: Path, image: np.ndarray, params: Optional[List[int]] = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ok = cv2.imwrite(str(path), image, params or [])
+    if not ok:
+        raise OSError(f"Failed to write image: {path}")
 
 
 def load_rows(traj_path: Path) -> tuple[List[Dict[str, Any]], List[np.ndarray], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
@@ -109,13 +122,21 @@ def load_rows(traj_path: Path) -> tuple[List[Dict[str, Any]], List[np.ndarray], 
         if not line.strip():
             continue
         row = json.loads(line)
-        pts = (row.get("glove") or {}).get("kpts_3d_world_m")
         mat = (row.get("head_pose") or {}).get("c2w") or (row.get("camera") or {}).get("c2w")
-        item: Dict[str, Any] = {"hand": None, "head": None, "axes": None}
-        if pts is not None:
+        item: Dict[str, Any] = {"hand": None, "hand_l": None, "hand_r": None, "head": None, "axes": None}
+        hand_sources = row.get("hands") or {}
+        if not hand_sources:
+            legacy_side = str((row.get("glove") or {}).get("side") or "left")
+            hand_sources = {legacy_side: {"glove": row.get("glove")}}
+        for side, key in (("left", "hand_l"), ("right", "hand_r")):
+            pts = (((hand_sources.get(side) or {}).get("glove") or {}).get("kpts_3d_world_m"))
+            if pts is None:
+                continue
             arr = np.asarray(pts, dtype=np.float64)
             if arr.shape[0] >= 21 and np.isfinite(arr[:21, :3]).all():
-                item["hand"] = arr[:21, :3]
+                item[key] = arr[:21, :3]
+                if item["hand"] is None:
+                    item["hand"] = arr[:21, :3]
                 all_points.append(arr[:21, :3])
                 wrists.append(arr[0, :3])
                 hand_offsets.append(arr[:21, :3] - arr[0, :3][None, :])
@@ -343,7 +364,7 @@ def align_middle_vertical_for_display(hand: np.ndarray, view_u: np.ndarray, view
 def render_trajectory_frames(rows: List[Dict[str, Any]], projector: WorldProjector, out_dir: Path, hand_display_rotate_deg: float = 0.0, hand_display_scale: float = 2.0, align_middle_vertical: bool = True) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     width, height = projector.width, projector.height
-    wrist_path: List[np.ndarray] = []
+    wrist_paths: Dict[str, List[np.ndarray]] = {"hand_l": [], "hand_r": []}
     head_path: List[np.ndarray] = []
     for idx, row in enumerate(rows):
         img = np.empty((height, width, 3), dtype=np.uint8)
@@ -354,21 +375,26 @@ def render_trajectory_frames(rows: List[Dict[str, Any]], projector: WorldProject
             img[yy, :] = np.clip(top * (1.0 - t) + bottom * t, 0, 255).astype(np.uint8)
         draw_back_wall(img, projector)
 
-        hand: Optional[np.ndarray] = row.get("hand")
-        if hand is not None:
+        hands: Dict[str, Optional[np.ndarray]] = {key: row.get(key) for key in ("hand_l", "hand_r")}
+        for key, hand in list(hands.items()):
+            if hand is None:
+                continue
             if align_middle_vertical:
                 hand = rotate_hand_about_wrist_for_display(hand, 0.0, scale=hand_display_scale, view_u=projector.view_u, view_v=projector.view_v)
                 hand = align_middle_vertical_for_display(hand, projector.view_u, projector.view_v, middle_idx=9)
             else:
                 hand = rotate_hand_about_wrist_for_display(hand, hand_display_rotate_deg, scale=hand_display_scale, view_u=projector.view_u, view_v=projector.view_v)
+            hands[key] = hand
         head: Optional[np.ndarray] = row.get("head")
         axes: Optional[np.ndarray] = row.get("axes")
-        if hand is not None:
-            wrist_path.append(hand[0].copy())
+        for key, hand in hands.items():
+            if hand is not None:
+                wrist_paths[key].append(hand[0].copy())
         if head is not None:
             head_path.append(head.copy())
 
-        for path, color, thickness in ((head_path[-120:], C_HEAD, 2), (wrist_path[-120:], C_WRIST, 2)):
+        paths = ((head_path[-120:], C_HEAD, 2), (wrist_paths["hand_l"][-120:], (255, 205, 85), 2), (wrist_paths["hand_r"][-120:], (85, 190, 255), 2))
+        for path, color, thickness in paths:
             for k in range(1, len(path)):
                 alpha = 0.16 + 0.60 * k / max(1, len(path) - 1)
                 draw_line(img, projector.project(path[k - 1]), projector.project(path[k]), color, thickness, alpha)
@@ -381,7 +407,9 @@ def render_trajectory_frames(rows: List[Dict[str, Any]], projector: WorldProject
             cv2.circle(img, origin, 5, (230, 238, 247), -1, cv2.LINE_AA)
             cv2.circle(img, origin, 6, (4, 9, 18), 1, cv2.LINE_AA)
 
-        if hand is not None:
+        for hand in hands.values():
+            if hand is None:
+                continue
             for a, b in BONES:
                 draw_line(img, projector.project(hand[a]), projector.project(hand[b]), finger_color(b), 3, 0.96)
             for joint_idx, point in enumerate(hand):
@@ -395,7 +423,7 @@ def render_trajectory_frames(rows: List[Dict[str, Any]], projector: WorldProject
         cv2.putText(img, "hand_l", (x0 + 42, y0 + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.43, C_TEXT, 1, cv2.LINE_AA)
         cv2.line(img, (x0 + 118, y0), (x0 + 152, y0), C_HEAD, 2, cv2.LINE_AA)
         cv2.putText(img, "head", (x0 + 160, y0 + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.43, C_TEXT, 1, cv2.LINE_AA)
-        cv2.imwrite(str(out_dir / f"{idx:05d}.jpg"), img, [int(cv2.IMWRITE_JPEG_QUALITY), 91])
+        checked_imwrite(out_dir / f"{idx:05d}.jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 91])
 
 
 def render_rgb_frames(session: Path, out_dir: Path, frame_count: int, max_width: int = 960, jpeg_quality: int = 88) -> int:
@@ -427,7 +455,7 @@ def render_rgb_frames(session: Path, out_dir: Path, frame_count: int, max_width:
         if max_width > 0 and w > max_width:
             scale = max_width / float(w)
             img = cv2.resize(img, (max_width, max(1, int(round(h * scale)))), interpolation=cv2.INTER_AREA)
-        cv2.imwrite(str(out_dir / f"{idx:05d}.jpg"), img, [int(cv2.IMWRITE_JPEG_QUALITY), int(jpeg_quality)])
+        checked_imwrite(out_dir / f"{idx:05d}.jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), int(jpeg_quality)])
         written += 1
     if written == 0:
         raise RuntimeError(f"No RGB frames exported from {src_root}")
@@ -453,7 +481,6 @@ def _live_tactile_points() -> np.ndarray:
 def _load_live_tactile_hand() -> np.ndarray:
     candidates = [
         TACTILE_HAND_ASSET,
-        Path("/home/lenovo/Downloads/ourhost/assets/hand.png"),
         Path(__file__).resolve().parents[1] / "tactile" / "assets" / "sensor_layout.png",
     ]
     for asset_path in candidates:
@@ -510,10 +537,10 @@ def _blend_radial(img: np.ndarray, center: tuple[float, float], radius: float, c
     dist = np.sqrt((xx - x) ** 2 + (yy - y) ** 2)
     t = dist / max(radius, 1e-6)
     alpha = np.zeros_like(t, dtype=np.float32)
-    inner = t <= 0.34
-    outer = (t > 0.34) & (t <= 1.0)
-    alpha[inner] = 0.92 + (0.42 - 0.92) * (t[inner] / 0.34)
-    alpha[outer] = 0.42 * (1.0 - (t[outer] - 0.34) / 0.66)
+    inner = t <= 0.40
+    outer = (t > 0.40) & (t <= 1.0)
+    alpha[inner] = 0.95 + (0.42 - 0.95) * (t[inner] / 0.40)
+    alpha[outer] = 0.42 * (1.0 - (t[outer] - 0.40) / 0.60)
     patch = img[y0:y1, x0:x1].astype(np.float32)
     patch = patch * (1.0 - alpha[..., None]) + np.asarray(color, dtype=np.float32)[None, None, :] * alpha[..., None]
     img[y0:y1, x0:x1] = patch
@@ -556,40 +583,66 @@ def _overlay_rgba(dst: np.ndarray, src_rgba: np.ndarray, x0: int, y0: int) -> No
     dst[dy0:dy1, dx0:dx1] = dst[dy0:dy1, dx0:dx1] * (1.0 - alpha) + patch[:, :, :3] * alpha
 
 
-def _draw_live_tactile_hand(canvas: np.ndarray, values: np.ndarray, points: np.ndarray, hand_asset: np.ndarray, vmax: float, rect: tuple[int, int, int, int], label: str, mirror: bool = False) -> float:
+def _draw_live_tactile_hand(canvas: np.ndarray, values: np.ndarray, points: np.ndarray, hand_asset: np.ndarray, vmax: float, rect: tuple[int, int, int, int], mirror: bool = False, remap_left: bool = False) -> tuple[float, float, int, int]:
     x, y, rect_w, rect_h = rect
     hand = _hand_rgba_without_gray_background(hand_asset, rect_h).copy()
     if mirror:
         hand = hand[:, ::-1].copy()
     hand_alpha = hand[:, :, 3:4].copy()
     display = np.clip(values.astype(np.float64) / max(vmax, 1e-9) * 100.0, 0.0, 100.0)
+    if remap_left:
+        display = display[TACTILE_LEFT_VISUAL_SOURCE]
     h, w = hand.shape[:2]
     heat_bgr = hand[:, :, :3]
     for (px, py), value in zip(points, display):
         if not np.isfinite(value) or value <= 0.0:
             continue
-        visual = float(np.power(min(1.0, value / 100.0), TACTILE_RESPONSE_GAMMA))
+        visual = float(min(1.0, value / 100.0))
         sx = 1.0 - float(px) if mirror else float(px)
         cx = sx * w
         cy = float(py) * h
-        _blend_radial(heat_bgr, (cx, cy), 9.0 + visual * 24.0, _tactile_ramp(visual))
-        _blend_circle(heat_bgr, (cx, cy), 2.2 + visual * 1.8, _tactile_ramp(min(1.0, visual + 0.16)), 0.95)
+        size = min(w, h)
+        _blend_radial(heat_bgr, (cx, cy), 4.0 + visual * size * 0.045, _tactile_ramp(visual))
+        _blend_circle(heat_bgr, (cx, cy), 2.0 + visual * 2.5, _tactile_ramp(min(1.0, visual + 0.15)), 1.0)
     hand[:, :, 3:4] = hand_alpha
     x0 = x + (rect_w - hand.shape[1]) // 2
     y0 = y + (rect_h - hand.shape[0]) // 2
     _overlay_rgba(canvas, hand, x0, y0)
-    return float(np.nanmax(values)) if values.size else 0.0
+    finite = display[np.isfinite(display)]
+    if not finite.size:
+        return 0.0, 0.0, 0, 0
+    return float(np.max(finite)), float(np.mean(finite)), int(np.sum(finite > 0.0)), int(np.sum(finite >= 70.0))
 
 
-def _render_live_tactile_frame(left_values: np.ndarray, right_values: np.ndarray, points: np.ndarray, hand_asset: np.ndarray, vmax: float) -> np.ndarray:
+def _draw_tactile_stats(canvas: np.ndarray, stats: tuple[float, float, int, int], x: int, y: int, width: int) -> None:
+    labels = ("MAX", "AVG", "CONTACT", "HIGH")
+    values = (f"{stats[0]:.1f}", f"{stats[1]:.1f}", str(stats[2]), str(stats[3]))
+    cell_w = width / 4.0
+    for i, (label, value) in enumerate(zip(labels, values)):
+        cx = int(round(x + (i + 0.5) * cell_w))
+        cv2.putText(canvas, label, (cx - 18, y), cv2.FONT_HERSHEY_SIMPLEX, 0.27, (167, 149, 128), 1, cv2.LINE_AA)
+        cv2.putText(canvas, value, (cx - 14, y + 13), cv2.FONT_HERSHEY_SIMPLEX, 0.34, (116, 90, 53), 1, cv2.LINE_AA)
+
+
+def _render_live_tactile_frame(left_values: np.ndarray, right_values: np.ndarray, points: np.ndarray, hand_asset: np.ndarray, left_vmax: float, right_vmax: float) -> np.ndarray:
     canvas = np.empty((TACTILE_FRAME_H, TACTILE_FRAME_W, 3), dtype=np.float32)
     top = np.asarray(TACTILE_BG_TOP_BGR, dtype=np.float32)
     bottom = np.asarray(TACTILE_BG_BOTTOM_BGR, dtype=np.float32)
     for yy in range(TACTILE_FRAME_H):
         t = yy / max(1, TACTILE_FRAME_H - 1)
         canvas[yy, :] = top * (1.0 - t) + bottom * t
-    left_peak = _draw_live_tactile_hand(canvas, left_values, points, hand_asset, vmax, (24, 38, 300, 290), "hand_left", mirror=False)
-    _draw_live_tactile_hand(canvas, right_values, points, hand_asset, vmax, (352, 38, 300, 290), "hand_right", mirror=True)
+    # Match the Live dashboard's paired tactile cards inside the review panel.
+    for x in (10, 346):
+        cv2.rectangle(canvas, (x, 8), (x + 320, 319), (255, 255, 255), -1, cv2.LINE_AA)
+        cv2.rectangle(canvas, (x, 8), (x + 320, 319), (243, 235, 223), 1, cv2.LINE_AA)
+        cv2.rectangle(canvas, (x + 8, 36), (x + 312, 278), (250, 245, 237), -1, cv2.LINE_AA)
+        cv2.rectangle(canvas, (x + 8, 36), (x + 312, 278), (243, 235, 223), 1, cv2.LINE_AA)
+    cv2.putText(canvas, "LEFT TACTILE", (24, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (116, 90, 53), 1, cv2.LINE_AA)
+    cv2.putText(canvas, "RIGHT TACTILE", (360, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.43, (116, 90, 53), 1, cv2.LINE_AA)
+    left_stats = _draw_live_tactile_hand(canvas, left_values, points, hand_asset, left_vmax, (30, 38, 280, 236), mirror=False, remap_left=True)
+    right_stats = _draw_live_tactile_hand(canvas, right_values, points, hand_asset, right_vmax, (366, 38, 280, 236), mirror=True)
+    _draw_tactile_stats(canvas, left_stats, 20, 294, 300)
+    _draw_tactile_stats(canvas, right_stats, 356, 294, 300)
     return np.clip(canvas, 0.0, 255.0).astype(np.uint8)
 
 
@@ -598,7 +651,7 @@ def _tactile_delta(values: np.ndarray) -> tuple[np.ndarray, float]:
         return values, 1.0
     n_base = min(TACTILE_BASELINE_FRAMES, values.shape[0])
     baseline = np.nanmedian(values[:n_base], axis=0) if n_base > 0 else np.zeros(TACTILE_SENSOR_COUNT)
-    delta = np.abs(values - baseline[None, :])
+    delta = np.maximum(0.0, values - baseline[None, :])
     finite = delta[np.isfinite(delta)]
     if finite.size == 0:
         return np.zeros_like(values), 1.0
@@ -613,25 +666,31 @@ def _tactile_delta(values: np.ndarray) -> tuple[np.ndarray, float]:
     return delta, vmax
 
 
-def load_tactile_rows(traj_path: Path, frame_count: int) -> tuple[np.ndarray, bool]:
-    left: List[List[float]] = []
-    has_left = False
+def load_tactile_rows(traj_path: Path, frame_count: int) -> tuple[np.ndarray, np.ndarray, bool, bool]:
+    sides: Dict[str, List[List[float]]] = {"left": [], "right": []}
+    has_data = {"left": False, "right": False}
     for line in traj_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        raw = (row.get("hand_frame") or {}).get("pressure_left")
-        ok = isinstance(raw, list) and len(raw) == TACTILE_SENSOR_COUNT
-        if ok:
-            arr = [float(v) for v in raw]
-            if any(np.isfinite(arr)) and any(abs(v) > 1e-9 for v in arr if np.isfinite(v)):
-                has_left = True
-        else:
-            arr = [0.0] * TACTILE_SENSOR_COUNT
-        left.append(arr)
-    while len(left) < frame_count:
-        left.append([0.0] * TACTILE_SENSOR_COUNT)
-    return np.asarray(left[:frame_count], dtype=np.float64), has_left
+        hand_frame = row.get("hand_frame") or {}
+        for side in ("left", "right"):
+            raw = hand_frame.get(f"pressure_{side}")
+            ok = isinstance(raw, list) and len(raw) == TACTILE_SENSOR_COUNT
+            if ok:
+                arr = [float(v) for v in raw]
+                finite = [v for v in arr if np.isfinite(v)]
+                if finite and any(abs(v) > 1e-9 for v in finite):
+                    has_data[side] = True
+            else:
+                arr = [0.0] * TACTILE_SENSOR_COUNT
+            sides[side].append(arr)
+    for side in ("left", "right"):
+        while len(sides[side]) < frame_count:
+            sides[side].append([0.0] * TACTILE_SENSOR_COUNT)
+    left = np.asarray(sides["left"][:frame_count], dtype=np.float64)
+    right = np.asarray(sides["right"][:frame_count], dtype=np.float64)
+    return left, right, has_data["left"], has_data["right"]
 
 def render_tactile_frames(traj_path: Path, out_dir: Path, frame_count: int) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -639,14 +698,15 @@ def render_tactile_frames(traj_path: Path, out_dir: Path, frame_count: int) -> i
         old.unlink()
     points = _live_tactile_points()
     hand_asset = _load_live_tactile_hand()
-    left, has_left = load_tactile_rows(traj_path, frame_count)
+    left, right, has_left, has_right = load_tactile_rows(traj_path, frame_count)
     left_delta, left_vmax = _tactile_delta(left)
-    vmax = max(left_vmax if has_left else 0.0, TACTILE_MIN_SCALE)
+    right_delta, right_vmax = _tactile_delta(right)
+    left_vmax = max(left_vmax if has_left else 0.0, TACTILE_MIN_SCALE)
+    right_vmax = max(right_vmax if has_right else 0.0, TACTILE_MIN_SCALE)
     written = 0
-    right_zero = np.zeros(TACTILE_SENSOR_COUNT, dtype=np.float64)
     for i in range(frame_count):
-        canvas = _render_live_tactile_frame(left_delta[i], right_zero, points, hand_asset, vmax)
-        cv2.imwrite(str(out_dir / f"{i:05d}.jpg"), canvas, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+        canvas = _render_live_tactile_frame(left_delta[i], right_delta[i], points, hand_asset, left_vmax, right_vmax)
+        checked_imwrite(out_dir / f"{i:05d}.jpg", canvas, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
         written += 1
     return written
 
@@ -692,8 +752,10 @@ def build_trajectory_web_data(rows: List[Dict[str, Any]], all_points: List[np.nd
     frames: List[Dict[str, Any]] = []
     for row in rows:
         item: Dict[str, Any] = {}
-        hand = row.get("hand")
-        if hand is not None:
+        for key in ("hand_l", "hand_r"):
+            hand = row.get(key)
+            if hand is None:
+                continue
             hand_arr = np.asarray(hand, dtype=np.float64).copy()
             if hand_arr.shape[0] > 1:
                 root = hand_arr[0].copy()
@@ -705,7 +767,7 @@ def build_trajectory_web_data(rows: List[Dict[str, Any]], all_points: List[np.nd
                         axis = axis / axis_norm
                         rel = hand_arr - root[None, :]
                         hand_arr = root[None, :] + 2.0 * (rel @ axis)[:, None] * axis[None, :] - rel
-            item["hand"] = np.round(hand_arr, 5).tolist()
+            item[key] = np.round(hand_arr, 5).tolist()
         head = row.get("head")
         if head is not None:
             item["head"] = np.round(np.asarray(head, dtype=np.float64), 5).tolist()
@@ -769,7 +831,8 @@ function projectTrajHand(pt,root){{const q=projectTraj(pt),r=projectTraj(root);q
 function line3(a,b,color,width=2,alpha=1,mirrorRoot=null){{const p=mirrorRoot?projectTrajHand(a,mirrorRoot):projectTraj(a),q=mirrorRoot?projectTrajHand(b,mirrorRoot):projectTraj(b);trajCtx.globalAlpha=alpha;trajCtx.strokeStyle=color;trajCtx.lineWidth=width;trajCtx.lineCap='round';trajCtx.beginPath();trajCtx.moveTo(p[0],p[1]);trajCtx.lineTo(q[0],q[1]);trajCtx.stroke();trajCtx.globalAlpha=1;}}
 function dot3(p,r,color,stroke='#ffffff',mirrorRoot=null){{const q=mirrorRoot?projectTrajHand(p,mirrorRoot):projectTraj(p);trajCtx.fillStyle=color;trajCtx.beginPath();trajCtx.arc(q[0],q[1],r,0,Math.PI*2);trajCtx.fill();trajCtx.strokeStyle=stroke;trajCtx.lineWidth=1;trajCtx.stroke();}}
 function drawTrajGrid(w,h){{const g=trajCtx.createLinearGradient(0,0,0,h);g.addColorStop(0,'#f2f8fc');g.addColorStop(1,'#e4eef6');trajCtx.fillStyle=g;trajCtx.fillRect(0,0,w,h);for(let x=0;x<=w;x+=28){{const major=Math.round(x/28)%4===0;trajCtx.strokeStyle=major?'rgba(124,141,160,.32)':'rgba(154,171,190,.18)';trajCtx.lineWidth=1;trajCtx.beginPath();trajCtx.moveTo(x,0);trajCtx.lineTo(x,h);trajCtx.stroke();}}for(let y=0;y<=h;y+=28){{const major=Math.round(y/28)%4===0;trajCtx.strokeStyle=major?'rgba(124,141,160,.32)':'rgba(154,171,190,.18)';trajCtx.lineWidth=1;trajCtx.beginPath();trajCtx.moveTo(0,y);trajCtx.lineTo(w,y);trajCtx.stroke();}}}}
-function drawTrajectory(){{const w=trajCanvas.width,h=trajCanvas.height;trajCtx.setTransform(1,0,0,1,0,0);drawTrajGrid(w,h);const frames=TRAJ.frames||[],f=frames[Math.max(0,Math.min(frames.length-1,frame))]||{{}},start=Math.max(1,frame-120);for(let i=start;i<=frame&&i<frames.length;i++){{const a=frames[i-1],b=frames[i],t=(i-start)/Math.max(1,frame-start);if(a&&b&&a.head&&b.head)line3(a.head,b.head,'#38a9a2',2,0.18+0.54*t);if(a&&b&&a.hand&&b.hand)line3(a.hand[0],b.hand[0],'#35aee9',2,0.18+0.58*t);}}if(f.head&&f.axes){{const axisColors=['#ef5b4f','#2ea65a','#dc8a32'];for(let k=0;k<3;k++){{const e=[f.head[0]+f.axes[0][k]*0.045,f.head[1]+f.axes[1][k]*0.045,f.head[2]+f.axes[2][k]*0.045];line3(f.head,e,axisColors[k],3,0.95);}}dot3(f.head,5,'#f8fafc','#334155');}}if(f.hand){{const handRoot=f.hand[0];for(const [a,b] of TRAJ.bones){{line3(f.hand[a],f.hand[b],FINGER_RGB[Math.max(0,Math.min(4,Math.floor((b-1)/4)))],3,0.96,handRoot);}}for(let i=0;i<f.hand.length;i++)dot3(f.hand[i],i===0?5:4,i===0?'#f8fafc':FINGER_RGB[Math.max(0,Math.min(4,Math.floor((i-1)/4)))],'#1f2937',handRoot);}}const lx=w-188,ly=18;trajCtx.font='12px system-ui';trajCtx.fillStyle='#334155';trajCtx.strokeStyle='#35aee9';trajCtx.lineWidth=2;trajCtx.beginPath();trajCtx.moveTo(lx,ly);trajCtx.lineTo(lx+34,ly);trajCtx.stroke();trajCtx.fillText('hand_l',lx+42,ly+4);trajCtx.strokeStyle='#38a9a2';trajCtx.beginPath();trajCtx.moveTo(lx+110,ly);trajCtx.lineTo(lx+144,ly);trajCtx.stroke();trajCtx.fillText('head',lx+152,ly+4);}}
+function drawHand3(hand){{if(!hand)return;for(const [a,b] of TRAJ.bones)line3(hand[a],hand[b],FINGER_RGB[Math.max(0,Math.min(4,Math.floor((b-1)/4)))],3,.96);for(let i=0;i<hand.length;i++)dot3(hand[i],i===0?5:4,i===0?'#f8fafc':FINGER_RGB[Math.max(0,Math.min(4,Math.floor((i-1)/4)))],'#1f2937');}}
+function drawTrajectory(){{const w=trajCanvas.width,h=trajCanvas.height;trajCtx.setTransform(1,0,0,1,0,0);drawTrajGrid(w,h);const frames=TRAJ.frames||[],f=frames[Math.max(0,Math.min(frames.length-1,frame))]||{{}},start=Math.max(1,frame-120);for(let i=start;i<=frame&&i<frames.length;i++){{const a=frames[i-1],b=frames[i],t=(i-start)/Math.max(1,frame-start);if(a&&b&&a.head&&b.head)line3(a.head,b.head,'#38a9a2',2,.18+.54*t);if(a&&b&&a.hand_l&&b.hand_l)line3(a.hand_l[0],b.hand_l[0],'#35aee9',2,.18+.58*t);if(a&&b&&a.hand_r&&b.hand_r)line3(a.hand_r[0],b.hand_r[0],'#f59e0b',2,.18+.58*t);}}if(f.head&&f.axes){{const axisColors=['#ef5b4f','#2ea65a','#dc8a32'];for(let k=0;k<3;k++){{const e=[f.head[0]+f.axes[0][k]*.045,f.head[1]+f.axes[1][k]*.045,f.head[2]+f.axes[2][k]*.045];line3(f.head,e,axisColors[k],3,.95);}}dot3(f.head,5,'#f8fafc','#334155');}}drawHand3(f.hand_l);drawHand3(f.hand_r);const lx=w-250,ly=18;trajCtx.font='12px system-ui';trajCtx.fillStyle='#334155';for(const [off,color,label] of [[0,'#35aee9','hand_l'],[82,'#f59e0b','hand_r'],[164,'#38a9a2','head']]){{trajCtx.strokeStyle=color;trajCtx.lineWidth=2;trajCtx.beginPath();trajCtx.moveTo(lx+off,ly);trajCtx.lineTo(lx+off+26,ly);trajCtx.stroke();trajCtx.fillText(label,lx+off+31,ly+4);}}}}
 trajCanvas.addEventListener('pointerdown',e=>{{if(e.button!==0)return;trajView.drag=true;trajView.x=e.clientX;trajView.y=e.clientY;trajCanvas.setPointerCapture(e.pointerId);trajCanvas.parentElement.classList.add('dragging');pause();}});
 trajCanvas.addEventListener('pointermove',e=>{{if(!trajView.drag)return;const dx=e.clientX-trajView.x,dy=e.clientY-trajView.y;trajView.x=e.clientX;trajView.y=e.clientY;trajView.yaw+=dx*0.01;trajView.pitch=clamp(trajView.pitch+dy*0.01,-3.05,3.05);drawAll();}});
 trajCanvas.addEventListener('pointerup',e=>{{trajView.drag=false;trajCanvas.parentElement.classList.remove('dragging');}});
