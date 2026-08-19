@@ -707,8 +707,22 @@ def read_bag(
     odom.sort(key=lambda it: it.msg_time_ns)
     hand_frames.sort(key=lambda it: it["bag_time_ns"])
     if hand_frames and any(row.get("source_topic") == GLOVE_TOPIC for row in hand_frames):
-        solved = solve_states_from_imu(hand_frames, handcal_path, resolve_driver=resolve_driver, hand="left")
-        print(f"[ExtractRosbagSampler] /glove packets: {len(hand_frames)}, solved left states: {solved}")
+        solved_left = solve_states_from_imu(
+            hand_frames,
+            handcal_path,
+            resolve_driver=resolve_driver,
+            hand="left",
+        )
+        solved_right = solve_states_from_imu(
+            hand_frames,
+            handcal_path,
+            resolve_driver=resolve_driver,
+            hand="right",
+        )
+        print(
+            f"[ExtractRosbagSampler] /glove packets: {len(hand_frames)}, "
+            f"solved left states: {solved_left}, solved right states: {solved_right}"
+        )
     return {
         "topic_types": topic_types,
         "counts": counts,

@@ -282,11 +282,8 @@ def track(args: argparse.Namespace) -> Dict:
                     mode = "held"
                     target = pred if args.use_prediction_when_rejected else filt
 
-            if mode == "confirmed_switch":
-                new_filt = target
-            else:
-                blended = (1.0 - alpha) * filt + alpha * target if accepted_measurement else target
-                new_filt = cap_delta(filt, blended, max_step_m)
+            blended = (1.0 - alpha) * filt + alpha * target if accepted_measurement else target
+            new_filt = cap_delta(filt, blended, max_step_m)
             vel = ((new_filt - filt) / frame_dt_sec) * (1.0 if accepted_measurement else args.rejected_velocity_decay)
             tracked_steps.append(float(np.linalg.norm(new_filt - filt)))
             residuals.append(float(np.linalg.norm(raw_root - new_filt)))
