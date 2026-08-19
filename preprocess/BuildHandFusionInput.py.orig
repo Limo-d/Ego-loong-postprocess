@@ -273,11 +273,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hand_sync_key", default="bag_time_ns", choices=["imu_stamp_left_ns", "bag_time_ns", "pressure_stamp_left_ns"])
     parser.add_argument("--max_dt_ms", type=float, default=80.0)
     parser.add_argument("--visual_side", default="auto", choices=["auto", "left", "right", "hand_l", "hand_r"])
-    parser.add_argument(
-        "--swap_hand_frame_lr",
-        action="store_true",
-        help="Treat /hand_frame left fields as the physical right glove and vice versa.",
-    )
     parser.add_argument("--glove_side", default="left", choices=["left", "right"])
     return parser
 

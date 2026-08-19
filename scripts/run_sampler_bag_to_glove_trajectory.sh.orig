@@ -529,10 +529,6 @@ fusion_cache_args=(
 if stage_cache_hit fusion "${fusion_cache_args[@]}"; then
   printf '  skip valid cache: %s\n' "$(stage_manifest fusion)"
 else
-  fusion_swap_args=()
-  if [[ "${HAND_FRAME_SWAP_LR}" == "1" ]]; then
-    fusion_swap_args+=(--swap_hand_frame_lr)
-  fi
   for side in left right; do
     if [[ "${side}" == "left" ]]; then
       visual_side=hand_l; fusion_jsonl="${FUSION_LEFT_JSONL}"; fusion_summary="${FUSION_LEFT_SUMMARY}"

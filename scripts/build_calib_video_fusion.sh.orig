@@ -227,8 +227,7 @@ for side in left right; do
     --summary_json "${fusion_summary}" \
     --visual_side "${visual_side}" \
     --glove_side "${side}" \
-    --hand_sync_key bag_time_ns \
-    "${fusion_swap_args[@]}"
+    --hand_sync_key bag_time_ns
 done
 
 printf '\n[calib] Done\n'
