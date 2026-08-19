@@ -16,12 +16,15 @@ export PYTHONPATH="${ROOT}/hamer:${ROOT}:${PYTHONPATH:-}"
 LOCATE_MODEL="${LOCATE_MODEL:-${ROOT}/models--nvidia--LocateAnything-3B/resolved}"
 PROMPT="${PROMPT:-white tactile glove with an IMU module worn on a hand}"
 PROMPT_TAG="${PROMPT_TAG:-white_tactile_glove_with_imu}"
-LOCATE_DTYPE="${LOCATE_DTYPE:-fp32}"
+LOCATE_DTYPE="${LOCATE_DTYPE:-bf16}"
+LOCATE_ATTN_IMPLEMENTATION="${LOCATE_ATTN_IMPLEMENTATION:-sdpa}"
+LOCATE_BATCH_SIZE="${LOCATE_BATCH_SIZE:-8}"
 LOCATE_DEVICE="${LOCATE_DEVICE:-cuda}"
 HAMER_DEVICE="${HAMER_DEVICE:-cuda}"
 HAMER_HANDEDNESS="${HAMER_HANDEDNESS:-all_left}"
 VISUAL_SIDE="${VISUAL_SIDE:-hand_l}"
 GLOVE_SIDE="${GLOVE_SIDE:-left}"
+IMAGE_LEFT_PHYSICAL_SIDE="${IMAGE_LEFT_PHYSICAL_SIDE:-left}"
 REQUESTED_FPS="${FPS:-}"
 FPS=""
 MAX_FRAMES="${MAX_FRAMES:-}"
@@ -124,6 +127,8 @@ else
     --model_path "${LOCATE_MODEL}" \
     --device "${LOCATE_DEVICE}" \
     --dtype "${LOCATE_DTYPE}" \
+    --attn_implementation "${LOCATE_ATTN_IMPLEMENTATION}" \
+    --batch_size "${LOCATE_BATCH_SIZE}" \
     --fps "${FPS}" \
     --out_json "${LOCATE_JSON}" \
     --out_video "${LOCATE_MP4}" \
@@ -148,7 +153,8 @@ else
     --min_iou "${CALIB_BBOX_MIN_IOU}" \
     --min_iou_center_px "${CALIB_BBOX_MIN_IOU_CENTER_PX}" \
     --max_gap "${CALIB_BBOX_MAX_GAP}" \
-    --reference_fps "${TIME_FILTER_REFERENCE_FPS}"
+    --reference_fps "${TIME_FILTER_REFERENCE_FPS}" \
+    --image_left_side "${IMAGE_LEFT_PHYSICAL_SIDE}"
 fi
 
 printf '\n[calib 4/6] HaMeR from calibration bbox\n'

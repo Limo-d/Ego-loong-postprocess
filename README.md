@@ -201,9 +201,14 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `USE_RTABMAP_POSE` | `1` | 是否使用 `rtabmap.db` 相机位姿 |
 | `RTABMAP_DB` | `${BAG_DATA_DIR}/calibration/rtabmap.db` | RTAB-Map 数据库；`BAG_DATA_DIR` 由脚本自动解析 |
 | `RTABMAP_MAX_INTERP_GAP_SEC` | `0.25` | 允许插值跨越的最大 RTAB-Map 节点时间间隔 |
+| `RTABMAP_RENDER_VIDEOS` | `0` | 是否生成两段 RTAB-Map 轨迹预览 MP4；默认关闭以加快第 2 阶段，设为 `1` 可恢复 |
+| `LOCATE_DTYPE` | `bf16` | LocateAnything 推理精度；Blackwell 默认使用 BF16，较 FP32 更快且显存占用更低 |
+| `LOCATE_ATTN_IMPLEMENTATION` | `sdpa` | LocateAnything 注意力后端；默认显式使用 PyTorch SDPA，避免尝试未安装的 Flash/Magi 后再回退 |
+| `LOCATE_BATCH_SIZE` | `8` | LocateAnything 批推理大小；仍输出逐帧检测JSON供 stable bbox 使用，设为 `1` 可回退旧逐帧路径 |
 | `HAMER_HANDEDNESS` | `all_left` | HaMeR 手性策略 |
 | `VISUAL_SIDE` | `hand_l` | 视觉手侧 |
 | `GLOVE_SIDE` | `left` | 手套数据侧 |
+| `IMAGE_LEFT_PHYSICAL_SIDE` | `left` | 画面左侧手框对应的物理手；当前采集相机使用 `left`，镜像或其他安装方式可设为 `right` |
 | `ESTIMATE_SCALE` | `1` | 标定时估计并应用 glove FK 到视觉手的尺度；设为 `0` 仅用于固定尺度 1.0 的对照实验 |
 | `FPS` | 自动 | 主流程忽略固定覆盖值，始终从 `rgb_stamp_ns` 估计真实 RGB 标称帧率 |
 | `TIME_FILTER_REFERENCE_FPS` | `30` | 旧版每帧 alpha、最大步长和确认帧数的参考语义；实际计算按真实 `dt` 换算 |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Track two glove boxes with stable egocentric left/right identities."""
+"""Track two glove boxes with configurable image-to-physical hand identities."""
 
 from __future__ import annotations
 
@@ -47,10 +47,13 @@ except ModuleNotFoundError:
 SIDES = ("right", "left")
 
 
-def _initial_side(box: np.ndarray, width: int) -> str:
-    # In an egocentric RGB view the wearer's right hand normally appears on the
-    # image-left. This is only a bootstrap; temporal association preserves IDs.
-    return "right" if float(bbox_center(box)[0]) < width * 0.5 else "left"
+def _initial_side(box: np.ndarray, width: int, image_left_side: str) -> str:
+    # The acquisition image may be mirrored or mounted with either physical
+    # hand on image-left. This is only a bootstrap; temporal association then
+    # preserves the configured identities.
+    if float(bbox_center(box)[0]) < width * 0.5:
+        return image_left_side
+    return "right" if image_left_side == "left" else "left"
 
 
 def _candidate_cost(box: np.ndarray, prev_box: np.ndarray, score: float) -> float:
@@ -130,16 +133,16 @@ def track_boxes(data: Dict, width: int, height: int, args: argparse.Namespace) -
             elapsed_by_side[side] = elapsed
             used.add(det_idx)
 
-        # Bootstrap an untracked identity from image side. With two detections,
-        # explicitly assign image-left to physical right and image-right to left.
+        # Bootstrap an untracked identity from the configured image side.
         remaining = [idx for idx in range(len(detections)) if idx not in used]
         if prev_box["right"] is None and prev_box["left"] is None and len(remaining) >= 2:
             ordered = sorted(remaining, key=lambda idx: float(bbox_center(detections[idx][0])[0]))
-            assignments["right"], assignments["left"] = ordered[0], ordered[-1]
+            image_right_side = "right" if args.image_left_side == "left" else "left"
+            assignments[args.image_left_side], assignments[image_right_side] = ordered[0], ordered[-1]
             used.update((ordered[0], ordered[-1]))
         else:
             for det_idx in remaining:
-                preferred = _initial_side(detections[det_idx][0], width)
+                preferred = _initial_side(detections[det_idx][0], width, args.image_left_side)
                 other = "left" if preferred == "right" else "right"
                 side = preferred if preferred not in assignments and prev_box[preferred] is None else other
                 if side not in assignments and prev_box[side] is None:
@@ -172,7 +175,8 @@ def track_boxes(data: Dict, width: int, height: int, args: argparse.Namespace) -
     output = json.loads(json.dumps(data))
     output.setdefault("postprocess", {})["dual_hand_bbox_tracking"] = {
         "method": "two_target_gated_assignment_with_gap_interpolation",
-        "identity_rule": "egocentric_image_left_is_physical_right_then_temporal_association",
+        "identity_rule": f"image_left_is_physical_{args.image_left_side}_then_temporal_association",
+        "image_left_side": args.image_left_side,
         "reference_fps": args.reference_fps,
         "max_gap": args.max_gap,
         "scale": args.scale,
@@ -251,6 +255,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--smooth_alpha", type=float, default=0.35)
     parser.add_argument("--scale", type=float, default=1.04)
     parser.add_argument("--reference_fps", type=float, default=30.0)
+    parser.add_argument(
+        "--image_left_side",
+        choices=["left", "right"],
+        default="left",
+        help="Physical hand identity assigned to detections on image-left.",
+    )
     return parser
 
 

@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -121,12 +122,13 @@ class LocateAnythingDetector:
         model_path: str,
         device: str,
         dtype: str,
+        attn_implementation: str,
         generation_mode: str,
         max_new_tokens: int,
         temperature: float,
         top_p: float,
     ):
-        from transformers import AutoModel, AutoProcessor, AutoTokenizer
+        from transformers import AutoConfig, AutoModel, AutoProcessor, AutoTokenizer
 
         self.device = device
         self.torch_dtype = _dtype_from_name(dtype)
@@ -136,10 +138,17 @@ class LocateAnythingDetector:
         self.top_p = top_p
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-        self.processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True)
+        self.processor = AutoProcessor.from_pretrained(model_path, trust_remote_code=True, use_fast=False)
+        config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
+        config._attn_implementation = attn_implementation
+        config.text_config._attn_implementation = attn_implementation
+        config.vision_config._attn_implementation = (
+            "flash_attention_2" if attn_implementation == "magi" else attn_implementation
+        )
         self.model = AutoModel.from_pretrained(
             model_path,
-            torch_dtype=self.torch_dtype,
+            config=config,
+            dtype=self.torch_dtype,
             trust_remote_code=True,
         ).to(device).eval()
 
@@ -195,6 +204,59 @@ class LocateAnythingDetector:
         detections = _parse_locateanything_boxes(answer, w, h, default_label=prompt)
         return {"answer": answer, "detections": detections}
 
+    def detect_batch(self, images: List[Image.Image], prompt: str) -> List[Dict]:
+        return [self.detect(image, prompt) for image in images]
+
+
+class LocateAnythingBatchDetector:
+    """NVIDIA's batched hybrid runtime with the legacy per-frame output contract."""
+
+    def __init__(
+        self,
+        model_path: str,
+        attn_implementation: str,
+        max_new_tokens: int,
+        temperature: float,
+        top_p: float,
+    ):
+        runtime_root = Path(__file__).resolve().parents[1] / "third_party" / "nvidia_locateanything_batch"
+        if not runtime_root.is_dir():
+            raise FileNotFoundError(f"Missing LocateAnything batch runtime: {runtime_root}")
+        sys.path.insert(0, str(runtime_root))
+        os.environ["LA_FLASH_MODEL"] = str(Path(model_path).expanduser().resolve())
+        os.environ["LA_FLASH_ATTN"] = attn_implementation
+        os.environ["LA_FLASH_VISION_ATTN"] = "sdpa"
+        os.environ["LA_FLASH_HYBRID_SCHEDULER"] = "pipeline"
+
+        from batch_utils import generate_batch_hybrid, load
+
+        self.generate_batch_hybrid = generate_batch_hybrid
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        load()
+
+    def detect_batch(self, images: List[Image.Image], prompt: str) -> List[Dict]:
+        if not images:
+            return []
+        answers = self.generate_batch_hybrid(
+            [(image, prompt) for image in images],
+            temperature=self.temperature,
+            top_p=self.top_p,
+            repetition_penalty=1.1,
+            max_new_tokens=self.max_new_tokens,
+            scheduler="pipeline",
+        )
+        output = []
+        for image, answer in zip(images, answers):
+            answer = answer if isinstance(answer, str) else str(answer)
+            w, h = image.size
+            output.append({
+                "answer": answer,
+                "detections": _parse_locateanything_boxes(answer, w, h, default_label=prompt),
+            })
+        return output
+
 
 def visualize_locateanything_bboxes(
     session_path: str,
@@ -202,6 +264,7 @@ def visualize_locateanything_bboxes(
     model_path: str,
     device: str,
     dtype: str,
+    attn_implementation: str,
     generation_mode: str,
     max_new_tokens: int,
     temperature: float,
@@ -212,6 +275,7 @@ def visualize_locateanything_bboxes(
     fps: float,
     max_frames: Optional[int],
     save_frames: bool,
+    batch_size: int,
 ) -> Dict[str, int]:
     frame_dirs = _frame_dirs(session_path, max_frames)
     if not frame_dirs:
@@ -236,15 +300,34 @@ def visualize_locateanything_bboxes(
     if save_frames:
         os.makedirs(out_frames_dir, exist_ok=True)
 
-    detector = LocateAnythingDetector(
-        model_path=model_path,
-        device=device,
-        dtype=dtype,
-        generation_mode=generation_mode,
-        max_new_tokens=max_new_tokens,
-        temperature=temperature,
-        top_p=top_p,
+    batch_size = max(1, int(batch_size))
+    use_batch_runtime = (
+        batch_size > 1
+        and device.startswith("cuda")
+        and dtype == "bf16"
+        and generation_mode == "hybrid"
+        and attn_implementation in {"sdpa", "magi"}
     )
+    if use_batch_runtime:
+        detector = LocateAnythingBatchDetector(
+            model_path=model_path,
+            attn_implementation=attn_implementation,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
+    else:
+        batch_size = 1
+        detector = LocateAnythingDetector(
+            model_path=model_path,
+            device=device,
+            dtype=dtype,
+            attn_implementation=attn_implementation,
+            generation_mode=generation_mode,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
     writer = None
     result = {
@@ -253,53 +336,67 @@ def visualize_locateanything_bboxes(
         "model_path": model_path,
         "prompt": prompt,
         "dtype": dtype,
+        "attn_implementation": attn_implementation,
+        "batch_size": batch_size,
+        "batch_runtime": use_batch_runtime,
         "generation_mode": generation_mode,
         "frames": [],
     }
     stats = {"frames": 0, "detections": 0, "written": 0}
 
-    for frame_i, frame_dir in enumerate(tqdm(frame_dirs, desc="LocateAnything bbox")):
-        frame_name = os.path.basename(frame_dir)
-        rgb_stamp_ns = timestamp_by_frame.get(frame_name)
-        rgb_path = os.path.join(frame_dir, "rgb.png")
-        img_bgr = cv2.imread(rgb_path)
-        if img_bgr is None:
-            result["frames"].append({"frame": frame_name, "rgb_stamp_ns": rgb_stamp_ns, "rgb_path": rgb_path, "answer": "", "detections": []})
-            continue
+    progress = tqdm(total=len(frame_dirs), desc=f"LocateAnything bbox batch={batch_size}")
+    for chunk_start in range(0, len(frame_dirs), batch_size):
+        records = []
+        images = []
+        for frame_i, frame_dir in enumerate(frame_dirs[chunk_start:chunk_start + batch_size], start=chunk_start):
+            frame_name = os.path.basename(frame_dir)
+            rgb_stamp_ns = timestamp_by_frame.get(frame_name)
+            rgb_path = os.path.join(frame_dir, "rgb.png")
+            img_bgr = cv2.imread(rgb_path)
+            image = None if img_bgr is None else Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
+            records.append((frame_i, frame_name, rgb_stamp_ns, rgb_path, img_bgr, image))
+            if image is not None:
+                images.append(image)
 
-        image = Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB))
-        pred = detector.detect(image, prompt=prompt)
-        detections = pred["detections"]
+        predictions = iter(detector.detect_batch(images, prompt=prompt))
+        for frame_i, frame_name, rgb_stamp_ns, rgb_path, img_bgr, image in records:
+            if img_bgr is None or image is None:
+                result["frames"].append({"frame": frame_name, "rgb_stamp_ns": rgb_stamp_ns, "rgb_path": rgb_path, "answer": "", "detections": []})
+                progress.update(1)
+                continue
 
-        vis = img_bgr.copy()
-        drawn = []
-        for det in detections:
-            drawn.append(_draw_detection(vis, det))
-            stats["detections"] += 1
+            pred = next(predictions)
+            vis = img_bgr.copy()
+            drawn = []
+            for det in pred["detections"]:
+                drawn.append(_draw_detection(vis, det))
+                stats["detections"] += 1
 
-        _draw_label(vis, f"{frame_name}  dets={len(drawn)}  prompt={prompt}", 10, 24, (255, 255, 255))
+            _draw_label(vis, f"{frame_name}  dets={len(drawn)}  prompt={prompt}", 10, 24, (255, 255, 255))
 
-        if writer is None:
-            h, w = vis.shape[:2]
-            writer = cv2.VideoWriter(out_video, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
-            if not writer.isOpened():
-                raise RuntimeError(f"Failed to open video writer: {out_video}")
+            if writer is None:
+                h, w = vis.shape[:2]
+                writer = cv2.VideoWriter(out_video, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+                if not writer.isOpened():
+                    raise RuntimeError(f"Failed to open video writer: {out_video}")
 
-        for _ in range(repeats[frame_i]):
-            writer.write(vis)
-            stats["written"] += 1
-        stats["frames"] += 1
+            for _ in range(repeats[frame_i]):
+                writer.write(vis)
+                stats["written"] += 1
+            stats["frames"] += 1
 
-        if save_frames:
-            cv2.imwrite(os.path.join(out_frames_dir, f"{frame_name}.png"), vis)
+            if save_frames:
+                cv2.imwrite(os.path.join(out_frames_dir, f"{frame_name}.png"), vis)
 
-        result["frames"].append({
-            "frame": frame_name,
-            "rgb_stamp_ns": rgb_stamp_ns,
-            "rgb_path": rgb_path,
-            "answer": pred["answer"],
-            "detections": drawn,
-        })
+            result["frames"].append({
+                "frame": frame_name,
+                "rgb_stamp_ns": rgb_stamp_ns,
+                "rgb_path": rgb_path,
+                "answer": pred["answer"],
+                "detections": drawn,
+            })
+            progress.update(1)
+    progress.close()
 
     if writer is not None:
         writer.release()
@@ -317,6 +414,8 @@ def main() -> None:
     parser.add_argument("--model_path", default="nvidia/LocateAnything-3B")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--dtype", choices=["bf16", "fp16", "fp32"], default="bf16")
+    parser.add_argument("--attn_implementation", choices=["sdpa", "flash_attention_2", "magi"], default="sdpa")
+    parser.add_argument("--batch_size", type=int, default=8, help="Batched hybrid inference size; use 1 for the legacy per-frame path.")
     parser.add_argument("--generation_mode", default="hybrid")
     parser.add_argument("--max_new_tokens", type=int, default=2048)
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -342,6 +441,7 @@ def main() -> None:
         model_path=args.model_path,
         device=args.device,
         dtype=args.dtype,
+        attn_implementation=args.attn_implementation,
         generation_mode=args.generation_mode,
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
@@ -352,6 +452,7 @@ def main() -> None:
         fps=args.fps,
         max_frames=args.max_frames,
         save_frames=not args.no_save_frames,
+        batch_size=args.batch_size,
     )
     print(f"[VisualizeLocateAnythingBboxes] Saved video: {out_video}")
     print(f"[VisualizeLocateAnythingBboxes] Saved json: {out_json}")

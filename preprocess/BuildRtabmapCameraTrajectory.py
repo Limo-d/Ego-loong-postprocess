@@ -357,12 +357,14 @@ def build(args: argparse.Namespace) -> Dict:
         "jsonl": str(jsonl_path),
         "txt": str(txt_path),
         "source_overlap_txt": str(source_txt_path),
-        "mp4": str(out_dir / "rtabmap_camera_pose_rgb30_interp.mp4"),
-        "mp4_no_axes": str(out_dir / "rtabmap_camera_pose_rgb30_interp_no_axes.mp4"),
+        "render_videos": bool(args.render_videos),
+        "mp4": str(out_dir / "rtabmap_camera_pose_rgb30_interp.mp4") if args.render_videos else None,
+        "mp4_no_axes": str(out_dir / "rtabmap_camera_pose_rgb30_interp_no_axes.mp4") if args.render_videos else None,
     }
     write_json(summary_path, summary)
-    render_video(out_rows, out_dir / "rtabmap_camera_pose_rgb30_interp.mp4", out_dir / "rtabmap_camera_pose_rgb30_interp_render_summary.json", args.fps, args.width, args.height, args.trail_len, args.camera_axis_len, True)
-    render_video(out_rows, out_dir / "rtabmap_camera_pose_rgb30_interp_no_axes.mp4", out_dir / "rtabmap_camera_pose_rgb30_interp_no_axes_summary.json", args.fps, args.width, args.height, args.trail_len, args.camera_axis_len, False)
+    if args.render_videos:
+        render_video(out_rows, out_dir / "rtabmap_camera_pose_rgb30_interp.mp4", out_dir / "rtabmap_camera_pose_rgb30_interp_render_summary.json", args.fps, args.width, args.height, args.trail_len, args.camera_axis_len, True)
+        render_video(out_rows, out_dir / "rtabmap_camera_pose_rgb30_interp_no_axes.mp4", out_dir / "rtabmap_camera_pose_rgb30_interp_no_axes_summary.json", args.fps, args.width, args.height, args.trail_len, args.camera_axis_len, False)
     return summary
 
 
@@ -378,6 +380,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--width", type=int, default=1440)
     parser.add_argument("--height", type=int, default=900)
     parser.add_argument("--camera_axis_len", type=float, default=0.08)
+    parser.add_argument(
+        "--render_videos",
+        action="store_true",
+        help="Render the two RTAB-Map trajectory preview MP4 files (disabled by default).",
+    )
     parser.add_argument(
         "--max_interp_gap_sec",
         type=float,

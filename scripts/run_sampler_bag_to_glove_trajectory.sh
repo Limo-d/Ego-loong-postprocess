@@ -64,12 +64,15 @@ export PYTHONPATH="${ROOT}/hamer:${ROOT}:${PYTHONPATH:-}"
 LOCATE_MODEL="${LOCATE_MODEL:-${ROOT}/models--nvidia--LocateAnything-3B/resolved}"
 PROMPT="${PROMPT:-white tactile glove with an IMU module worn on a hand}"
 PROMPT_TAG="${PROMPT_TAG:-white_tactile_glove_with_imu}"
-LOCATE_DTYPE="${LOCATE_DTYPE:-fp32}"
+LOCATE_DTYPE="${LOCATE_DTYPE:-bf16}"
+LOCATE_ATTN_IMPLEMENTATION="${LOCATE_ATTN_IMPLEMENTATION:-sdpa}"
+LOCATE_BATCH_SIZE="${LOCATE_BATCH_SIZE:-8}"
 LOCATE_DEVICE="${LOCATE_DEVICE:-cuda}"
 HAMER_DEVICE="${HAMER_DEVICE:-cuda}"
 HAMER_HANDEDNESS="${HAMER_HANDEDNESS:-track}"
 VISUAL_SIDE="${VISUAL_SIDE:-hand_l}"
 GLOVE_SIDE="${GLOVE_SIDE:-left}"
+IMAGE_LEFT_PHYSICAL_SIDE="${IMAGE_LEFT_PHYSICAL_SIDE:-left}"
 REQUESTED_FPS="${FPS:-}"
 FPS=""
 MAX_FRAMES="${MAX_FRAMES:-}"
@@ -79,6 +82,7 @@ VISUAL_2D_SMOOTH_ALPHA="${VISUAL_2D_SMOOTH_ALPHA:-0.35}"
 VISUAL_2D_MAX_INTERP_GAP="${VISUAL_2D_MAX_INTERP_GAP:-3}"
 TIME_FILTER_REFERENCE_FPS="${TIME_FILTER_REFERENCE_FPS:-30}"
 USE_RTABMAP_POSE="${USE_RTABMAP_POSE:-1}"
+RTABMAP_RENDER_VIDEOS="${RTABMAP_RENDER_VIDEOS:-0}"
 RTABMAP_DB="${RTABMAP_DB:-${CALIBRATION_DIR}/rtabmap.db}"
 RTABMAP_POSE_DIR="${RTABMAP_POSE_DIR:-${SESSION}/rtabmap_pose}"
 RTABMAP_MAX_INTERP_GAP_SEC="${RTABMAP_MAX_INTERP_GAP_SEC:-0.25}"
@@ -259,9 +263,11 @@ printf '  BAG_DIR:     %s\n' "${BAG_DIR}"
 printf '  CALIBRATION: %s\n' "${CALIBRATION_DIR}"
 printf '  SESSION:     %s\n' "${SESSION}"
 printf '  PROMPT:      %s\n' "${PROMPT}"
+printf '  Locate:      dtype=%s attn=%s batch=%s\n' "${LOCATE_DTYPE}" "${LOCATE_ATTN_IMPLEMENTATION}" "${LOCATE_BATCH_SIZE}"
 printf '  OUTPUT_DIR:  %s\n' "${OUTPUT_DIR}"
 printf '  RTABMAP_DB:  %s\n' "${RTABMAP_DB}"
 printf '  RTABMAP:     %s\n' "${USE_RTABMAP_POSE}"
+printf '  RTAB videos: %s\n' "${RTABMAP_RENDER_VIDEOS}"
 
 printf '\n[1/11] Extract ROS2 bag RGBD/hand_frame\n'
 extract_cache_args=(
@@ -318,6 +324,7 @@ if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
     --param "fps=${FPS}"
     --param "max_interp_gap_sec=${RTABMAP_MAX_INTERP_GAP_SEC}"
     --param "require_full_coverage=1"
+    --param "render_videos=${RTABMAP_RENDER_VIDEOS}"
     --output "${RTABMAP_TRAJECTORY_JSONL}"
     --output "${RTABMAP_TRAJECTORY_SUMMARY}"
     --output "${RTABMAP_APPLY_SUMMARY}"
@@ -326,12 +333,17 @@ if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   if stage_cache_hit rtabmap_pose "${rtabmap_cache_args[@]}"; then
     printf '  skip valid cache: %s\n' "$(stage_manifest rtabmap_pose)"
   else
+    rtabmap_render_args=()
+    if [[ "${RTABMAP_RENDER_VIDEOS}" == "1" ]]; then
+      rtabmap_render_args=(--render_videos)
+    fi
     "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildRtabmapCameraTrajectory.py" \
       --rtabmap_db "${RTABMAP_DB}" \
       --timestamps_jsonl "${RGBD_DIR}/timestamps.jsonl" \
       --out_dir "${RTABMAP_POSE_DIR}" \
       --fps "${FPS}" \
       --max_interp_gap_sec "${RTABMAP_MAX_INTERP_GAP_SEC}" \
+      "${rtabmap_render_args[@]}" \
       "${rtabmap_strict_args[@]}"
     "${HAMER_PYTHON}" "${ROOT}/preprocess/ApplyCameraTrajectoryToPreprocess.py" \
       --all_data_dir "${RGBD_DIR}/all_data" \
@@ -350,11 +362,15 @@ locate_cache_args=(
   --input "$(stage_manifest extract)"
   --input "${LOCATE_MODEL}/config.json"
   --code "${ROOT}/preprocess/VisualizeLocateAnythingBboxes.py"
+  --code "${ROOT}/third_party/nvidia_locateanything_batch/batch_utils/engine_hybrid.py"
+  --code "${ROOT}/third_party/nvidia_locateanything_batch/batch_utils/hybrid_runtime.py"
   --code "${ROOT}/preprocess/Timebase.py"
   --param "prompt=${PROMPT}"
   --param "model=${LOCATE_MODEL}"
   --param "device=${LOCATE_DEVICE}"
   --param "dtype=${LOCATE_DTYPE}"
+  --param "attn_implementation=${LOCATE_ATTN_IMPLEMENTATION}"
+  --param "batch_size=${LOCATE_BATCH_SIZE}"
   --param "fps=${FPS}"
   --param "max_frames=${MAX_FRAMES}"
   --param "save_bbox_frames=${SAVE_BBOX_FRAMES}"
@@ -374,6 +390,8 @@ else
     --model_path "${LOCATE_MODEL}" \
     --device "${LOCATE_DEVICE}" \
     --dtype "${LOCATE_DTYPE}" \
+    --attn_implementation "${LOCATE_ATTN_IMPLEMENTATION}" \
+    --batch_size "${LOCATE_BATCH_SIZE}" \
     --fps "${FPS}" \
     --out_json "${LOCATE_JSON}" \
     --out_video "${LOCATE_MP4}" \
@@ -390,6 +408,7 @@ track_bbox_cache_args=(
   --code "${ROOT}/preprocess/Timebase.py"
   --param "fps=${FPS}"
   --param "reference_fps=${TIME_FILTER_REFERENCE_FPS}"
+  --param "image_left_physical_side=${IMAGE_LEFT_PHYSICAL_SIDE}"
   --output "${STABLE_BBOX_JSON}"
   --output "${STABLE_BBOX_DIR}/tracking_summary.json"
   --output "${STABLE_BBOX_MP4}"
@@ -404,7 +423,8 @@ else
     --summary_json "${STABLE_BBOX_DIR}/tracking_summary.json" \
     --out_video "${STABLE_BBOX_MP4}" \
     --fps "${FPS}" \
-    --reference_fps "${TIME_FILTER_REFERENCE_FPS}"
+    --reference_fps "${TIME_FILTER_REFERENCE_FPS}" \
+    --image_left_side "${IMAGE_LEFT_PHYSICAL_SIDE}"
   stage_cache_write track_bbox "${track_bbox_cache_args[@]}"
 fi
 
@@ -541,6 +561,8 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     --code "${ROOT}/scripts/build_calib_video_fusion.sh"
     --code "${ROOT}/preprocess/ExtractRosbagSampler.py"
     --code "${ROOT}/preprocess/VisualizeLocateAnythingBboxes.py"
+    --code "${ROOT}/third_party/nvidia_locateanything_batch/batch_utils/engine_hybrid.py"
+    --code "${ROOT}/third_party/nvidia_locateanything_batch/batch_utils/hybrid_runtime.py"
     --code "${ROOT}/preprocess/TrackDualHandBboxes.py"
     --code "${ROOT}/preprocess/TrackSingleHandBboxes.py"
     --code "${ROOT}/preprocess/run_hamer_from_locate_bboxes.py"
@@ -565,6 +587,8 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     --param "inlier_m=${DEPTH_ROBUST_INLIER_M}"
     --param "locate_device=${LOCATE_DEVICE}"
     --param "locate_dtype=${LOCATE_DTYPE}"
+    --param "locate_attn_implementation=${LOCATE_ATTN_IMPLEMENTATION}"
+    --param "locate_batch_size=${LOCATE_BATCH_SIZE}"
     --param "hamer_device=${HAMER_DEVICE}"
     --param "save_bbox_frames=${SAVE_BBOX_FRAMES}"
     --param "bbox_max_center_jump_px=${CALIB_BBOX_MAX_CENTER_JUMP_PX}"
@@ -574,6 +598,7 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     --param "bbox_min_iou_center_px=${CALIB_BBOX_MIN_IOU_CENTER_PX}"
     --param "bbox_max_gap=${CALIB_BBOX_MAX_GAP}"
     --param "reference_fps=${TIME_FILTER_REFERENCE_FPS}"
+    --param "image_left_physical_side=${IMAGE_LEFT_PHYSICAL_SIDE}"
     --output "${CALIB_FUSION_LEFT_JSONL}"
     --output "${CALIB_FUSION_RIGHT_JSONL}"
     --output "${CALIB_FUSION_LEFT_SUMMARY}"
@@ -595,11 +620,14 @@ if [[ "${USE_CALIB_VIDEO}" == "1" ]]; then
     PROMPT="${PROMPT}" \
     PROMPT_TAG="${PROMPT_TAG}" \
     LOCATE_DTYPE="${LOCATE_DTYPE}" \
+    LOCATE_ATTN_IMPLEMENTATION="${LOCATE_ATTN_IMPLEMENTATION}" \
+    LOCATE_BATCH_SIZE="${LOCATE_BATCH_SIZE}" \
     LOCATE_DEVICE="${LOCATE_DEVICE}" \
     HAMER_DEVICE="${HAMER_DEVICE}" \
     HAMER_HANDEDNESS="${HAMER_HANDEDNESS}" \
     VISUAL_SIDE="${VISUAL_SIDE}" \
     GLOVE_SIDE="${GLOVE_SIDE}" \
+    IMAGE_LEFT_PHYSICAL_SIDE="${IMAGE_LEFT_PHYSICAL_SIDE}" \
     FPS="${FPS}" \
     MAX_FRAMES="${MAX_FRAMES}" \
     OVERWRITE=1 \
