@@ -231,7 +231,8 @@ def render(args: argparse.Namespace) -> Dict:
     smooth_valid = np.isfinite(smoothed).all(axis=(1, 2))
 
     out_path = Path(args.out_path).expanduser().resolve()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if not args.no_render:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
     writer = None
     stats = {
         "frames": len(rows),
@@ -246,7 +247,8 @@ def render(args: argparse.Namespace) -> Dict:
     smooth_visible = []
     displacement = []
 
-    for i, row in enumerate(tqdm(rows, desc="Rendering visual 2D smooth")):
+    render_rows = [] if args.no_render else rows
+    for i, row in enumerate(tqdm(render_rows, desc="Rendering visual 2D smooth")):
         rgb_path = row.get("rgb_path")
         img = cv2.imread(str(rgb_path)) if rgb_path else None
         if img is None:
@@ -296,7 +298,7 @@ def render(args: argparse.Namespace) -> Dict:
 
     summary = {
         "input_jsonl": str(Path(args.input_jsonl).expanduser().resolve()),
-        "out_path": str(out_path),
+        "out_path": None if args.no_render else str(out_path),
         "output_jsonl": str(Path(args.output_jsonl).expanduser().resolve()) if args.output_jsonl else None,
         "fps": args.fps,
         "alpha": args.alpha,
@@ -306,6 +308,7 @@ def render(args: argparse.Namespace) -> Dict:
         "duration_sec": float(times_sec[-1]) if len(times_sec) else 0.0,
         "palm_indices": palm_indices,
         "stats": stats,
+        "rendered": not args.no_render,
     }
     if raw_visible:
         summary["raw_visible_points"] = {
@@ -347,13 +350,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max_frames", type=int, default=None)
     parser.add_argument("--draw_raw", action="store_true")
     parser.add_argument("--draw_indices", action="store_true")
+    parser.add_argument("--no_render", action="store_true", help="Write smoothed JSON/summary without decoding RGB or encoding MP4.")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
     summary = render(args)
-    print(f"[VisualizeVisual2DSmooth] video: {args.out_path}")
+    if not args.no_render:
+        print(f"[VisualizeVisual2DSmooth] video: {args.out_path}")
+    else:
+        print("[VisualizeVisual2DSmooth] video: skipped")
     print(f"[VisualizeVisual2DSmooth] summary: {json.dumps(summary, ensure_ascii=False)}")
 
 

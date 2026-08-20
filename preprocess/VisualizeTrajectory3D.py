@@ -39,8 +39,12 @@ def read_jsonl(path: Path) -> List[Dict]:
     return rows
 
 
-def hand_points_world(row: Dict) -> Optional[np.ndarray]:
-    pts = (row.get("glove") or {}).get("kpts_3d_world_m")
+def hand_points_world(row: Dict, side: Optional[str] = None) -> Optional[np.ndarray]:
+    if side is None:
+        glove = row.get("glove") or {}
+    else:
+        glove = (((row.get("hands") or {}).get(side) or {}).get("glove") or {})
+    pts = glove.get("kpts_3d_world_m")
     if pts is None:
         return None
     arr = np.asarray(pts, dtype=np.float64)
@@ -93,23 +97,35 @@ def finger_color(i: int) -> str:
     return "#c061cb"
 
 
-def draw_hand_3d(ax, pts: np.ndarray) -> None:
+def hand_color(side: str, joint: int) -> str:
+    if side == "left":
+        return "#2563eb"
+    if side == "right":
+        return "#ea580c"
+    return finger_color(joint)
+
+
+def draw_hand_3d(ax, pts: np.ndarray, side: str) -> None:
     for a, b in MP_HAND_BONES:
         ax.plot(
             [pts[a, 0], pts[b, 0]],
             [pts[a, 1], pts[b, 1]],
             [pts[a, 2], pts[b, 2]],
-            color=finger_color(b),
+            color=hand_color(side, b),
             linewidth=2.0,
         )
-    ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2], c=[finger_color(i) for i in range(21)], s=18, edgecolors="black", linewidths=0.25)
+    ax.scatter(
+        pts[:, 0], pts[:, 1], pts[:, 2],
+        c=[hand_color(side, i) for i in range(21)], s=18,
+        edgecolors="black", linewidths=0.25, label=f"{side} hand" if side in {"left", "right"} else "hand",
+    )
 
 
-def draw_hand_2d(ax, pts: np.ndarray, dims: Tuple[int, int]) -> None:
+def draw_hand_2d(ax, pts: np.ndarray, dims: Tuple[int, int], side: str) -> None:
     a_dim, b_dim = dims
     for a, b in MP_HAND_BONES:
-        ax.plot([pts[a, a_dim], pts[b, a_dim]], [pts[a, b_dim], pts[b, b_dim]], color=finger_color(b), linewidth=2.0)
-    ax.scatter(pts[:, a_dim], pts[:, b_dim], c=[finger_color(i) for i in range(21)], s=18, edgecolors="black", linewidths=0.25)
+        ax.plot([pts[a, a_dim], pts[b, a_dim]], [pts[a, b_dim], pts[b, b_dim]], color=hand_color(side, b), linewidth=2.0)
+    ax.scatter(pts[:, a_dim], pts[:, b_dim], c=[hand_color(side, i) for i in range(21)], s=18, edgecolors="black", linewidths=0.25)
 
 
 def draw_camera_axes(ax, mat: np.ndarray, scale: float) -> None:
@@ -147,12 +163,18 @@ def render(args: argparse.Namespace) -> Dict:
     rows = read_jsonl(Path(args.trajectory_jsonl).expanduser().resolve())
     if args.max_frames is not None:
         rows = rows[: args.max_frames]
-    hand_series = [hand_points_world(r) for r in rows]
+    dual_mode = any(isinstance(row.get("hands"), dict) for row in rows)
+    sides = ("left", "right") if dual_mode else ("hand",)
+    hand_series = {
+        side: [hand_points_world(row, None if side == "hand" else side) for row in rows]
+        for side in sides
+    }
     cam_series = [c2w(r) for r in rows]
-    valid_hands = [p for p in hand_series if p is not None]
-    if not valid_hands:
+    valid_hands = {side: [p for p in series if p is not None] for side, series in hand_series.items()}
+    if not any(valid_hands.values()):
         raise RuntimeError("No valid glove.kpts_3d_world_m in trajectory.")
-    limits = collect_limits(hand_series, cam_series, args.pad_ratio)
+    all_hand_series = [points for series in hand_series.values() for points in series]
+    limits = collect_limits(all_hand_series, cam_series, args.pad_ratio)
 
     out = Path(args.out_path).expanduser().resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -162,19 +184,26 @@ def render(args: argparse.Namespace) -> Dict:
 
     fig_w = args.width / 100.0
     fig_h = args.height / 100.0
-    last_hand = valid_hands[0]
+    last_hand = {side: (values[0] if values else None) for side, values in valid_hands.items()}
     cam_path: List[np.ndarray] = []
-    wrist_path: List[np.ndarray] = []
+    wrist_paths: Dict[str, List[np.ndarray]] = {side: [] for side in sides}
     written = 0
     repeats = repeat_counts(rows, output_fps=args.fps)
 
-    for i, (row, hand, cam) in enumerate(tqdm(list(zip(rows, hand_series, cam_series)), desc="Rendering trajectory 3D")):
-        if hand is None:
-            hand = last_hand
-        else:
-            last_hand = hand
-        wrist_path.append(hand[0].copy())
-        wrist_trail = np.asarray(wrist_path[-args.trail_len:], dtype=np.float64)
+    for i, (row, cam) in enumerate(tqdm(list(zip(rows, cam_series)), desc="Rendering trajectory 3D")):
+        frame_hands: Dict[str, np.ndarray] = {}
+        wrist_trails: Dict[str, np.ndarray] = {}
+        for side in sides:
+            hand = hand_series[side][i]
+            if hand is None:
+                hand = last_hand[side]
+            else:
+                last_hand[side] = hand
+            if hand is None:
+                continue
+            frame_hands[side] = hand
+            wrist_paths[side].append(hand[0].copy())
+            wrist_trails[side] = np.asarray(wrist_paths[side][-args.trail_len:], dtype=np.float64)
         if cam is not None:
             cam_path.append(cam[:3, 3].copy())
         cam_trail = np.asarray(cam_path[-args.trail_len:], dtype=np.float64) if cam_path else np.zeros((0, 3))
@@ -191,9 +220,11 @@ def render(args: argparse.Namespace) -> Dict:
         ax3d.set_title("World trajectory")
         if len(cam_trail) > 1:
             ax3d.plot(cam_trail[:, 0], cam_trail[:, 1], cam_trail[:, 2], color="#111111", linewidth=1.4, label="head/camera")
-        if len(wrist_trail) > 1:
-            ax3d.plot(wrist_trail[:, 0], wrist_trail[:, 1], wrist_trail[:, 2], color="#8b5cf6", linewidth=1.4, label="wrist")
-        draw_hand_3d(ax3d, hand)
+        for side, wrist_trail in wrist_trails.items():
+            if len(wrist_trail) > 1:
+                ax3d.plot(wrist_trail[:, 0], wrist_trail[:, 1], wrist_trail[:, 2], color=hand_color(side, 0), linewidth=1.4, label=f"{side} wrist")
+        for side, hand in frame_hands.items():
+            draw_hand_3d(ax3d, hand, side)
         if cam is not None:
             draw_camera_axes(ax3d, cam, args.camera_axis_len)
         ax3d.legend(loc="upper right")
@@ -203,13 +234,16 @@ def render(args: argparse.Namespace) -> Dict:
         if len(cam_trail) > 1:
             ax_xy.plot(cam_trail[:, 0], cam_trail[:, 1], color="#111111", linewidth=1.1)
             ax_xz.plot(cam_trail[:, 0], cam_trail[:, 2], color="#111111", linewidth=1.1)
-        if len(wrist_trail) > 1:
-            ax_xy.plot(wrist_trail[:, 0], wrist_trail[:, 1], color="#8b5cf6", linewidth=1.1)
-            ax_xz.plot(wrist_trail[:, 0], wrist_trail[:, 2], color="#8b5cf6", linewidth=1.1)
-        draw_hand_2d(ax_xy, hand, (0, 1))
-        draw_hand_2d(ax_xz, hand, (0, 2))
+        for side, wrist_trail in wrist_trails.items():
+            if len(wrist_trail) > 1:
+                ax_xy.plot(wrist_trail[:, 0], wrist_trail[:, 1], color=hand_color(side, 0), linewidth=1.1)
+                ax_xz.plot(wrist_trail[:, 0], wrist_trail[:, 2], color=hand_color(side, 0), linewidth=1.1)
+        for side, hand in frame_hands.items():
+            draw_hand_2d(ax_xy, hand, (0, 1), side)
+            draw_hand_2d(ax_xz, hand, (0, 2), side)
 
-        fig.suptitle(f"trajectory | frame {row.get('frame')} | glove world 21pts", fontsize=14)
+        mode_label = "dual hand" if dual_mode else "single hand"
+        fig.suptitle(f"trajectory | frame {row.get('frame')} | {mode_label} glove world 21pts", fontsize=14)
         fig.tight_layout(rect=[0, 0.02, 1, 0.96])
         fig.canvas.draw()
         rgba = np.asarray(fig.canvas.buffer_rgba())
@@ -226,7 +260,8 @@ def render(args: argparse.Namespace) -> Dict:
         "trajectory_jsonl": str(Path(args.trajectory_jsonl).expanduser().resolve()),
         "out_path": str(out),
         "frames": len(rows),
-        "valid_hand_world": len(valid_hands),
+        "mode": "dual_hand" if dual_mode else "single_hand",
+        "valid_hand_world": {side: len(values) for side, values in valid_hands.items()},
         "valid_camera_pose": sum(1 for c in cam_series if c is not None),
         "written": written,
         "source_frames": len(rows),

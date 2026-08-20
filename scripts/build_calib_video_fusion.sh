@@ -5,6 +5,8 @@ ROOT="${ROOT:-/home/lenovo/Ego-loong-postprocess}"
 CALIB_BAG_SESSION="${CALIB_BAG_SESSION:?CALIB_BAG_SESSION is required}"
 CALIB_BAG_DIR="${CALIB_BAG_DIR:-${CALIB_BAG_SESSION}/bag}"
 CALIB_SESSION="${CALIB_SESSION:?CALIB_SESSION is required}"
+HAND_CALIBRATION_FILE="${HAND_CALIBRATION_FILE:-}"
+CAMERA_EXTRINSICS_FILE="${CAMERA_EXTRINSICS_FILE:-}"
 
 ROS_SETUP="${ROS_SETUP:-/opt/ros/jazzy/setup.bash}"
 HAND_MSG_SETUP="${HAND_MSG_SETUP:-${ROOT}/hand_msg_ws/install/setup.bash}"
@@ -18,17 +20,19 @@ PROMPT="${PROMPT:-white tactile glove with an IMU module worn on a hand}"
 PROMPT_TAG="${PROMPT_TAG:-white_tactile_glove_with_imu}"
 LOCATE_DTYPE="${LOCATE_DTYPE:-bf16}"
 LOCATE_ATTN_IMPLEMENTATION="${LOCATE_ATTN_IMPLEMENTATION:-sdpa}"
-LOCATE_BATCH_SIZE="${LOCATE_BATCH_SIZE:-8}"
+LOCATE_BATCH_SIZE="${LOCATE_BATCH_SIZE:-16}"
 LOCATE_DEVICE="${LOCATE_DEVICE:-cuda}"
 HAMER_DEVICE="${HAMER_DEVICE:-cuda}"
+HAMER_BATCH_SIZE="${HAMER_BATCH_SIZE:-32}"
 HAMER_HANDEDNESS="${HAMER_HANDEDNESS:-all_left}"
 VISUAL_SIDE="${VISUAL_SIDE:-hand_l}"
 GLOVE_SIDE="${GLOVE_SIDE:-left}"
 IMAGE_LEFT_PHYSICAL_SIDE="${IMAGE_LEFT_PHYSICAL_SIDE:-left}"
-HAND_FRAME_SWAP_LR="${HAND_FRAME_SWAP_LR:-1}"
+HAND_FRAME_SWAP_LR="${HAND_FRAME_SWAP_LR:-0}"
 REQUESTED_FPS="${FPS:-}"
 FPS=""
 MAX_FRAMES="${MAX_FRAMES:-}"
+EXTRACT_IMAGE_WRITE_WORKERS="${EXTRACT_IMAGE_WRITE_WORKERS:-8}"
 OVERWRITE="${OVERWRITE:-0}"
 SAVE_BBOX_FRAMES="${SAVE_BBOX_FRAMES:-0}"
 DEPTH_RADIUS="${DEPTH_RADIUS:-8}"
@@ -45,6 +49,8 @@ CALIB_BBOX_MIN_IOU_CENTER_PX="${CALIB_BBOX_MIN_IOU_CENTER_PX:-9999}"
 CALIB_BBOX_MAX_GAP="${CALIB_BBOX_MAX_GAP:-30}"
 TIME_FILTER_REFERENCE_FPS="${TIME_FILTER_REFERENCE_FPS:-30}"
 RESOLVE_DRIVER="${RESOLVE_DRIVER:-/home/lenovo/Retarget/data/ros_ws/resolve_check/resolve_driver}"
+RENDER_DEBUG_VIDEOS="${RENDER_DEBUG_VIDEOS:-0}"
+PARALLEL_HANDS="${PARALLEL_HANDS:-1}"
 
 RGBD_DIR="${CALIB_SESSION}/preprocess"
 LOCATE_DIR="${CALIB_SESSION}/locateanything_${PROMPT_TAG}"
@@ -98,7 +104,14 @@ else
     --bag_dir "${CALIB_BAG_DIR}"
     --output_dir "${RGBD_DIR}"
     --resolve_driver "${RESOLVE_DRIVER}"
+    --image_write_workers "${EXTRACT_IMAGE_WRITE_WORKERS}"
   )
+  if [[ -n "${HAND_CALIBRATION_FILE}" && -f "${HAND_CALIBRATION_FILE}" ]]; then
+    extract_args+=(--handcal_path "${HAND_CALIBRATION_FILE}")
+  fi
+  if [[ -n "${CAMERA_EXTRINSICS_FILE}" && -f "${CAMERA_EXTRINSICS_FILE}" ]]; then
+    extract_args+=(--camera_extrinsics "${CAMERA_EXTRINSICS_FILE}")
+  fi
   if [[ "${OVERWRITE}" == "1" ]]; then
     extract_args+=(--overwrite)
   fi
@@ -122,6 +135,9 @@ else
   if [[ "${SAVE_BBOX_FRAMES}" == "1" ]]; then
     locate_frame_args=(--out_frames_dir "${LOCATE_DIR}/bbox_frames")
   fi
+  if [[ "${RENDER_DEBUG_VIDEOS}" != "1" ]]; then
+    locate_frame_args+=(--no_video)
+  fi
   "${LOCATE_PYTHON}" "${ROOT}/preprocess/VisualizeLocateAnythingBboxes.py" \
     --session_path "${CALIB_SESSION}" \
     --prompt "${PROMPT}" \
@@ -141,12 +157,16 @@ printf '\n[calib 3/6] Track/stabilize calibration bbox\n'
 if has_output "${STABLE_BBOX_JSON}"; then
   printf '  skip existing: %s\n' "${STABLE_BBOX_JSON}"
 else
+  track_video_args=()
+  if [[ "${RENDER_DEBUG_VIDEOS}" == "1" ]]; then
+    track_video_args=(--out_video "${STABLE_BBOX_MP4}")
+  fi
   "${HAMER_PYTHON}" "${ROOT}/preprocess/TrackDualHandBboxes.py" \
     --session_path "${CALIB_SESSION}" \
     --input_json "${LOCATE_JSON}" \
     --output_json "${STABLE_BBOX_JSON}" \
     --summary_json "${STABLE_BBOX_DIR}/tracking_summary.json" \
-    --out_video "${STABLE_BBOX_MP4}" \
+    "${track_video_args[@]}" \
     --fps "${FPS}" \
     --max_center_jump_px "${CALIB_BBOX_MAX_CENTER_JUMP_PX}" \
     --lost_jump_px "${CALIB_BBOX_LOST_JUMP_PX}" \
@@ -162,6 +182,10 @@ printf '\n[calib 4/6] HaMeR from calibration bbox\n'
 if has_output "${HAMER_FRAME_DIR}/00000/${HAMER_JSON_NAME}"; then
   printf '  skip existing per-frame HaMeR json: %s\n' "${HAMER_JSON_NAME}"
 else
+  hamer_video_args=()
+  if [[ "${RENDER_DEBUG_VIDEOS}" != "1" ]]; then
+    hamer_video_args=(--no_video)
+  fi
   "${HAMER_PYTHON}" "${ROOT}/preprocess/run_hamer_from_locate_bboxes.py" \
     --session_path "${CALIB_SESSION}" \
     --bbox_json "${STABLE_BBOX_JSON}" \
@@ -171,9 +195,11 @@ else
     --out_json_name "${HAMER_JSON_NAME}" \
     --out_video "${HAMER_MP4}" \
     --device "${HAMER_DEVICE}" \
+    --batch_size "${HAMER_BATCH_SIZE}" \
     --max_boxes 2 \
     --handedness "${HAMER_HANDEDNESS}" \
     --fps "${FPS}" \
+    "${hamer_video_args[@]}" \
     "${max_frames_args[@]}"
 fi
 
@@ -204,6 +230,8 @@ if [[ "${HAND_FRAME_SWAP_LR}" == "1" ]]; then
   fusion_swap_args+=(--swap_hand_frame_lr)
 fi
 printf '\n[calib 6/6] Build left/right calibration visual + /hand_frame fusion inputs\n'
+fusion_pids=()
+fusion_sides=()
 for side in left right; do
   if [[ "${side}" == "left" ]]; then
     visual_side=hand_l
@@ -218,18 +246,37 @@ for side in left right; do
     printf '  skip existing: %s\n' "${fusion_jsonl}"
     continue
   fi
-  "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildHandFusionInput.py" \
-    --session_path "${CALIB_SESSION}" \
-    --rgbd_subdir preprocess \
-    --visual_json_name "${HAMER_DEPTH_JSON_NAME}" \
-    --visual_json_dir "${DEPTH_FRAME_DIR}" \
-    --output_jsonl "${fusion_jsonl}" \
-    --summary_json "${fusion_summary}" \
-    --visual_side "${visual_side}" \
-    --glove_side "${side}" \
-    --hand_sync_key bag_time_ns \
+  fusion_cmd=(
+    "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildHandFusionInput.py"
+    --session_path "${CALIB_SESSION}"
+    --rgbd_subdir preprocess
+    --visual_json_name "${HAMER_DEPTH_JSON_NAME}"
+    --visual_json_dir "${DEPTH_FRAME_DIR}"
+    --output_jsonl "${fusion_jsonl}"
+    --summary_json "${fusion_summary}"
+    --visual_side "${visual_side}"
+    --glove_side "${side}"
+    --hand_sync_key bag_time_ns
     "${fusion_swap_args[@]}"
+  )
+  if [[ "${PARALLEL_HANDS}" == "1" ]]; then
+    "${fusion_cmd[@]}" &
+    fusion_pids+=("$!")
+    fusion_sides+=("${side}")
+  else
+    "${fusion_cmd[@]}"
+  fi
 done
+fusion_failed=0
+for i in "${!fusion_pids[@]}"; do
+  if ! wait "${fusion_pids[$i]}"; then
+    printf 'ERROR: calibration %s fusion failed\n' "${fusion_sides[$i]}" >&2
+    fusion_failed=1
+  fi
+done
+if [[ "${fusion_failed}" == "1" ]]; then
+  exit 1
+fi
 
 printf '\n[calib] Done\n'
 printf '  calibration session: %s\n' "${CALIB_SESSION}"

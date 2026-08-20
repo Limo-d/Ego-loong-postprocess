@@ -426,6 +426,93 @@ class HaMeRModel:
             return 0.50
 
     @torch.no_grad()
+    def predict_batch_from_crops(self, requests: list[dict]) -> list[Optional[dict]]:
+        """Run one HaMeR forward for crops collected across images/frames."""
+        results: list[Optional[dict]] = [None] * len(requests)
+        if not self.is_available or not requests:
+            return results
+
+        try:
+            from hamer.datasets.vitdet_dataset import ViTDetDataset
+            from hamer.utils.renderer import cam_crop_to_full
+            from hamer.utils import recursive_to
+
+            samples = []
+            valid_requests = []
+            for request_index, request in enumerate(requests):
+                img_rgb = np.asarray(request["img_rgb"])
+                bbox = np.asarray(request["bbox"], dtype=np.float32)
+                x1, y1, x2, y2 = bbox.astype(int)
+                if max(x2 - x1, y2 - y1) < 10:
+                    continue
+                is_right = int(request.get("is_right", 1))
+                dataset = ViTDetDataset(
+                    self.cfg,
+                    img_cv2=img_rgb[:, :, ::-1],
+                    boxes=np.asarray([[x1, y1, x2, y2]], dtype=np.float32),
+                    right=np.asarray([is_right], dtype=np.float32),
+                )
+                if len(dataset) == 0:
+                    continue
+                samples.append(dataset[0])
+                valid_requests.append((request_index, img_rgb, bbox, is_right))
+
+            if not samples:
+                return results
+            batch = torch.utils.data.default_collate(samples)
+            batch = recursive_to(batch, self.device)
+            out = self.model(batch)
+
+            pred_cam = out["pred_cam"].clone()
+            pred_keypoints_3d = out["pred_keypoints_3d"].detach().cpu().numpy()
+            pred_vertices = out["pred_vertices"].detach().cpu().numpy()
+            multiplier = 2 * batch["right"] - 1
+            pred_cam[:, 1] = multiplier * pred_cam[:, 1]
+            box_center = batch["box_center"].float()
+            box_size = batch["box_size"].float()
+            img_size = batch["img_size"].float()
+            scaled_focal_length = (
+                self.cfg.EXTRA.FOCAL_LENGTH
+                / self.cfg.MODEL.IMAGE_SIZE
+                * img_size.max(dim=1).values
+            )
+            pred_cam_t_full = cam_crop_to_full(
+                pred_cam, box_center, box_size, img_size, scaled_focal_length
+            ).detach().cpu().numpy()
+            focal_values = scaled_focal_length.detach().cpu().numpy()
+
+            for batch_index, (request_index, img_rgb, bbox, is_right) in enumerate(valid_requests):
+                joints_relative = pred_keypoints_3d[batch_index].copy()
+                vertices_relative = pred_vertices[batch_index].copy()
+                if is_right == 0:
+                    joints_relative[:, 0] *= -1
+                    vertices_relative[:, 0] *= -1
+                translation = pred_cam_t_full[batch_index]
+                joints_cam = joints_relative + translation[np.newaxis, :]
+                vertices_cam = vertices_relative + translation[np.newaxis, :]
+                img_h, img_w = img_rgb.shape[:2]
+                joints_2d = np.zeros((21, 2), dtype=np.float32)
+                focal = float(focal_values[batch_index])
+                if np.all(joints_cam[:, 2] > 0):
+                    joints_2d[:, 0] = joints_cam[:, 0] / joints_cam[:, 2] * focal + img_w / 2.0
+                    joints_2d[:, 1] = joints_cam[:, 1] / joints_cam[:, 2] * focal + img_h / 2.0
+                confidence = self._compute_hamer_confidence(
+                    joints_relative, joints_cam, joints_2d,
+                    img_w, img_h, bbox, focal,
+                )
+                results[request_index] = {
+                    "joints_3d": joints_cam.astype(np.float32),
+                    "joints_2d": joints_2d.astype(np.float32),
+                    "vertices_3d": vertices_cam.astype(np.float32),
+                    "confidence": confidence,
+                }
+            return results
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            return results
+
+    @torch.no_grad()
     def predict_from_crop(
         self,
         img_rgb: np.ndarray,

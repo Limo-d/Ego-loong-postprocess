@@ -68,7 +68,17 @@ def _draw_label(img: np.ndarray, text: str, x: int, y: int, color: tuple) -> Non
     cv2.putText(img, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2, cv2.LINE_AA)
 
 
-def _draw_detection(img: np.ndarray, det: Dict) -> Dict:
+def _format_detection(det: Dict) -> Dict:
+    bbox = np.asarray(det["bbox"], dtype=np.float32)
+    return {
+        "bbox": [float(v) for v in bbox.tolist()],
+        "label": str(det.get("label", "object")),
+        "score": float(det.get("score", 1.0)),
+        "raw": det.get("raw", ""),
+    }
+
+
+def _draw_detection(img: np.ndarray, det: Dict) -> None:
     bbox = np.asarray(det["bbox"], dtype=np.float32)
     h, w = img.shape[:2]
     x1, y1, x2, y2 = bbox
@@ -77,19 +87,11 @@ def _draw_detection(img: np.ndarray, det: Dict) -> Dict:
     x2 = int(np.clip(round(x2), 0, w - 1))
     y2 = int(np.clip(round(y2), 0, h - 1))
 
-    label = str(det.get("label", "object"))
-    score = float(det.get("score", 1.0))
+    label = det["label"]
+    score = det["score"]
     color = (80, 220, 80)
     cv2.rectangle(img, (x1, y1), (x2, y2), color, 3, cv2.LINE_AA)
     _draw_label(img, f"{label} {score:.2f}", x1, y1 - 8, color)
-
-    return {
-        "bbox": [float(v) for v in bbox.tolist()],
-        "label": label,
-        "score": score,
-        "raw": det.get("raw", ""),
-    }
-
 
 def _parse_locateanything_boxes(answer: str, image_w: int, image_h: int, default_label: str) -> List[Dict]:
     detections = []
@@ -276,6 +278,7 @@ def visualize_locateanything_bboxes(
     max_frames: Optional[int],
     save_frames: bool,
     batch_size: int,
+    render_video: bool = True,
 ) -> Dict[str, int]:
     frame_dirs = _frame_dirs(session_path, max_frames)
     if not frame_dirs:
@@ -295,7 +298,8 @@ def visualize_locateanything_bboxes(
     ]
     repeats = repeat_counts(timeline_rows, output_fps=fps)
 
-    os.makedirs(os.path.dirname(out_video), exist_ok=True)
+    if render_video:
+        os.makedirs(os.path.dirname(out_video), exist_ok=True)
     os.makedirs(os.path.dirname(out_json), exist_ok=True)
     if save_frames:
         os.makedirs(out_frames_dir, exist_ok=True)
@@ -366,26 +370,31 @@ def visualize_locateanything_bboxes(
                 continue
 
             pred = next(predictions)
-            vis = img_bgr.copy()
-            drawn = []
-            for det in pred["detections"]:
-                drawn.append(_draw_detection(vis, det))
-                stats["detections"] += 1
+            detections = [_format_detection(det) for det in pred["detections"]]
+            stats["detections"] += len(detections)
+            vis = None
+            if render_video or save_frames:
+                vis = img_bgr.copy()
+                for det in detections:
+                    _draw_detection(vis, det)
+                _draw_label(vis, f"{frame_name}  dets={len(detections)}  prompt={prompt}", 10, 24, (255, 255, 255))
 
-            _draw_label(vis, f"{frame_name}  dets={len(drawn)}  prompt={prompt}", 10, 24, (255, 255, 255))
-
-            if writer is None:
+            if render_video and writer is None:
+                assert vis is not None
                 h, w = vis.shape[:2]
                 writer = cv2.VideoWriter(out_video, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                 if not writer.isOpened():
                     raise RuntimeError(f"Failed to open video writer: {out_video}")
 
-            for _ in range(repeats[frame_i]):
-                writer.write(vis)
-                stats["written"] += 1
+            if writer is not None:
+                assert vis is not None
+                for _ in range(repeats[frame_i]):
+                    writer.write(vis)
+                    stats["written"] += 1
             stats["frames"] += 1
 
             if save_frames:
+                assert vis is not None
                 cv2.imwrite(os.path.join(out_frames_dir, f"{frame_name}.png"), vis)
 
             result["frames"].append({
@@ -393,7 +402,7 @@ def visualize_locateanything_bboxes(
                 "rgb_stamp_ns": rgb_stamp_ns,
                 "rgb_path": rgb_path,
                 "answer": pred["answer"],
-                "detections": drawn,
+                "detections": detections,
             })
             progress.update(1)
     progress.close()
@@ -415,7 +424,7 @@ def main() -> None:
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--dtype", choices=["bf16", "fp16", "fp32"], default="bf16")
     parser.add_argument("--attn_implementation", choices=["sdpa", "flash_attention_2", "magi"], default="sdpa")
-    parser.add_argument("--batch_size", type=int, default=8, help="Batched hybrid inference size; use 1 for the legacy per-frame path.")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batched hybrid inference size; use 1 for the legacy per-frame path.")
     parser.add_argument("--generation_mode", default="hybrid")
     parser.add_argument("--max_new_tokens", type=int, default=2048)
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -426,6 +435,7 @@ def main() -> None:
     parser.add_argument("--out_json", default=None)
     parser.add_argument("--out_frames_dir", default=None)
     parser.add_argument("--no_save_frames", action="store_true")
+    parser.add_argument("--no_video", action="store_true", help="Run detection without encoding the bbox MP4.")
     args = parser.parse_args()
 
     session_path = os.path.abspath(args.session_path)
@@ -453,8 +463,10 @@ def main() -> None:
         max_frames=args.max_frames,
         save_frames=not args.no_save_frames,
         batch_size=args.batch_size,
+        render_video=not args.no_video,
     )
-    print(f"[VisualizeLocateAnythingBboxes] Saved video: {out_video}")
+    if not args.no_video:
+        print(f"[VisualizeLocateAnythingBboxes] Saved video: {out_video}")
     print(f"[VisualizeLocateAnythingBboxes] Saved json: {out_json}")
     if not args.no_save_frames:
         print(f"[VisualizeLocateAnythingBboxes] Saved frames: {out_frames_dir}")

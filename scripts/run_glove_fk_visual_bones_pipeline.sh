@@ -21,6 +21,7 @@ CALIB_FRAME_START="${CALIB_FRAME_START:-}"
 CALIB_FRAME_END="${CALIB_FRAME_END:-}"
 ALPHA_ANGLE="${ALPHA_ANGLE:-0.45}"
 ALPHA_QUAT="${ALPHA_QUAT:-0.45}"
+GLOVE_NEUTRAL_FRAMES="${GLOVE_NEUTRAL_FRAMES:-30}"
 FPS="${FPS:-20}"
 WRIST_TRACK_ALPHA="${WRIST_TRACK_ALPHA:-0.25}"
 WRIST_TRACK_ACCEPT_STEP_M="${WRIST_TRACK_ACCEPT_STEP_M:-0.035}"
@@ -37,6 +38,7 @@ FLIP_PALM_NORMAL="${FLIP_PALM_NORMAL:-0}"
 WRIST_TRACK_SNAP_ROOT="${WRIST_TRACK_SNAP_ROOT:-0}"
 WRIST_TRACK_DEPTH_ONLY="${WRIST_TRACK_DEPTH_ONLY:-1}"
 TIME_FILTER_REFERENCE_FPS="${TIME_FILTER_REFERENCE_FPS:-30}"
+RENDER_DEBUG_VIDEOS="${RENDER_DEBUG_VIDEOS:-0}"
 
 OUT_TAG="visual_bones_smooth_solve045"
 SIDE_TAG="${GLOVE_SIDE}"
@@ -76,6 +78,11 @@ TF_STATIC_JSONL="${TF_STATIC_JSONL:-${SESSION}/preprocess/tf_static.jsonl}"
 
 mkdir -p "${CONFIG_DIR}" "${SMOOTH_DIR}" "${FK_DIR}" "${CALIB_WORK_DIR}"
 
+NEUTRAL_ARGS=()
+if [[ "${GLOVE_NEUTRAL_FRAMES}" -gt 0 ]]; then
+  NEUTRAL_ARGS=(--neutral_frames "${GLOVE_NEUTRAL_FRAMES}")
+fi
+
 if [[ -n "${CALIB_INPUT_FUSION}" ]]; then
   HAND_CONFIG_FUSION="${CALIB_INPUT_FUSION}"
   HAND_CONFIG_FRAME_START="${CALIB_FRAME_START}"
@@ -114,7 +121,8 @@ printf '\n[2/13] Smooth main glove solve_state (%s, alpha_angle=%s, alpha_quat=%
   --glove_side "${GLOVE_SIDE}" \
   --alpha_angle "${ALPHA_ANGLE}" \
   --alpha_quat "${ALPHA_QUAT}" \
-  --reference_fps "${TIME_FILTER_REFERENCE_FPS}"
+  --reference_fps "${TIME_FILTER_REFERENCE_FPS}" \
+  "${NEUTRAL_ARGS[@]}"
 
 printf '\n[3/13] Build main glove FK 21 points with visual bones (apply_palm_quat=%s)\n' "${APPLY_PALM_QUAT}"
 BUILD_MAIN_FK_ARGS=(
@@ -151,7 +159,8 @@ if [[ -n "${CALIB_INPUT_FUSION}" ]]; then
     --glove_side "${GLOVE_SIDE}" \
     --alpha_angle "${ALPHA_ANGLE}" \
     --alpha_quat "${ALPHA_QUAT}" \
-    --reference_fps "${TIME_FILTER_REFERENCE_FPS}"
+    --reference_fps "${TIME_FILTER_REFERENCE_FPS}" \
+    "${NEUTRAL_ARGS[@]}"
   BUILD_CALIB_FK_ARGS=(
     --input_jsonl "${CALIB_SMOOTH_FUSION}"
     --output_jsonl "${CALIB_FK_FOR_ROTATION}"
@@ -228,19 +237,23 @@ elif [[ "${WRIST_TRACK_DEPTH_ONLY}" == "1" ]]; then
 fi
 "${PYTHON}" "${ROOT}/preprocess/TrackGloveWristRoot.py" "${TRACK_ARGS[@]}"
 
-printf '\n[8/13] Render raw calibrated HaMeR-vs-glove overlay video\n'
-"${PYTHON}" "${ROOT}/preprocess/VisualizeGloveFkVsVisual.py" \
-  --input_jsonl "${CALIBRATED_FRAMES}" \
-  --out_path "${OVERLAY_MP4}" \
-  --summary_json "${OVERLAY_SUMMARY}" \
-  --fps "${FPS}"
+if [[ "${RENDER_DEBUG_VIDEOS}" == "1" ]]; then
+  printf '\n[8/13] Render raw calibrated HaMeR-vs-glove overlay video\n'
+  "${PYTHON}" "${ROOT}/preprocess/VisualizeGloveFkVsVisual.py" \
+    --input_jsonl "${CALIBRATED_FRAMES}" \
+    --out_path "${OVERLAY_MP4}" \
+    --summary_json "${OVERLAY_SUMMARY}" \
+    --fps "${FPS}"
 
-printf '\n[9/13] Render wristroot_track HaMeR-vs-glove overlay video\n'
-"${PYTHON}" "${ROOT}/preprocess/VisualizeGloveFkVsVisual.py" \
-  --input_jsonl "${WRIST_TRACK_FRAMES}" \
-  --out_path "${TRACK_OVERLAY_MP4}" \
-  --summary_json "${TRACK_OVERLAY_SUMMARY}" \
-  --fps "${FPS}"
+  printf '\n[9/13] Render wristroot_track HaMeR-vs-glove overlay video\n'
+  "${PYTHON}" "${ROOT}/preprocess/VisualizeGloveFkVsVisual.py" \
+    --input_jsonl "${WRIST_TRACK_FRAMES}" \
+    --out_path "${TRACK_OVERLAY_MP4}" \
+    --summary_json "${TRACK_OVERLAY_SUMMARY}" \
+    --fps "${FPS}"
+else
+  printf '\n[8-9/13] Skip per-hand overlay videos: RENDER_DEBUG_VIDEOS=%s\n' "${RENDER_DEBUG_VIDEOS}"
+fi
 
 printf '\n[10/13] Build unified wristroot_track trajectory\n'
 "${PYTHON}" "${ROOT}/preprocess/BuildUnifiedTrajectory.py" \
@@ -270,20 +283,26 @@ else
   printf '  skip camera optical fix: USE_CAMERA_OPTICAL_FIX=%s\n' "${USE_CAMERA_OPTICAL_FIX}"
 fi
 
-printf '\n[12/13] Render wristroot_track camera-optical world trajectory video\n'
-"${PYTHON}" "${ROOT}/preprocess/VisualizeTrajectory3D.py" \
-  --trajectory_jsonl "${TRAJECTORY_CAMERAOPTICAL_JSONL}" \
-  --out_path "${TRAJECTORY_3D_MP4}" \
-  --summary_json "${TRAJECTORY_3D_SUMMARY}" \
-  --fps "${FPS}"
+if [[ "${RENDER_DEBUG_VIDEOS}" == "1" ]]; then
+  printf '\n[12/13] Render per-hand wristroot_track camera-optical world trajectory video\n'
+  "${PYTHON}" "${ROOT}/preprocess/VisualizeTrajectory3D.py" \
+    --trajectory_jsonl "${TRAJECTORY_CAMERAOPTICAL_JSONL}" \
+    --out_path "${TRAJECTORY_3D_MP4}" \
+    --summary_json "${TRAJECTORY_3D_SUMMARY}" \
+    --fps "${FPS}"
+else
+  printf '\n[12/13] Skip per-hand 3D video: RENDER_DEBUG_VIDEOS=%s\n' "${RENDER_DEBUG_VIDEOS}"
+fi
 
 printf '\n[13/13] Done. Main outputs:\n'
 printf '  visual config:    %s\n' "${VISUAL_CONFIG}"
 printf '  calibration json: %s\n' "${CALIB_JSON}"
 printf '  calibrated frames:%s\n' "${CALIBRATED_FRAMES}"
 printf '  wrist track frames:%s\n' "${WRIST_TRACK_FRAMES}"
-printf '  raw overlay video: %s\n' "${OVERLAY_MP4}"
-printf '  track overlay video:%s\n' "${TRACK_OVERLAY_MP4}"
 printf '  trajectory jsonl:  %s\n' "${TRAJECTORY_JSONL}"
 printf '  cameraopt jsonl:   %s\n' "${TRAJECTORY_CAMERAOPTICAL_JSONL}"
-printf '  3D trajectory mp4: %s\n' "${TRAJECTORY_3D_MP4}"
+if [[ "${RENDER_DEBUG_VIDEOS}" == "1" ]]; then
+  printf '  raw overlay video: %s\n' "${OVERLAY_MP4}"
+  printf '  track overlay video:%s\n' "${TRACK_OVERLAY_MP4}"
+  printf '  3D trajectory mp4: %s\n' "${TRAJECTORY_3D_MP4}"
+fi

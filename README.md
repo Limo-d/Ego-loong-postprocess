@@ -142,32 +142,52 @@ GLOVE_SIDE=left
 /home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T0156.38
 ```
 
-`BAG_SESSION` 可以传采集根目录，也可以直接传其 `data` 目录。脚本会先解析出统一的数据根目录 `BAG_DATA_DIR`，再寻找 bag：
+`BAG_SESSION` 可以传单个 session 根目录，也可以直接传其 `data` 目录。脚本会先解析出统一的数据根目录 `BAG_DATA_DIR`，再寻找 bag：
 
 ```text
 ${BAG_SESSION}/bag
 ${BAG_SESSION}/data/bag
 ```
 
-新版数据包通常使用：
+批次格式的数据包由多个 session 共享同一份标定：
 
 ```text
-${BAG_SESSION}/data/bag
-${BAG_SESSION}/data/calibration/rtabmap.db
-${BAG_SESSION}/data/calibration/calib_video_*/bag
+<batch>/
+├── calibrations/
+│   ├── calibration_manifest.json
+│   ├── hand_calibration.txt
+│   ├── camera_extrinsics.json
+│   ├── coordinate_calibration.txt
+│   ├── installation_calibration.txt
+│   ├── calibration_video/bag
+│   └── pinch_calibration/bag
+└── <session>/
+    └── data/
+        ├── bag
+        └── map/rtabmap.db
 ```
 
-其中 `calib_video_*` 是专门录制的手眼/手套视觉标定 bag。主流程默认 `AUTO_CALIB_VIDEO=1`，会自动选择最新的 `calib_video_*` 目录作为标定输入；如果想手动指定，设置 `CALIB_BAG_SESSION=/path/to/calib_video_xxx`。
+传入 `<batch>/<session>` 或 `<batch>/<session>/data` 时，主流程会自动发现相邻的 `<batch>/calibrations`，并让各 session 共享 `hand_calibration.txt`、`camera_extrinsics.json` 和 `calibration_video`。旧格式的 `data/calibration/handcal.txt`、`oak_extrinsics.json` 和 `calib_video_*` 仍然兼容。
 
-RTAB-Map 数据库默认从解析后的数据根目录读取：
+批次格式的 RTAB-Map 数据库属于各 session，默认读取：
 
 ```text
-${BAG_DATA_DIR}/calibration/rtabmap.db
+${BAG_DATA_DIR}/map/rtabmap.db
 ```
+
+旧格式继续回退到 `${BAG_DATA_DIR}/calibration/rtabmap.db`。
 
 当前默认 `USE_RTABMAP_POSE=1`，也就是后续相机位姿来自 `rtabmap.db` 导出的 Poses，并插值到 RGB 帧。
 
 ## 一行运行命令
+
+处理整个共享标定批次：
+
+```bash
+BATCH_ROOT=/path/to/batch OVERWRITE=1 scripts/run_sampler_batch_to_glove_trajectory.sh
+```
+
+批次脚本按名称顺序处理所有包含 `data/bag` 的一级子目录。共享 `calibration_video` 默认只处理一次，产物和缓存保存在 `postprocess_data/_batch_calibration/<batch-name>/`，后续 session 直接复用。默认遇到失败即停止；设置 `CONTINUE_ON_ERROR=1` 可以继续处理其余 session，并在最后汇总失败项。
 
 典型左手数据处理命令：
 
@@ -195,17 +215,23 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |
 | `BAG_SESSION` | sampler 示例路径 | 输入采集根目录或其 `data` 目录，两种写法等价 |
+| `BATCH_ROOT` | 自动识别 | 共享 `calibrations` 的批次根；单 session 运行时通常无需指定 |
+| `CALIBRATION_DIR` | 自动识别 | 新格式为 `${BATCH_ROOT}/calibrations`，旧格式回退到 session 内 `calibration` |
+| `HAND_CALIBRATION_FILE` | 自动识别 | 新格式 `hand_calibration.txt`，旧格式 `handcal.txt` |
+| `CAMERA_EXTRINSICS_FILE` | 自动识别 | 新格式 `camera_extrinsics.json`，旧格式 `oak_extrinsics.json` |
 | `SESSION_NAME` | 自动生成 | 输出 session 名称 |
 | `SESSION` | `postprocess_data/${SESSION_NAME}` | 完整输出目录 |
 | `BAG_DIR` | 自动识别 | ROS2 bag 目录 |
 | `USE_RTABMAP_POSE` | `1` | 是否使用 `rtabmap.db` 相机位姿 |
-| `RTABMAP_DB` | `${BAG_DATA_DIR}/calibration/rtabmap.db` | RTAB-Map 数据库；`BAG_DATA_DIR` 由脚本自动解析 |
+| `RTABMAP_DB` | 自动识别 | 优先 `${BAG_DATA_DIR}/map/rtabmap.db`，旧格式回退到 calibration 目录 |
 | `RTABMAP_MAX_INTERP_GAP_SEC` | `0.25` | 允许插值跨越的最大 RTAB-Map 节点时间间隔 |
 | `RTABMAP_RENDER_VIDEOS` | `0` | 是否生成两段 RTAB-Map 轨迹预览 MP4；默认关闭以加快第 2 阶段，设为 `1` 可恢复 |
+| `EXTRACT_IMAGE_WRITE_WORKERS` | `8` | ROS bag 解包时并行进行 PNG 编码和写盘；设为 `1` 可回退串行模式 |
 | `LOCATE_DTYPE` | `bf16` | LocateAnything 推理精度；Blackwell 默认使用 BF16，较 FP32 更快且显存占用更低 |
 | `LOCATE_ATTN_IMPLEMENTATION` | `sdpa` | LocateAnything 注意力后端；默认显式使用 PyTorch SDPA，避免尝试未安装的 Flash/Magi 后再回退 |
-| `LOCATE_BATCH_SIZE` | `8` | LocateAnything 批推理大小；仍输出逐帧检测JSON供 stable bbox 使用，设为 `1` 可回退旧逐帧路径 |
-| `HAMER_HANDEDNESS` | `all_left` | HaMeR 手性策略 |
+| `LOCATE_BATCH_SIZE` | `16` | LocateAnything 批推理大小；仍输出逐帧检测JSON供 stable bbox 使用，设为 `1` 可回退旧逐帧路径 |
+| `HAMER_BATCH_SIZE` | `32` | HaMeR 每次统一推理的手部 crop 数；稳定框带显式左右手标签时跨帧批处理，旧 track 数据缺标签时自动回退为 `1` |
+| `HAMER_HANDEDNESS` | `track` | HaMeR 手性策略；根据稳定框的左右手轨迹处理双手 |
 | `VISUAL_SIDE` | `hand_l` | 视觉手侧 |
 | `GLOVE_SIDE` | `left` | 手套数据侧 |
 | `IMAGE_LEFT_PHYSICAL_SIDE` | `left` | 画面左侧手框对应的物理手；当前采集相机使用 `left`，镜像或其他安装方式可设为 `right` |
@@ -213,6 +239,12 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `FPS` | 自动 | 主流程忽略固定覆盖值，始终从 `rgb_stamp_ns` 估计真实 RGB 标称帧率 |
 | `TIME_FILTER_REFERENCE_FPS` | `30` | 旧版每帧 alpha、最大步长和确认帧数的参考语义；实际计算按真实 `dt` 换算 |
 | `OVERWRITE` | `0` | `1` 时忽略阶段缓存并强制重算 |
+| `CONFIG_ONLY` | `0` | `1` 时只解析并打印输入路径，不创建输出或运行处理阶段 |
+| `PARALLEL_HANDS` | `1` | 左右手 fusion、平滑、FK、标定应用和腕部追踪并行执行；设为 `0` 可串行调试 |
+| `RENDER_DEBUG_VIDEOS` | `0` | 是否生成 bbox、HaMeR、单手 2D、overlay 和单手 3D 调试视频 |
+| `RENDER_STABLE_BBOX_VIDEO` | `1` | 是否保留 Locate stable bbox 视频 |
+| `RENDER_HAMER_SMOOTH_VIDEO` | `1` | 是否将左右手平滑 HaMeR 2D 结果合并渲染为一个视频 |
+| `RENDER_FINAL_VIDEO` | `0` | 是否额外生成最终双手 3D 视频；默认通过 review web 查看轨迹 |
 | `MAX_FRAMES` | 空 | 限制处理帧数，调试用 |
 | `RUN_QUALITY_CHECK` | `1` | 主流程结束前运行硬性质量门禁；失败时脚本返回非零状态 |
 | `QUALITY_MAX_WRIST_RESIDUAL_P95_M` | `0.070` | 腕部跟踪残差 P95 上限，单位米 |
@@ -227,9 +259,13 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `DEPTH_RADIUS` | `8` | 深度局部搜索半径 |
 | `DEPTH_ROBUST_INLIER_M` | `0.055` | 深度 inlier 阈值 |
 | `VISUAL_2D_SMOOTH_ALPHA` | `0.35` | 2D overlay 平滑系数 |
+| `HAMER_BRANCH_JUMP_THRESHOLD_DEG` | `75` | 相邻 HaMeR 手掌法向超过此角度时视为姿态分支跳变候选 |
+| `HAMER_BRANCH_BRIDGE_GAP_FRAMES` | `3` | 合并异常分支内部短暂返回正常分支的最大帧数 |
+| `HAMER_BRANCH_MAX_REJECT_FRAMES` | `60` | 短期跳入后又返回原分支时，允许拒绝并用前后 HaMeR 姿态插值的最大帧数 |
 | `WRIST_TRACK_ALPHA` | `0.25` | wrist 3D/root 时间滤波系数，由子流程读取 |
 | `WRIST_TRACK_MAX_STEP_M` | `0.007` | wrist 3D/root 单帧最大步长，由子流程读取 |
 | `REVIEW_HAND_DISPLAY_ROTATE_DEG` | `45` | 网页 3D 手部显示旋转参数；当前默认开启 `wrist -> middle_mcp` 竖直对齐时主要用于兼容旧命令 |
+| `REVIEW_RGB_WORKERS` | `8` | review web 并行导出 RGB JPEG 的线程数；轨迹和触觉由浏览器 Canvas 实时绘制，不再生成逐帧 JPEG |
 
 ## 输出目录
 
@@ -253,26 +289,21 @@ glove_fk21_visual_bones_smooth_solve045/         glove FK、标定、wrist track
 outputs/                                         用户主要查看和交付结果
 ```
 
-`outputs/` 内的重要结果：
+`outputs/` 内默认的重要结果：
 
 ```text
-outputs/videos/00_rgb_raw.mp4
-outputs/videos/01_locate_bboxes.mp4
 outputs/videos/02_stable_bbox.mp4
-outputs/videos/03_visual_21kpts_raw.mp4
-outputs/videos/04_visual_21kpts_2d_smooth.mp4
-outputs/videos/06_glove_fk_overlay_wristroot_track.mp4
-outputs/videos/07_trajectory_3d_world.mp4
-outputs/videos/07b_trajectory_3d_camera_frame.mp4
+outputs/videos/04_dual_visual_21kpts_2d_smooth.mp4
 
 outputs/data/trajectory_wristroot_track_cameraoptical.jsonl
-outputs/data/visual_2d_smooth.jsonl
 outputs/data/locate_bboxes.json
 outputs/data/stable_bboxes.json
 
 outputs/summaries/*.json
 outputs/web/index.html
 ```
+
+默认仍保留左右手各自的 fusion、平滑、FK、标定和腕部追踪数据及 summary，只生成 stable bbox 和双手 HaMeR 2D 平滑视频，不生成双手 3D MP4；3D 轨迹通过 `outputs/web/index.html` 查看。需要恢复旧版单手/中间调试视频时设置 `RENDER_DEBUG_VIDEOS=1`，需要额外生成双手 3D MP4 时设置 `RENDER_FINAL_VIDEO=1`。
 
 ## 可视化网页
 
@@ -291,11 +322,11 @@ outputs/web/index.html
 底部：播放/暂停、重置、时间轴
 ```
 
-网页使用帧序列播放，不依赖浏览器 MP4/H.264 解码。生成后的网页是自包含的，RGB 和 3D 帧位于：
+网页使用 RGB 帧序列播放，不依赖浏览器 MP4/H.264 解码。3D 轨迹和触觉热力图由浏览器根据嵌入数据实时绘制，不再生成逐帧图片。生成后的网页包含：
 
 ```text
 outputs/web/rgb_frames/*.jpg
-outputs/web/traj_frames/*.jpg
+outputs/web/tactile_hand.png
 ```
 
 ### 采集风格网页
@@ -311,7 +342,7 @@ outputs/web/traj_frames/*.jpg
 ```text
 outputs/web_collect/index.html
 outputs/web_collect/rgb_frames/*.jpg
-outputs/web_collect/traj_frames/*.jpg
+outputs/web_collect/tactile_hand.png
 ```
 
 `web_collect` 右侧的采集时长、图表、拖动和播放均来自轨迹中的 `timestamp.rgb_stamp_ns`。`--fps` 只在旧轨迹缺少时间戳时作为回退值，不再用帧数除以固定 FPS 计算时长。
@@ -452,11 +483,13 @@ BAG_DIR=/actual/path/to/bag BAG_SESSION=/path/to/session scripts/run_sampler_bag
 
 ### RTABMAP_DB not found
 
-默认路径（`BAG_DATA_DIR` 由 `BAG_SESSION` 自动解析）：
+批次格式默认路径（`BAG_DATA_DIR` 由 `BAG_SESSION` 自动解析）：
 
 ```text
-${BAG_DATA_DIR}/calibration/rtabmap.db
+${BAG_DATA_DIR}/map/rtabmap.db
 ```
+
+旧格式会继续尝试 calibration 目录中的 `rtabmap.db`。
 
 如果数据库在别处：
 
@@ -488,12 +521,12 @@ COMPACT_OUTPUTS=1
 
 ### 网页打不开或视频不播放
 
-网页不是直接播放 MP4，而是播放 `outputs/web/rgb_frames` 和 `outputs/web/traj_frames` 里的帧。确认这些文件存在：
+网页不是直接播放 MP4；RGB 来自 `outputs/web/rgb_frames`，轨迹和触觉由 Canvas 绘制。确认这些文件存在：
 
 ```text
 outputs/web/index.html
 outputs/web/rgb_frames/00000.jpg
-outputs/web/traj_frames/00000.jpg
+outputs/web/tactile_hand.png
 ```
 
 如果缺失，重新生成网页：

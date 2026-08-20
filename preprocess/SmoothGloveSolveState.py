@@ -88,12 +88,72 @@ def slerp(q0: np.ndarray, q1: np.ndarray, alpha: float) -> np.ndarray:
     return normalize_quat(s0 * q0 + s1 * q1)
 
 
+def quat_multiply(q0: np.ndarray, q1: np.ndarray) -> np.ndarray:
+    w0, x0, y0, z0 = q0
+    w1, x1, y1, z1 = q1
+    return np.asarray([
+        w0 * w1 - x0 * x1 - y0 * y1 - z0 * z1,
+        w0 * x1 + x0 * w1 + y0 * z1 - z0 * y1,
+        w0 * y1 - x0 * z1 + y0 * w1 + z0 * x1,
+        w0 * z1 + x0 * y1 - y0 * x1 + z0 * w1,
+    ], dtype=np.float64)
+
+
+def average_quat(quats: List[np.ndarray]) -> Optional[np.ndarray]:
+    valid = [normalize_quat(q) for q in quats]
+    valid = [q for q in valid if q is not None]
+    if not valid:
+        return None
+    reference = valid[0]
+    aligned = [q if float(np.dot(q, reference)) >= 0.0 else -q for q in valid]
+    return normalize_quat(np.sum(aligned, axis=0))
+
+
+def estimate_neutral_state(rows: List[Dict], solve_key: str, frame_count: int) -> Optional[np.ndarray]:
+    states = []
+    for row in rows[:max(0, int(frame_count))]:
+        hand_frame = row.get("hand_frame") or {}
+        values = hand_frame.get(solve_key)
+        if valid_state(values):
+            states.append(np.asarray(values, dtype=np.float64))
+    if not states:
+        return None
+    arr = np.asarray(states, dtype=np.float64)
+    neutral = np.median(arr, axis=0)
+    cmc = average_quat([state[19:23] for state in states])
+    palm = average_quat([state[23:27] for state in states])
+    if cmc is None or palm is None:
+        return None
+    neutral[19:23] = cmc
+    neutral[23:27] = palm
+    return neutral
+
+
+def apply_neutral_state(state: np.ndarray, neutral: np.ndarray) -> np.ndarray:
+    corrected = state.copy()
+    corrected[:19] -= neutral[:19]
+    for start in (19, 23):
+        current = normalize_quat(state[start:start + 4])
+        reference = normalize_quat(neutral[start:start + 4])
+        if current is None or reference is None:
+            continue
+        reference_inv = reference * np.asarray([1.0, -1.0, -1.0, -1.0])
+        relative = normalize_quat(quat_multiply(reference_inv, current))
+        if relative is not None:
+            corrected[start:start + 4] = relative
+    return corrected
+
+
 def smooth_rows(args: argparse.Namespace) -> Dict:
     rows = read_jsonl(Path(args.input_jsonl).expanduser().resolve())
     solve_key = f"solve_state_{args.glove_side}"
     alpha_angle = float(args.alpha_angle)
     alpha_quat = float(args.alpha_quat)
     reference_fps = float(args.reference_fps)
+    neutral_frames = max(0, int(args.neutral_frames))
+    neutral_state = estimate_neutral_state(rows, solve_key, neutral_frames) if neutral_frames else None
+    if neutral_frames and neutral_state is None:
+        raise RuntimeError(f"Could not estimate {solve_key} neutral state from first {neutral_frames} frames")
 
     prev_angles: Optional[np.ndarray] = None
     prev_cmc: Optional[np.ndarray] = None
@@ -118,7 +178,8 @@ def smooth_rows(args: argparse.Namespace) -> Dict:
             out_rows.append(new_row)
             continue
 
-        state = np.asarray(hand_frame[solve_key], dtype=np.float64)
+        raw_state = np.asarray(hand_frame[solve_key], dtype=np.float64)
+        state = apply_neutral_state(raw_state, neutral_state) if neutral_state is not None else raw_state.copy()
         stamp_ns = row_stamp_ns(row)
         frame_dt_sec = dt_sec(prev_stamp_ns, stamp_ns, reference_fps)
         effective_alpha_angle = effective_alpha(alpha_angle, frame_dt_sec, reference_fps)
@@ -164,7 +225,9 @@ def smooth_rows(args: argparse.Namespace) -> Dict:
             "effective_alpha_quat": effective_alpha_quat,
             "dt_sec": frame_dt_sec,
             "reference_fps": reference_fps,
-            "method": "Timestamp-aware EMA for angle slots 0:19; timestamp-aware quaternion slerp EMA for slots 19:23 and 23:27.",
+            "neutral_frames": neutral_frames,
+            "neutral_applied": neutral_state is not None,
+            "method": "Optional initial neutral offset, then timestamp-aware EMA for angle slots 0:19 and quaternion slerp EMA for slots 19:23 and 23:27.",
         }
         prev_stamp_ns = stamp_ns
         stats["state_smoothed"] += 1
@@ -177,6 +240,8 @@ def smooth_rows(args: argparse.Namespace) -> Dict:
         "alpha_angle": alpha_angle,
         "alpha_quat": alpha_quat,
         "reference_fps": reference_fps,
+        "neutral_frames": neutral_frames,
+        "neutral_state": None if neutral_state is None else [float(v) for v in neutral_state],
         "timebase": "rgb_stamp_ns",
         "stats": stats,
     }
@@ -195,6 +260,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--alpha_angle", type=float, default=0.45)
     parser.add_argument("--alpha_quat", type=float, default=0.45)
     parser.add_argument("--reference_fps", type=float, default=30.0, help="FPS at which alpha values retain their legacy per-frame meaning.")
+    parser.add_argument("--neutral_frames", type=int, default=0, help="Use the median/mean state from the first N frames as a per-recording neutral offset; 0 disables it.")
     return parser
 
 

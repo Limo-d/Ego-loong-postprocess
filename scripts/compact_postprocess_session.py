@@ -28,7 +28,10 @@ TOP_LEVEL_REMOVE_PREFIXES = (
 TOP_LEVEL_REMOVE_NAMES = {"preprocess", "rtabmap_pose", "calibration_handeye"}
 
 KEEP_OUTPUT_VIDEOS = {
+    "07_dual_trajectory_3d_world.mp4",
     "00_rgb_raw.mp4",
+    "02_stable_bbox.mp4",
+    "04_dual_visual_21kpts_2d_smooth.mp4",
     "04_left_visual_21kpts_2d_smooth.mp4",
     "04_right_visual_21kpts_2d_smooth.mp4",
     "06_left_glove_fk_overlay_wristroot_track.mp4",
@@ -97,6 +100,13 @@ def collect_targets(session: Path) -> List[Path]:
             if item.exists():
                 targets.append(item)
 
+    web_dir = session / "outputs" / "web"
+    if (web_dir / "tactile_hand.png").is_file():
+        for name in ("traj_frames", "tactile_frames"):
+            legacy = web_dir / name
+            if legacy.exists():
+                targets.append(legacy)
+
     return sorted(set(targets), key=lambda p: str(p))
 
 
@@ -120,7 +130,7 @@ def write_summary(session: Path, rows: List[Dict[str, Any]], dry_run: bool) -> P
         "candidate_files": total_files,
         "targets": rows,
         "kept": {
-            "web": "outputs/web/index.html plus web/rgb_frames and web/traj_frames",
+            "web": "outputs/web/index.html plus web/rgb_frames and web/tactile_hand.png (trajectory/tactile use Canvas)",
             "videos": sorted(KEEP_OUTPUT_VIDEOS),
             "data": ["trajectory_wristroot_track_cameraoptical.jsonl", "locate_bboxes.json", "stable_bboxes.json"],
         },
@@ -140,9 +150,13 @@ def main() -> None:
     web = outputs / "web" / "index.html"
     rgb_frames = outputs / "web" / "rgb_frames"
     traj_frames = outputs / "web" / "traj_frames"
+    tactile_frames = outputs / "web" / "tactile_frames"
+    tactile_hand = outputs / "web" / "tactile_hand.png"
     if not session.exists():
         raise FileNotFoundError(session)
-    if not web.exists() or not rgb_frames.exists() or not traj_frames.exists():
+    canvas_web = tactile_hand.is_file()
+    legacy_web = traj_frames.is_dir() and tactile_frames.is_dir()
+    if not web.exists() or not rgb_frames.exists() or not (canvas_web or legacy_web):
         raise RuntimeError(
             "Review web is not self-contained yet. Run scripts/generate_review_web.py before compacting."
         )

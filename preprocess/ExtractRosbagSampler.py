@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import ctypes
+import hashlib
 import json
 import math
 import os
@@ -27,6 +29,8 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import warnings
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -48,12 +52,13 @@ DEPTH_INFO_TOPIC = "/factor_perception/depth/camera_info"
 DEPTH_REGISTERED_INFO_TOPIC = "/factor_perception/depth_registered/camera_info"
 DEPTH_INFO_TOPICS = (DEPTH_INFO_TOPIC, DEPTH_REGISTERED_INFO_TOPIC)
 ODOM_TOPIC = "/factor_perception/odom"
-IMU_TOPIC = "/factor_perception/imu"
 TF_TOPIC = "/tf"
 TF_STATIC_TOPIC = "/tf_static"
 HAND_FRAME_TOPIC = "/hand_frame"
 GLOVE_TOPIC = "/glove"
 RESOLVE_DRIVER_DEFAULT = Path("/home/lenovo/Retarget/data/ros_ws/resolve_check/resolve_driver")
+_NATIVE_RVL = None
+_NATIVE_RVL_ATTEMPTED = False
 
 DEFAULT_T_RGB_DEPTH = np.array(
     [
@@ -125,25 +130,7 @@ def compressed_to_bgr(msg: Any) -> np.ndarray:
     return img
 
 
-def decode_rvl_depth(data: bytes) -> np.ndarray:
-    """Decode a compressed_depth_image_transport RVL uint16 payload.
-
-    The transport prepends its 12-byte ConfigHeader, followed by uint32 width
-    and height fields and the RVL word stream. RVL packs VLE nibbles from the
-    most-significant side of each little-endian uint32 word.
-    """
-    rvl_header_size = 20
-    if len(data) < rvl_header_size:
-        raise ValueError(
-            f"Compressed RVL depth payload too small: got {len(data)} bytes, "
-            f"expected at least {rvl_header_size}"
-        )
-
-    width, height = struct.unpack_from("<II", data, 12)
-    if width == 0 or height == 0 or width > 16384 or height > 16384:
-        raise ValueError(f"Invalid RVL depth dimensions: {width}x{height}")
-
-    payload = data[rvl_header_size:]
+def _decode_rvl_python(payload: bytes, width: int, height: int) -> np.ndarray:
     padded_payload = payload + b"\0" * ((-len(payload)) % 4)
     words = np.frombuffer(padded_payload, dtype="<u4")
     word_idx = 0
@@ -195,6 +182,81 @@ def decode_rvl_depth(data: bytes) -> np.ndarray:
             depth[pixel_idx] = previous
             pixel_idx += 1
 
+    return depth.reshape(int(height), int(width))
+
+
+def _load_native_rvl():
+    global _NATIVE_RVL, _NATIVE_RVL_ATTEMPTED
+    if _NATIVE_RVL_ATTEMPTED:
+        return _NATIVE_RVL
+    _NATIVE_RVL_ATTEMPTED = True
+    if os.environ.get("EGOLOONG_DISABLE_NATIVE_RVL", "0") == "1":
+        return None
+    source = Path(__file__).resolve().parent / "native" / "rvl_decode.cpp"
+    if not source.is_file():
+        return None
+    try:
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()[:16]
+        build_dir = Path(tempfile.gettempdir()) / "ego_loong_native"
+        build_dir.mkdir(parents=True, exist_ok=True)
+        library_path = build_dir / f"librvl_decode_{digest}.so"
+        if not library_path.is_file():
+            temporary_path = build_dir / f".{library_path.name}.{os.getpid()}.tmp"
+            subprocess.run(
+                ["g++", "-O3", "-std=c++17", "-shared", "-fPIC", str(source), "-o", str(temporary_path)],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            os.replace(temporary_path, library_path)
+        library = ctypes.CDLL(str(library_path))
+        function = library.ego_loong_decode_rvl_u16
+        function.argtypes = [
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.c_size_t,
+            ctypes.POINTER(ctypes.c_uint16),
+            ctypes.c_size_t,
+        ]
+        function.restype = ctypes.c_int
+        _NATIVE_RVL = (library, function)
+    except Exception as exc:
+        warnings.warn(f"Native RVL decoder unavailable; using slow Python fallback: {exc}")
+        _NATIVE_RVL = None
+    return _NATIVE_RVL
+
+
+def decode_rvl_depth(data: bytes) -> np.ndarray:
+    """Decode compressed_depth_image_transport RVL into a uint16 image."""
+    rvl_header_size = 20
+    if len(data) < rvl_header_size:
+        raise ValueError(
+            f"Compressed RVL depth payload too small: got {len(data)} bytes, "
+            f"expected at least {rvl_header_size}"
+        )
+    width, height = struct.unpack_from("<II", data, 12)
+    if width == 0 or height == 0 or width > 16384 or height > 16384:
+        raise ValueError(f"Invalid RVL depth dimensions: {width}x{height}")
+    payload = data[rvl_header_size:]
+    native = _load_native_rvl()
+    if native is None:
+        return _decode_rvl_python(payload, width, height)
+    payload_array = np.frombuffer(payload, dtype=np.uint8)
+    depth = np.empty(int(width) * int(height), dtype=np.uint16)
+    result = native[1](
+        payload_array.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+        payload_array.size,
+        depth.ctypes.data_as(ctypes.POINTER(ctypes.c_uint16)),
+        depth.size,
+    )
+    errors = {
+        -1: "invalid native RVL arguments",
+        -2: "truncated or invalid RVL variable-length integer",
+        -3: "RVL zero run exceeds depth image size",
+        -4: "RVL nonzero run exceeds depth image size",
+        -5: "RVL decoded value outside uint16 range",
+    }
+    if result != 0:
+        raise ValueError(errors.get(result, f"native RVL decoder failed with code {result}"))
     return depth.reshape(int(height), int(width))
 
 
@@ -312,6 +374,22 @@ def parse_extrinsic(value: str) -> np.ndarray:
     mat = np.asarray(raw, dtype=np.float64)
     if mat.shape != (4, 4):
         raise ValueError(f"--t_rgb_depth must be a 4x4 JSON matrix, got {mat.shape}")
+    return mat
+
+
+def load_camera_extrinsic(path: Path) -> np.ndarray:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = payload["depth_to_rgb"]["matrix_4x4_m"]
+    except (KeyError, TypeError) as exc:
+        raise ValueError(
+            f"Camera extrinsics must contain depth_to_rgb.matrix_4x4_m: {path}"
+        ) from exc
+    mat = np.asarray(raw, dtype=np.float64)
+    if mat.shape != (4, 4):
+        raise ValueError(
+            f"depth_to_rgb.matrix_4x4_m must be a 4x4 matrix in {path}, got {mat.shape}"
+        )
     return mat
 
 
@@ -476,9 +554,13 @@ def parse_glove_packet_cdr(data: bytes, bag_time_ns: int) -> Dict[str, Any]:
 
 def find_handcal_for_session(session_path: Path) -> Optional[Path]:
     candidates = [
+        session_path / "calibrations" / "hand_calibration.txt",
+        session_path / "calibration" / "hand_calibration.txt",
         session_path / "calibration" / "handcal.txt",
         session_path / "data" / "calibration" / "handcal.txt",
+        session_path.parent / "hand_calibration.txt",
         session_path.parent / "handcal.txt",
+        session_path.parent / "calibrations" / "hand_calibration.txt",
         session_path.parent / "calibration" / "handcal.txt",
     ]
     for path in candidates:
@@ -614,7 +696,6 @@ def read_bag(
         TF_STATIC_TOPIC,
         HAND_FRAME_TOPIC,
         GLOVE_TOPIC,
-        IMU_TOPIC,
     }
     msg_types = {}
     for topic in wanted:
@@ -766,6 +847,60 @@ def write_image(path: Path, image: np.ndarray) -> None:
         raise RuntimeError(f"Failed to encode/write image: {path}")
 
 
+def write_image_with_hardlink(path: Path, alias_path: Path, image: np.ndarray) -> None:
+    """Encode once and expose the same bytes at a second required path."""
+    write_image(path, image)
+    alias_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        alias_path.unlink(missing_ok=True)
+        os.link(path, alias_path)
+    except OSError:
+        write_image(alias_path, image)
+
+
+class ParallelImageWriter:
+    """Bounded image encoder/writer pool; bounds queued arrays to control RAM."""
+
+    def __init__(self, workers: int):
+        self.workers = max(1, int(workers))
+        self.executor = None if self.workers == 1 else ThreadPoolExecutor(
+            max_workers=self.workers,
+            thread_name_prefix="extract-image",
+        )
+        self.pending = set()
+        self.max_pending = self.workers * 4
+
+    def submit(self, path: Path, image: np.ndarray) -> None:
+        if self.executor is None:
+            write_image(path, image)
+            return
+        self.pending.add(self.executor.submit(write_image, path, image))
+        if len(self.pending) >= self.max_pending:
+            done, self.pending = wait(self.pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                future.result()
+
+    def submit_with_hardlink(self, path: Path, alias_path: Path, image: np.ndarray) -> None:
+        if self.executor is None:
+            write_image_with_hardlink(path, alias_path, image)
+            return
+        self.pending.add(self.executor.submit(write_image_with_hardlink, path, alias_path, image))
+        if len(self.pending) >= self.max_pending:
+            done, self.pending = wait(self.pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                future.result()
+
+    def close(self) -> None:
+        if self.executor is None:
+            return
+        done, self.pending = wait(self.pending)
+        try:
+            for future in done:
+                future.result()
+        finally:
+            self.executor.shutdown(wait=True, cancel_futures=True)
+
+
 def write_outputs(
     session_path: Path,
     output_dir: Path,
@@ -773,6 +908,7 @@ def write_outputs(
     overwrite: bool,
     max_sync_dt_ns: Optional[int],
     t_rgb_depth: Optional[np.ndarray],
+    image_write_workers: int,
 ) -> Dict[str, Any]:
     preprocess_dir = output_dir
     all_data_dir = preprocess_dir / "all_data"
@@ -796,6 +932,8 @@ def write_outputs(
     odom_rows: List[Dict[str, Any]] = []
     depth_sync_fail = 0
     odom_sync_fail = 0
+    deduplicated_registered_depth = 0
+    image_writer = ParallelImageWriter(image_write_workers)
 
     for idx, rgb_item in enumerate(extracted["rgb"]):
         frame_key = f"{idx:05d}"
@@ -804,7 +942,7 @@ def write_outputs(
 
         rgb_img = compressed_to_bgr(rgb_item.msg)
         rgb_path = frame_dir / "rgb.png"
-        write_image(rgb_path, rgb_img)
+        image_writer.submit(rgb_path, rgb_img)
 
         depth_item = nearest_by_stamp(extracted["depth"], rgb_item.msg_time_ns, max_sync_dt_ns)
         depth_path = frame_dir / "depth.png"
@@ -818,15 +956,14 @@ def write_outputs(
         if depth_item is None:
             depth_sync_fail += 1
             depth_arr = np.zeros((int(depth_info["height"]), int(depth_info["width"])), dtype=np.uint16)
-            write_image(depth_path, depth_arr)
-            write_image(
+            image_writer.submit(depth_path, depth_arr)
+            image_writer.submit(
                 depth_aligned_path,
                 cv2.resize(depth_arr, (rgb_img.shape[1], rgb_img.shape[0]), interpolation=cv2.INTER_NEAREST),
             )
         else:
             depth_dt_ns = int(depth_item.msg_time_ns - rgb_item.msg_time_ns)
             depth_arr = depth_image_to_array(depth_item.msg)
-            write_image(depth_path, depth_arr)
             depth_is_registered = depth_item.topic == DEPTH_REGISTERED_COMPRESSED_TOPIC
             if depth_is_registered:
                 depth_aligned = resize_depth_to_rgb(depth_arr, (rgb_img.shape[0], rgb_img.shape[1]))
@@ -861,7 +998,12 @@ def write_outputs(
                     "target_frame": rgb_info["frame_id"],
                     "t_rgb_depth": t_rgb_depth.tolist(),
                 }
-            write_image(depth_aligned_path, depth_aligned)
+            if depth_is_registered and depth_arr.shape == depth_aligned.shape:
+                image_writer.submit_with_hardlink(depth_path, depth_aligned_path, depth_arr)
+                deduplicated_registered_depth += 1
+            else:
+                image_writer.submit(depth_path, depth_arr)
+                image_writer.submit(depth_aligned_path, depth_aligned)
 
         odom_item = nearest_by_bag_time(extracted["odom"], rgb_item.bag_time_ns, max_sync_dt_ns)
         pose_source = {
@@ -983,6 +1125,8 @@ def write_outputs(
             }
         )
 
+    image_writer.close()
+
     camera_summary = {
         "session_path": str(session_path),
         "rgb": rgb_info,
@@ -1020,6 +1164,8 @@ def write_outputs(
                 "map_odom_tf_count": len(map_odom_tf),
                 "pose_method": "tf_chain_map_odom_base_link_when_available",
                 "max_sync_dt_ns": max_sync_dt_ns,
+                "image_write_workers": int(image_write_workers),
+                "deduplicated_registered_depth": deduplicated_registered_depth,
             },
             f,
             indent=4,
@@ -1054,6 +1200,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max_frames", type=int, default=None, help="Limit RGB frames for quick tests.")
     parser.add_argument("--max_sync_dt_ms", type=float, default=80.0, help="Max nearest-neighbor sync delta in ms; <0 disables.")
     parser.add_argument("--overwrite", action="store_true", help="Remove existing preprocess/all_data before writing.")
+    parser.add_argument("--image_write_workers", type=int, default=8, help="Parallel PNG encode/write workers; use 1 for serial writes.")
     parser.add_argument(
         "--resolve_driver",
         default=str(RESOLVE_DRIVER_DEFAULT),
@@ -1063,6 +1210,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--t_rgb_depth",
         default=None,
         help="Optional 4x4 JSON matrix mapping depth/LEFT optical points into RGB optical frame. Defaults to the calibrated sampler OAK matrix.",
+    )
+    parser.add_argument(
+        "--camera_extrinsics",
+        default=None,
+        help="Optional camera_extrinsics.json containing depth_to_rgb.matrix_4x4_m.",
+    )
+    parser.add_argument(
+        "--handcal_path",
+        default=None,
+        help="Optional explicit hand calibration file for legacy /glove packets.",
     )
     parser.add_argument(
         "--disable_depth_to_rgb_extrinsic",
@@ -1084,10 +1241,16 @@ def main() -> None:
         t_rgb_depth = None
     elif args.t_rgb_depth:
         t_rgb_depth = parse_extrinsic(args.t_rgb_depth)
+    elif args.camera_extrinsics:
+        t_rgb_depth = load_camera_extrinsic(Path(args.camera_extrinsics).expanduser().resolve())
     else:
         t_rgb_depth = DEFAULT_T_RGB_DEPTH
 
-    handcal_path = find_handcal_for_session(session_path)
+    handcal_path = (
+        Path(args.handcal_path).expanduser().resolve()
+        if args.handcal_path
+        else find_handcal_for_session(session_path)
+    )
     resolve_driver = Path(args.resolve_driver).expanduser().resolve()
     extracted = read_bag(
         bag_dir,
@@ -1102,6 +1265,7 @@ def main() -> None:
         overwrite=args.overwrite,
         max_sync_dt_ns=max_sync_dt_ns,
         t_rgb_depth=t_rgb_depth,
+        image_write_workers=args.image_write_workers,
     )
     print(f"[ExtractRosbagSampler] stats: {json.dumps(stats, ensure_ascii=False)}")
 

@@ -499,10 +499,96 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         "depth_correction_failed": 0,
         "hand_r": 0,
         "hand_l": 0,
+        "batch_size_requested": max(1, int(args.batch_size)),
+        "batch_size_effective": 1,
+        "batch_forward_calls": 0,
+        "batched_crops": 0,
         "failed_frames": [],
     }
     aggregate_frames: List[Dict[str, Any]] = []
     prev_anchors: Dict[str, Optional[np.ndarray]] = {"right": None, "left": None}
+
+    # Tracking legacy bbox files can depend on the previous frame's HaMeR output.
+    # Stable dual-hand bbox files carry explicit side labels, so their crops are
+    # independent and can safely be collected across frames for one model forward.
+    requested_batch_size = max(1, int(args.batch_size))
+    batch_enabled = requested_batch_size > 1
+    fallback_frame: Optional[str] = None
+    if batch_enabled and args.handedness == "track":
+        for cam_data in cam_frames:
+            frame_key = str(cam_data.idx).zfill(frame_digits)
+            detections = select_detections(
+                bbox_by_frame.get(frame_key, []),
+                max_boxes=args.max_boxes,
+                score_thresh=args.score_thresh,
+            )
+            explicit_sides = [str(det.get("side") or "").lower() for det in detections]
+            if any(side not in ("right", "hand_r", "left", "hand_l") for side in explicit_sides):
+                batch_enabled = False
+                fallback_frame = frame_key
+                break
+
+    prefetched_results: Dict[Tuple[int, int], Optional[Dict[str, Any]]] = {}
+    if batch_enabled:
+        pending_requests: List[Dict[str, Any]] = []
+        pending_keys: List[Tuple[int, int]] = []
+
+        def flush_hamer_batch() -> None:
+            if not pending_requests:
+                return
+            batch_results = model.predict_batch_from_crops(pending_requests)
+            prefetched_results.update(zip(pending_keys, batch_results))
+            stats["batch_forward_calls"] += 1
+            stats["batched_crops"] += len(pending_requests)
+            pending_requests.clear()
+            pending_keys.clear()
+
+        for cam_data in tqdm(cam_frames, desc=f"Prepare HaMeR batches (batch={requested_batch_size})"):
+            frame_key = str(cam_data.idx).zfill(frame_digits)
+            detections = select_detections(
+                bbox_by_frame.get(frame_key, []),
+                max_boxes=args.max_boxes,
+                score_thresh=args.score_thresh,
+            )
+            if not detections:
+                continue
+            img_bgr = cam_data.img
+            if img_bgr is None:
+                img_path = session_path / "preprocess" / "all_data" / frame_key / "rgb.png"
+                img_bgr = cv2.imread(str(img_path))
+            if img_bgr is None:
+                continue
+            img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            inferred_sides = assign_handedness(
+                detections=detections,
+                image_width=img_bgr.shape[1],
+                handedness=args.handedness,
+                prev_anchors={"right": None, "left": None},
+                track_max_jump=args.track_max_jump,
+            )
+            for det_idx, det in enumerate(detections):
+                is_right = inferred_sides[det_idx]
+                pending_requests.append(
+                    {
+                        "img_rgb": img_rgb,
+                        "bbox": det["bbox"],
+                        "is_right": 1 if is_right is None or is_right else 0,
+                    }
+                )
+                pending_keys.append((int(cam_data.idx), det_idx))
+                if len(pending_requests) >= requested_batch_size:
+                    flush_hamer_batch()
+        flush_hamer_batch()
+        stats["batch_size_effective"] = requested_batch_size
+        print(
+            f"[locate-hamer] batched inference: crops={stats['batched_crops']} "
+            f"forwards={stats['batch_forward_calls']} batch_size={requested_batch_size}"
+        )
+    elif requested_batch_size > 1:
+        print(
+            "[locate-hamer] batching disabled: track mode requires explicit side labels "
+            f"for every selected bbox (first missing frame: {fallback_frame})"
+        )
 
     for cam_data in tqdm(cam_frames, desc="HaMeR from LocateAnything bboxes"):
         frame_key = str(cam_data.idx).zfill(frame_digits)
@@ -548,12 +634,15 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
                 else:
                     hamer_side_flag = 1 if is_right else 0
 
-                hamer_result = model.predict_from_crop(
-                    img_rgb=img_rgb,
-                    bbox=bbox,
-                    is_right=hamer_side_flag,
-                    focal_length=focal,
-                )
+                if batch_enabled:
+                    hamer_result = prefetched_results.get((int(cam_data.idx), det_idx))
+                else:
+                    hamer_result = model.predict_from_crop(
+                        img_rgb=img_rgb,
+                        bbox=bbox,
+                        is_right=hamer_side_flag,
+                        focal_length=focal,
+                    )
                 stats["bbox_used"] += 1
                 if hamer_result is None:
                     frame_results.append(
@@ -702,6 +791,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
             "mano_path": getattr(model, "mano_path", None),
             "mano_mean_params_path": getattr(model, "mano_mean_params_path", None),
             "device": str(getattr(model, "device", "")),
+            "batch_size": stats["batch_size_effective"],
         },
         "mano_faces": safe_list(model.faces),
         "stats": stats,
@@ -794,6 +884,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out_mano_video", default=None, help="Optional mp4 with MANO mesh projected on RGB frames")
     parser.add_argument("--mano_alpha", type=float, default=0.42, help="Transparency for MANO mesh overlay")
     parser.add_argument("--device", default="cuda", help="cuda or cpu; falls back to cpu if CUDA is unavailable")
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=32,
+        help="Number of hand crops per HaMeR forward. Track mode automatically falls back to 1 for legacy bboxes without explicit side labels.",
+    )
     parser.add_argument("--max_boxes", type=int, default=2, help="Use top-N boxes per frame after score filtering")
     parser.add_argument("--score_thresh", type=float, default=0.0)
     parser.add_argument("--max_frames", type=int, default=None)
