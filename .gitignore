@@ -42,6 +42,7 @@ venv/
 *.tar
 *.tar.gz
 *.log
+/.docker-assets/
 
 # Local scratch and backup files
 *.bak

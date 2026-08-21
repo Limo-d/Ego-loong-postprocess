@@ -42,6 +42,10 @@ setup.sh                     环境安装/检查脚本
 
 ## 环境要求
 
+需要把当前 Ubuntu 24.04、ROS 2 Jazzy、CUDA/Python 环境和模型固化成完整
+Docker 镜像时，参见 [docker/README.md](docker/README.md)。镜像保留宿主机
+NVIDIA 驱动边界，并支持单 session、共享 calibration 批次和一帧 smoke test。
+
 当前管线使用三个 Python/ROS 环境：
 
 ```text
