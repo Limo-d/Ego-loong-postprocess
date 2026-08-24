@@ -125,23 +125,33 @@ def load_rows(traj_path: Path) -> tuple[List[Dict[str, Any]], List[np.ndarray], 
             continue
         row = json.loads(line)
         mat = (row.get("head_pose") or {}).get("c2w") or (row.get("camera") or {}).get("c2w")
-        item: Dict[str, Any] = {"hand": None, "hand_l": None, "hand_r": None, "head": None, "axes": None}
+        item: Dict[str, Any] = {
+            "hand": None, "hand_l": None, "hand_r": None, "head": None, "axes": None,
+            "hand_l_camera": None, "hand_r_camera": None,
+            "head_camera": np.zeros(3, dtype=np.float64),
+            "axes_camera": np.eye(3, dtype=np.float64),
+        }
         hand_sources = row.get("hands") or {}
         if not hand_sources:
             legacy_side = str((row.get("glove") or {}).get("side") or "left")
             hand_sources = {legacy_side: {"glove": row.get("glove")}}
         for side, key in (("left", "hand_l"), ("right", "hand_r")):
-            pts = (((hand_sources.get(side) or {}).get("glove") or {}).get("kpts_3d_world_m"))
-            if pts is None:
-                continue
-            arr = np.asarray(pts, dtype=np.float64)
-            if arr.shape[0] >= 21 and np.isfinite(arr[:21, :3]).all():
-                item[key] = arr[:21, :3]
-                if item["hand"] is None:
-                    item["hand"] = arr[:21, :3]
-                all_points.append(arr[:21, :3])
-                wrists.append(arr[0, :3])
-                hand_offsets.append(arr[:21, :3] - arr[0, :3][None, :])
+            glove = ((hand_sources.get(side) or {}).get("glove") or {})
+            world = glove.get("kpts_3d_world_m")
+            if world is not None:
+                arr = np.asarray(world, dtype=np.float64)
+                if arr.shape[0] >= 21 and np.isfinite(arr[:21, :3]).all():
+                    item[key] = arr[:21, :3]
+                    if item["hand"] is None:
+                        item["hand"] = arr[:21, :3]
+                    all_points.append(arr[:21, :3])
+                    wrists.append(arr[0, :3])
+                    hand_offsets.append(arr[:21, :3] - arr[0, :3][None, :])
+            camera = glove.get("kpts_3d_camera_m")
+            if camera is not None:
+                arr = np.asarray(camera, dtype=np.float64)
+                if arr.shape[0] >= 21 and np.isfinite(arr[:21, :3]).all():
+                    item[f"{key}_camera"] = arr[:21, :3]
         if mat is not None:
             m = np.asarray(mat, dtype=np.float64)
             if m.shape == (4, 4) and np.isfinite(m).all():
@@ -788,18 +798,23 @@ def build_chart_data(traj_path: Path, frame_times: List[float]) -> List[Dict[str
             "lx": None, "ly": None, "lz": None,
             "rx": None, "ry": None, "rz": None,
             "hx": None, "hy": None, "hz": None,
+            "clx": None, "cly": None, "clz": None,
+            "crx": None, "cry": None, "crz": None,
+            "chx": 0.0, "chy": 0.0, "chz": 0.0,
         }
         hands = row.get("hands") or {}
         for side, prefix in (("left", "l"), ("right", "r")):
-            pts = (((hands.get(side) or {}).get("glove") or {}).get("kpts_3d_world_m"))
-            if pts is None:
-                continue
-            arr = np.asarray(pts, dtype=np.float64)
-            if arr.ndim >= 2 and arr.shape[0] > 0 and arr.shape[1] >= 3 and np.isfinite(arr[0, :3]).all():
-                wrist = arr[0, :3]
-                item[f"{prefix}x"] = float(wrist[0])
-                item[f"{prefix}y"] = float(wrist[1])
-                item[f"{prefix}z"] = float(wrist[2])
+            glove = ((hands.get(side) or {}).get("glove") or {})
+            for field, key_prefix in (("kpts_3d_world_m", prefix), ("kpts_3d_camera_m", f"c{prefix}")):
+                pts = glove.get(field)
+                if pts is None:
+                    continue
+                arr = np.asarray(pts, dtype=np.float64)
+                if arr.ndim >= 2 and arr.shape[0] > 0 and arr.shape[1] >= 3 and np.isfinite(arr[0, :3]).all():
+                    wrist = arr[0, :3]
+                    item[f"{key_prefix}x"] = float(wrist[0])
+                    item[f"{key_prefix}y"] = float(wrist[1])
+                    item[f"{key_prefix}z"] = float(wrist[2])
         c2w = (row.get("head_pose") or {}).get("c2w") or (row.get("camera") or {}).get("c2w")
         if c2w is not None:
             mat = np.asarray(c2w, dtype=np.float64)
@@ -813,71 +828,82 @@ def build_chart_data(traj_path: Path, frame_times: List[float]) -> List[Dict[str
 
 
 def build_trajectory_web_data(rows: List[Dict[str, Any]], all_points: List[np.ndarray], hand_display_scale: float = 3.0) -> Dict[str, Any]:
-    finite_sets = []
-    for pts in all_points:
-        arr = np.asarray(pts, dtype=np.float64).reshape(-1, 3)
-        arr = arr[np.isfinite(arr).all(axis=1)]
-        if arr.size:
-            finite_sets.append(arr)
-    if finite_sets:
-        cloud = np.concatenate(finite_sets, axis=0)
-        center = np.nanmedian(cloud, axis=0)
-        radius = float(np.nanpercentile(np.linalg.norm(cloud - center[None, :], axis=1), 98.0))
-    else:
-        center = np.zeros(3, dtype=np.float64)
-        radius = 1.0
-    if not np.isfinite(radius) or radius < 1e-6:
-        radius = 1.0
+    def build_coordinate_data(suffix: str, coordinate_points: List[np.ndarray]) -> Dict[str, Any]:
+        finite_sets = []
+        for pts in coordinate_points:
+            arr = np.asarray(pts, dtype=np.float64).reshape(-1, 3)
+            arr = arr[np.isfinite(arr).all(axis=1)]
+            if arr.size:
+                finite_sets.append(arr)
+        if finite_sets:
+            cloud = np.concatenate(finite_sets, axis=0)
+            center = np.nanmedian(cloud, axis=0)
+            radius = float(np.nanpercentile(np.linalg.norm(cloud - center[None, :], axis=1), 98.0))
+        else:
+            center = np.zeros(3, dtype=np.float64)
+            radius = 1.0
+        if not np.isfinite(radius) or radius < 1e-6:
+            radius = 1.0
 
-    frames: List[Dict[str, Any]] = []
+        frames: List[Dict[str, Any]] = []
+        for row in rows:
+            item: Dict[str, Any] = {}
+            for key in ("hand_l", "hand_r"):
+                hand = row.get(f"{key}{suffix}")
+                if hand is None:
+                    continue
+                hand_arr = np.asarray(hand, dtype=np.float64).copy()
+                if hand_arr.shape[0] > 1:
+                    root = hand_arr[0].copy()
+                    hand_arr[1:] = root[None, :] + (hand_arr[1:] - root[None, :]) * float(hand_display_scale)
+                    if TRAJECTORY_MIRROR_LEFT_HAND and hand_arr.shape[0] > 9:
+                        axis = hand_arr[9] - root
+                        axis_norm = float(np.linalg.norm(axis))
+                        if np.isfinite(axis_norm) and axis_norm > 1e-9:
+                            axis = axis / axis_norm
+                            rel = hand_arr - root[None, :]
+                            hand_arr = root[None, :] + 2.0 * (rel @ axis)[:, None] * axis[None, :] - rel
+                item[key] = np.round(hand_arr, 5).tolist()
+            head = row.get(f"head{suffix}")
+            if head is not None:
+                item["head"] = np.round(np.asarray(head, dtype=np.float64), 5).tolist()
+            axes = row.get(f"axes{suffix}")
+            if axes is not None:
+                item["axes"] = np.round(np.asarray(axes, dtype=np.float64), 5).tolist()
+            frames.append(item)
+        initial_directions = []
+        if frames:
+            for key in ("hand_l", "hand_r"):
+                hand = frames[0].get(key)
+                if hand is None or len(hand) <= 9:
+                    continue
+                direction = np.asarray(hand[9], dtype=np.float64)[:2] - np.asarray(hand[0], dtype=np.float64)[:2]
+                norm = float(np.linalg.norm(direction))
+                if norm > 1e-9:
+                    initial_directions.append(direction / norm)
+        default_yaw = -2.3517
+        if initial_directions:
+            mean_direction = np.sum(initial_directions, axis=0)
+            if float(np.linalg.norm(mean_direction)) > 1e-9:
+                mean_direction /= np.linalg.norm(mean_direction)
+                default_yaw = float(-np.pi / 2.0 - np.arctan2(mean_direction[1], mean_direction[0]))
+        return {
+            "frames": frames,
+            "center": np.round(center, 5).tolist(),
+            "radius": round(radius, 5),
+            "default_yaw": default_yaw,
+        }
+
+    camera_points: List[np.ndarray] = [np.zeros((1, 3), dtype=np.float64)]
     for row in rows:
-        item: Dict[str, Any] = {}
-        for key in ("hand_l", "hand_r"):
-            hand = row.get(key)
-            if hand is None:
-                continue
-            hand_arr = np.asarray(hand, dtype=np.float64).copy()
-            if hand_arr.shape[0] > 1:
-                root = hand_arr[0].copy()
-                hand_arr[1:] = root[None, :] + (hand_arr[1:] - root[None, :]) * float(hand_display_scale)
-                if TRAJECTORY_MIRROR_LEFT_HAND and hand_arr.shape[0] > 9:
-                    axis = hand_arr[9] - root
-                    axis_norm = float(np.linalg.norm(axis))
-                    if np.isfinite(axis_norm) and axis_norm > 1e-9:
-                        axis = axis / axis_norm
-                        rel = hand_arr - root[None, :]
-                        hand_arr = root[None, :] + 2.0 * (rel @ axis)[:, None] * axis[None, :] - rel
-            item[key] = np.round(hand_arr, 5).tolist()
-        head = row.get("head")
-        if head is not None:
-            item["head"] = np.round(np.asarray(head, dtype=np.float64), 5).tolist()
-        axes = row.get("axes")
-        if axes is not None:
-            item["axes"] = np.round(np.asarray(axes, dtype=np.float64), 5).tolist()
-        frames.append(item)
-    initial_directions = []
-    if frames:
-        for key in ("hand_l", "hand_r"):
-            hand = frames[0].get(key)
-            if hand is None or len(hand) <= 9:
-                continue
-            direction = np.asarray(hand[9], dtype=np.float64)[:2] - np.asarray(hand[0], dtype=np.float64)[:2]
-            norm = float(np.linalg.norm(direction))
-            if norm > 1e-9:
-                initial_directions.append(direction / norm)
-    default_yaw = -2.3517
-    if initial_directions:
-        mean_direction = np.sum(initial_directions, axis=0)
-        if float(np.linalg.norm(mean_direction)) > 1e-9:
-            mean_direction /= np.linalg.norm(mean_direction)
-            default_yaw = float(-np.pi / 2.0 - np.arctan2(mean_direction[1], mean_direction[0]))
-    return {
-        "frames": frames,
-        "center": np.round(center, 5).tolist(),
-        "radius": round(radius, 5),
-        "bones": BONES,
-        "default_yaw": default_yaw,
-    }
+        for key in ("hand_l_camera", "hand_r_camera"):
+            if row.get(key) is not None:
+                camera_points.append(np.asarray(row[key], dtype=np.float64))
+    world_data = build_coordinate_data("", all_points)
+    camera_data = build_coordinate_data("_camera", camera_points)
+    world_data["bones"] = BONES
+    world_data["camera"] = camera_data
+    return world_data
 
 
 def write_html(
@@ -918,25 +944,27 @@ def write_html(
 .side{{grid-template-rows:92px 1fr 153px}}
 .chartBox{{grid-template-rows:59px 1fr}}
 .hhx:before{{background:#0f766e}}.hhy:before{{background:#64748b}}.hhz:before{{background:#a16207}}
+.timeline{{grid-template-columns:220px 1fr 116px}}button.coord{{min-width:92px;background:#0f766e}}
 </style></head>
 <body><div class="shell"><header class="topbar"><div><h1>第一人称数据采集</h1><div class="sub">review</div></div><div class="status"><span class="dot"></span><span>审核进度 · 69/100</span></div></header>
-<main class="main"><section class="stage"><div class="panel videoPanel"><div class="badge">RGB</div><canvas id="rgbCanvas"></canvas></div><div class="lowerStage"><div class="panel videoPanel trajPanel"><div class="badge">Trajectory</div><canvas id="trajCanvas"></canvas></div><div class="panel videoPanel tactilePanel"><div class="badge">Tactile</div><canvas id="tactileCanvas"></canvas></div></div></section>
+<main class="main"><section class="stage"><div class="panel videoPanel"><div class="badge">RGB</div><canvas id="rgbCanvas"></canvas></div><div class="lowerStage"><div class="panel videoPanel trajPanel"><div class="badge" id="trajBadge">Trajectory · World</div><canvas id="trajCanvas"></canvas></div><div class="panel videoPanel tactilePanel"><div class="badge">Tactile</div><canvas id="tactileCanvas"></canvas></div></div></section>
 <aside class="panel side"><section><div class="section-title"><span>采集信息</span><span class="frameTag" id="frameTag">0 / {frames}</span></div><div class="grid3"><div class="metric"><div class="label">采集时长</div><div class="value">{duration:.2f}<span class="unit">s</span></div></div><div class="metric"><div class="label">实时帧率</div><div class="value">{fps:.1f}<span class="unit">fps</span></div></div><div class="metric"><div class="label">有效帧（左/右）</div><div class="value">{left_valid}/{right_valid}</div></div></div></section><section class="chartBox"><div class="legend"><span class="llx">左手 x</span><span class="lly">左手 y</span><span class="llz">左手 z</span><span class="rrx">右手 x</span><span class="rry">右手 y</span><span class="rrz">右手 z</span></div><canvas id="chartCanvas"></canvas></section><section class="current"><div class="readout"><b>左手 wrist x · world</b><span id="lxNow">--</span></div><div class="readout"><b>左手 wrist y · world</b><span id="lyNow">--</span></div><div class="readout"><b>左手 wrist z · world</b><span id="lzNow">--</span></div><div class="readout"><b>右手 wrist x · world</b><span id="rxNow">--</span></div><div class="readout"><b>右手 wrist y · world</b><span id="ryNow">--</span></div><div class="readout"><b>右手 wrist z · world</b><span id="rzNow">--</span></div></section></aside></main>
-<footer class="timeline"><div class="controls"><button id="playBtn">播放</button><button class="secondary" id="resetBtn">重置</button></div><input id="scrub" type="range" min="0" max="{duration:.6f}" step="0.01" value="0"><div class="time"><span id="timeNow">0.00</span>s / {duration:.2f}s</div></footer></div>
+<footer class="timeline"><div class="controls"><button id="playBtn">播放</button><button class="secondary" id="resetBtn">重置</button><button class="coord" id="coordBtn">坐标：World</button></div><input id="scrub" type="range" min="0" max="{duration:.6f}" step="0.01" value="0"><div class="time"><span id="timeNow">0.00</span>s / {duration:.2f}s</div></footer></div>
 <script>
 function fitShell(){{const scale=Math.min(window.innerWidth/1280,window.innerHeight/720);document.documentElement.style.setProperty('--scale',String(scale));}}
 window.addEventListener('resize',fitShell);fitShell();
 const DATA={chart_json}; const TRAJ={traj_json}; const TACTILE={tactile_json}; const FRAME_TIMES={frame_times_json}; const DURATION={duration:.6f}; const FPS={fps:.6f}; const FRAME_COUNT={frames}; const TACTILE_CANVAS_BG="{TACTILE_CANVAS_BG}"; const TRAJECTORY_CANVAS_BG="{TRAJECTORY_CANVAS_BG}";
+const COORD_KEYS=['lx','ly','lz','rx','ry','rz','hx','hy','hz']; DATA.forEach(p=>COORD_KEYS.forEach(k=>p['w'+k]=p[k])); const WORLD_TRAJ={{frames:TRAJ.frames,center:TRAJ.center,radius:TRAJ.radius,default_yaw:TRAJ.default_yaw}};
 const rgbFrames=Array.from({{length:FRAME_COUNT}},(_,i)=>`rgb_frames/${{String(i).padStart(5,'0')}}.jpg`);
-const rgbCanvas=document.getElementById('rgbCanvas'),trajCanvas=document.getElementById('trajCanvas'),tactileCanvas=document.getElementById('tactileCanvas'),rgbCtx=rgbCanvas.getContext('2d'),trajCtx=trajCanvas.getContext('2d'),tactileCtx=tactileCanvas.getContext('2d'),playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn'),scrub=document.getElementById('scrub'),timeNow=document.getElementById('timeNow'),frameTag=document.getElementById('frameTag'),lxNow=document.getElementById('lxNow'),lyNow=document.getElementById('lyNow'),lzNow=document.getElementById('lzNow'),rxNow=document.getElementById('rxNow'),ryNow=document.getElementById('ryNow'),rzNow=document.getElementById('rzNow'),canvas=document.getElementById('chartCanvas'),ctx=canvas.getContext('2d'); let frame=0,playing=false,lastTs=0,playTime=0; const imgCache=new Map();
-function nearest(t){{let b=null,bd=1e9;for(const p of DATA){{const d=Math.abs(p.t-t);if(d<bd){{bd=d;b=p}}}}return b}} function fmt(v){{return Number.isFinite(v)?v.toFixed(3)+' m':'--'}} function loadImage(src){{if(imgCache.has(src))return imgCache.get(src);const im=new Image();im.src=src;imgCache.set(src,im);return im}} function preload(i){{for(let k=-2;k<=8;k++){{const j=Math.max(0,Math.min(FRAME_COUNT-1,i+k));loadImage(rgbFrames[j]);}}loadImage('tactile_hand.png');}}
+const rgbCanvas=document.getElementById('rgbCanvas'),trajCanvas=document.getElementById('trajCanvas'),tactileCanvas=document.getElementById('tactileCanvas'),rgbCtx=rgbCanvas.getContext('2d'),trajCtx=trajCanvas.getContext('2d'),tactileCtx=tactileCanvas.getContext('2d'),playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn'),coordBtn=document.getElementById('coordBtn'),trajBadge=document.getElementById('trajBadge'),scrub=document.getElementById('scrub'),timeNow=document.getElementById('timeNow'),frameTag=document.getElementById('frameTag'),lxNow=document.getElementById('lxNow'),lyNow=document.getElementById('lyNow'),lzNow=document.getElementById('lzNow'),rxNow=document.getElementById('rxNow'),ryNow=document.getElementById('ryNow'),rzNow=document.getElementById('rzNow'),canvas=document.getElementById('chartCanvas'),ctx=canvas.getContext('2d'); let frame=0,playing=false,lastTs=0,playTime=0,coordMode='world'; const imgCache=new Map();
+function nearest(t){{let b=null,bd=1e9;for(const p of DATA){{const d=Math.abs(p.t-t);if(d<bd){{bd=d;b=p}}}}return b}} function activeTraj(){{return coordMode==='camera'?(TRAJ.camera||WORLD_TRAJ):WORLD_TRAJ}} function fmt(v){{return Number.isFinite(v)?v.toFixed(3)+' m':'--'}} function loadImage(src){{if(imgCache.has(src))return imgCache.get(src);const im=new Image();im.src=src;imgCache.set(src,im);return im}} function preload(i){{for(let k=-2;k<=8;k++){{const j=Math.max(0,Math.min(FRAME_COUNT-1,i+k));loadImage(rgbFrames[j]);}}loadImage('tactile_hand.png');}}
 
-const DEFAULT_TRAJ_VIEW={{yaw:Number.isFinite(TRAJ.default_yaw)?TRAJ.default_yaw:-2.3517,pitch:0.0,roll:3.1415926536,zoom:1}};
-const trajView={{...DEFAULT_TRAJ_VIEW,drag:false,x:0,y:0}};
+function defaultTrajView(){{const a=activeTraj();return {{yaw:Number.isFinite(a.default_yaw)?a.default_yaw:-2.3517,pitch:0.0,roll:3.1415926536,zoom:1}}}}
+const trajView={{...defaultTrajView(),drag:false,x:0,y:0}};
 const FINGER_RGB=['#ff40c4','#f59e0b','#22c55e','#0ea5e9','#8b5cf6'];
 function clamp(v,a,b){{return Math.max(a,Math.min(b,v))}}
-function resetTrajView(){{trajView.yaw=DEFAULT_TRAJ_VIEW.yaw;trajView.pitch=DEFAULT_TRAJ_VIEW.pitch;trajView.roll=DEFAULT_TRAJ_VIEW.roll;trajView.zoom=DEFAULT_TRAJ_VIEW.zoom;trajView.drag=false;}}
-function projectTraj(pt){{const c=TRAJ.center||[0,0,0],r=Math.max(1e-6,TRAJ.radius||1),w=trajCanvas.width,h=trajCanvas.height;let x=pt[0]-c[0],y=pt[1]-c[1],z=pt[2]-c[2];const cy=Math.cos(trajView.yaw),sy=Math.sin(trajView.yaw),cp=Math.cos(trajView.pitch),sp=Math.sin(trajView.pitch),cr=Math.cos(trajView.roll||0),sr=Math.sin(trajView.roll||0);const x1=cy*x-sy*y,y1=sy*x+cy*y,z1=z;const y2=cp*y1-sp*z1,z2=sp*y1+cp*z1;const sx=cr*x1-sr*(-y2),sy2=sr*x1+cr*(-y2);const sc=Math.min(w,h)*0.43/r*trajView.zoom;return [w*.5+sx*sc,h*.52+sy2*sc,z2];}}
+function resetTrajView(){{const d=defaultTrajView();trajView.yaw=d.yaw;trajView.pitch=d.pitch;trajView.roll=d.roll;trajView.zoom=d.zoom;trajView.drag=false;}}
+function projectTraj(pt){{const a=activeTraj(),c=a.center||[0,0,0],r=Math.max(1e-6,a.radius||1),w=trajCanvas.width,h=trajCanvas.height;let x=pt[0]-c[0],y=pt[1]-c[1],z=pt[2]-c[2];const cy=Math.cos(trajView.yaw),sy=Math.sin(trajView.yaw),cp=Math.cos(trajView.pitch),sp=Math.sin(trajView.pitch),cr=Math.cos(trajView.roll||0),sr=Math.sin(trajView.roll||0);const x1=cy*x-sy*y,y1=sy*x+cy*y,z1=z;const y2=cp*y1-sp*z1,z2=sp*y1+cp*z1;const sx=cr*x1-sr*(-y2),sy2=sr*x1+cr*(-y2);const sc=Math.min(w,h)*0.43/r*trajView.zoom;return [w*.5+sx*sc,h*.52+sy2*sc,z2];}}
 function projectTrajHand(pt,root){{const q=projectTraj(pt),r=projectTraj(root);q[0]=2*r[0]-q[0];return q;}}
 function line3(a,b,color,width=2,alpha=1,mirrorRoot=null){{const p=mirrorRoot?projectTrajHand(a,mirrorRoot):projectTraj(a),q=mirrorRoot?projectTrajHand(b,mirrorRoot):projectTraj(b);trajCtx.globalAlpha=alpha;trajCtx.strokeStyle=color;trajCtx.lineWidth=width;trajCtx.lineCap='round';trajCtx.beginPath();trajCtx.moveTo(p[0],p[1]);trajCtx.lineTo(q[0],q[1]);trajCtx.stroke();trajCtx.globalAlpha=1;}}
 function dot3(p,r,color,stroke='#ffffff',mirrorRoot=null){{const q=mirrorRoot?projectTrajHand(p,mirrorRoot):projectTraj(p);trajCtx.fillStyle=color;trajCtx.beginPath();trajCtx.arc(q[0],q[1],r,0,Math.PI*2);trajCtx.fill();trajCtx.strokeStyle=stroke;trajCtx.lineWidth=1;trajCtx.stroke();}}
@@ -966,6 +994,9 @@ const hxNow=document.getElementById('hxNow'),hyNow=document.getElementById('hyNo
 const updateReadoutBase=updateReadout;
 updateReadout=function(t){{updateReadoutBase(t);const p=nearest(Math.max(0,Math.min(DURATION,t||0)));if(p){{hxNow.textContent=fmt(p.hx);hyNow.textContent=fmt(p.hy);hzNow.textContent=fmt(p.hz)}}}};
 drawChart=function(t){{const dpr=window.devicePixelRatio||1,w=canvas.width,h=canvas.height,p={{l:54*dpr,r:18*dpr,t:16*dpr,b:34*dpr}};ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,w,h);const series=[['lx','#2563eb'],['ly','#ea580c'],['lz','#16a34a'],['rx','#7c3aed'],['ry','#db2777'],['rz','#0891b2'],['hx','#0f766e'],['hy','#64748b'],['hz','#a16207']],vals=[];DATA.forEach(d=>series.forEach(s=>{{if(Number.isFinite(d[s[0]]))vals.push(d[s[0]])}}));let mn=vals.length?Math.min(...vals):-1,mx=vals.length?Math.max(...vals):1,sp=Math.max(.001,mx-mn);mn-=sp*.08;mx+=sp*.08;const sx=v=>p.l+(w-p.l-p.r)*v/DURATION,sy=v=>p.t+(h-p.t-p.b)*(1-(v-mn)/(mx-mn));ctx.strokeStyle='#e2e8f0';ctx.lineWidth=1*dpr;ctx.fillStyle='#64748b';ctx.font=`${{12*dpr}}px system-ui`;for(let i=0;i<=5;i++){{const y=p.t+(h-p.t-p.b)*i/5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillText((mx-(mx-mn)*i/5).toFixed(2),8*dpr,y+4*dpr)}}for(let i=0;i<=4;i++){{const x=p.l+(w-p.l-p.r)*i/4;ctx.beginPath();ctx.moveTo(x,p.t);ctx.lineTo(x,h-p.b);ctx.stroke();ctx.fillText((DURATION*i/4).toFixed(1)+'s',x-12*dpr,h-10*dpr)}}function line(k,c){{ctx.beginPath();let drawing=false;DATA.forEach(pt=>{{if(!Number.isFinite(pt[k])){{drawing=false;return}}const x=sx(pt.t),y=sy(pt[k]);if(!drawing){{ctx.moveTo(x,y);drawing=true}}else ctx.lineTo(x,y)}});ctx.strokeStyle=c;ctx.lineWidth=2.1*dpr;ctx.stroke()}}series.forEach(s=>line(s[0],s[1]));const x=sx(t);ctx.strokeStyle='#0f172a';ctx.lineWidth=1.6*dpr;ctx.beginPath();ctx.moveTo(x,p.t);ctx.lineTo(x,h-p.b);ctx.stroke()}};
+function setCoordMode(mode){{coordMode=mode==='camera'?'camera':'world';for(const p of DATA)for(const k of COORD_KEYS)p[k]=p[(coordMode==='camera'?'c':'w')+k];const selected=activeTraj();TRAJ.frames=selected.frames;TRAJ.center=selected.center;TRAJ.radius=selected.radius;TRAJ.default_yaw=selected.default_yaw;const title=coordMode==='camera'?'Camera':'World';coordBtn.textContent='坐标：'+title;coordBtn.setAttribute('aria-pressed',String(coordMode==='camera'));trajBadge.textContent='Trajectory · '+title;document.querySelectorAll('.current .readout b').forEach(label=>{{if(!label.dataset.base)label.dataset.base=label.textContent.split('·')[0].trim();label.textContent=label.dataset.base+' · '+coordMode}});resetTrajView();drawAll()}}
+coordBtn.onclick=()=>setCoordMode(coordMode==='world'?'camera':'world');
+setCoordMode(new URLSearchParams(window.location.search).get('coord')==='camera'?'camera':'world');
 window.addEventListener('resize',resize); resize(); requestAnimationFrame(tick);
 </script></body></html>'''
     out = outputs / output_subdir / "index.html"

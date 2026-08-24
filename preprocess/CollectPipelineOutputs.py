@@ -102,6 +102,7 @@ def artifact_specs(
         ("summaries/left_trajectory_summary.json", fk_dirs["left"] / "trajectory_wristroot_track_cameraoptical_summary.json"),
         ("summaries/right_trajectory_summary.json", fk_dirs["right"] / "trajectory_wristroot_track_cameraoptical_summary.json"),
         ("summaries/trajectory_summary.json", dual_fk_dir / "trajectory_wristroot_track_cameraoptical_summary.json"),
+        ("summaries/world_rebase_first_camera_summary.json", dual_fk_dir / "world_rebase_first_camera_summary.json"),
     ]
     video_specs = []
     if include_stable_bbox_video or include_debug_videos:

@@ -923,6 +923,7 @@ RIGHT_CALIBRATION="${RIGHT_FK_DIR}/glove_fk_to_camera_calib_smooth_solve045.json
 FINAL_TRAJECTORY="${DUAL_FK_DIR}/trajectory_wristroot_track_cameraoptical.jsonl"
 FINAL_TRAJECTORY_SUMMARY="${DUAL_FK_DIR}/trajectory_wristroot_track_cameraoptical_summary.json"
 PALM_LEVEL_SUMMARY="${DUAL_FK_DIR}/palm_plane_level_summary.json"
+WORLD_REBASE_SUMMARY="${DUAL_FK_DIR}/world_rebase_first_camera_summary.json"
 FINAL_TRAJECTORY_MP4="${DUAL_FK_DIR}/trajectory_3d_world_wristroot_track_cameraoptical.mp4"
 FINAL_TRAJECTORY_VIDEO_SUMMARY="${DUAL_FK_DIR}/trajectory_3d_world_wristroot_track_cameraoptical_summary.json"
 glove_cache_args=(
@@ -945,6 +946,7 @@ glove_cache_args=(
   --code "${ROOT}/preprocess/VisualizeTrajectory3D.py"
   --code "${ROOT}/preprocess/RenderDualVisual2DSmooth.py"
   --code "${ROOT}/preprocess/LevelDualHandPalmPlane.py"
+  --code "${ROOT}/preprocess/RebaseTrajectoryWorldToFirstCamera.py"
   --code "${ROOT}/preprocess/VisualizeVisual2DSmooth.py"
   --param "fps=${FPS}"
   --param "glove_sides=${ACTIVE_GLOVE_SIDES_CSV}"
@@ -984,6 +986,7 @@ glove_cache_args=(
   --param "render_final_video=${RENDER_FINAL_VIDEO}"
   --output "${FINAL_TRAJECTORY}"
   --output "${FINAL_TRAJECTORY_SUMMARY}"
+  --output "${WORLD_REBASE_SUMMARY}"
 )
 if [[ "${PALM_LEVEL_FRAMES}" -gt 0 ]]; then
   glove_cache_args+=(--output "${PALM_LEVEL_SUMMARY}")
@@ -1092,6 +1095,11 @@ else
       --summary_json "${PALM_LEVEL_SUMMARY}" \
       --level_frames "${PALM_LEVEL_FRAMES}"
   fi
+  printf '\n  [9/11:dual-rebase] Rebase world coordinates to the first camera optical frame\n'
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/RebaseTrajectoryWorldToFirstCamera.py" \
+    --input_jsonl "${FINAL_TRAJECTORY}" \
+    --output_jsonl "${FINAL_TRAJECTORY}" \
+    --summary_json "${WORLD_REBASE_SUMMARY}"
   if [[ "${RENDER_HAMER_SMOOTH_VIDEO}" == "1" ]]; then
     printf '\n  [9/11:dual-2d] Render branch-corrected left/right HaMeR smooth video\n'
     "${HAMER_PYTHON}" "${ROOT}/preprocess/RenderDualVisual2DSmooth.py" \
@@ -1136,6 +1144,7 @@ collect_cache_args=(
   --param "render_final_video=${RENDER_FINAL_VIDEO}"
   --output "${OUTPUT_DIR}/manifest.json"
   --output "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
+  --output "${OUTPUT_DIR}/summaries/world_rebase_first_camera_summary.json"
 )
 if [[ "${RENDER_STABLE_BBOX_VIDEO}" == "1" ]]; then
   collect_cache_args+=(--output "${OUTPUT_DIR}/videos/02_stable_bbox.mp4")

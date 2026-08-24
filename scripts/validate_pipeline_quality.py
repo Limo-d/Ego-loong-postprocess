@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -90,12 +91,56 @@ def validate(args: argparse.Namespace) -> Dict[str, Any]:
         metrics["trajectory_duration_sec"] = frame_times[-1] if frame_times else 0.0
         metrics["trajectory_nominal_fps"] = nominal_fps(trajectory_rows)
 
-    for frame_dir_name in ("rgb_frames", "traj_frames", "tactile_frames"):
-        frame_dir = outputs / "web" / frame_dir_name
-        count = len(list(frame_dir.glob("*.jpg"))) if frame_dir.is_dir() else 0
-        metrics[f"web_{frame_dir_name}"] = count
-        if count < trajectory_frames:
-            failures.append(f"web {frame_dir_name} has {count} frames, expected at least {trajectory_frames}")
+    web_dir = outputs / "web"
+    rgb_frame_dir = web_dir / "rgb_frames"
+    rgb_frame_count = len(list(rgb_frame_dir.glob("*.jpg"))) if rgb_frame_dir.is_dir() else 0
+    metrics["web_rgb_frames"] = rgb_frame_count
+    if rgb_frame_count < trajectory_frames:
+        failures.append(f"web rgb_frames has {rgb_frame_count} frames, expected at least {trajectory_frames}")
+
+    # The current review page renders trajectory and tactile data in browser-side
+    # Canvas elements. Older pages used one JPEG per frame, so accept either
+    # representation while still verifying that the Canvas payload is complete.
+    index_path = web_dir / "index.html"
+    index_text = index_path.read_text(encoding="utf-8") if index_path.is_file() else ""
+    frame_count_match = re.search(r"const\s+FRAME_COUNT\s*=\s*(\d+)\s*;", index_text)
+    canvas_frame_count = int(frame_count_match.group(1)) if frame_count_match else None
+    metrics["web_canvas_frame_count"] = canvas_frame_count
+
+    canvas_specs = {
+        "trajectory": {
+            "legacy_dir": "traj_frames",
+            "markers": ('id="trajCanvas"', "const TRAJ="),
+        },
+        "tactile": {
+            "legacy_dir": "tactile_frames",
+            "markers": ('id="tactileCanvas"', "const TACTILE="),
+        },
+    }
+    for renderer_name, spec in canvas_specs.items():
+        legacy_dir = web_dir / spec["legacy_dir"]
+        legacy_count = len(list(legacy_dir.glob("*.jpg"))) if legacy_dir.is_dir() else 0
+        metrics[f"web_{spec['legacy_dir']}"] = legacy_count
+        if legacy_count >= trajectory_frames:
+            metrics[f"web_{renderer_name}_renderer"] = "jpeg_frames"
+            continue
+
+        markers_present = all(marker in index_text for marker in spec["markers"])
+        frame_count_ok = canvas_frame_count == trajectory_frames
+        tactile_asset_ok = renderer_name != "tactile" or (
+            (web_dir / "tactile_hand.png").is_file()
+            and (web_dir / "tactile_hand.png").stat().st_size > 0
+        )
+        if markers_present and frame_count_ok and tactile_asset_ok:
+            metrics[f"web_{renderer_name}_renderer"] = "canvas"
+            continue
+
+        failures.append(
+            f"web {renderer_name} renderer incomplete: "
+            f"legacy_frames={legacy_count}, canvas_markers={markers_present}, "
+            f"canvas_frame_count={canvas_frame_count}, expected={trajectory_frames}, "
+            f"asset_ok={tactile_asset_ok}"
+        )
 
     try:
         collected = read_json(outputs / "manifest.json")
