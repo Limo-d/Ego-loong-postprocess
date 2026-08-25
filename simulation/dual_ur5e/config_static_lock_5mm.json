@@ -1,0 +1,45 @@
+{
+  "model_path": "third_party/mujoco_menagerie/universal_robots_ur5e/ur5e.xml",
+  "base_positions_m": {
+    "left": [-0.45, 0.0, 0.02],
+    "right": [0.45, 0.0, 0.02]
+  },
+  "home_q_rad": [-1.5708, -1.5708, 1.5708, -1.5708, -1.5708, 0.0],
+  "input_coordinate": "camera",
+  "camera_optical_to_robot": [
+    [1.0, 0.0, 0.0],
+    [0.0, 0.0, 1.0],
+    [0.0, -1.0, 0.0]
+  ],
+  "translation_scale": 1.0,
+  "action_conditioning": {
+    "enabled": true,
+    "acceleration_weight": 1.0,
+    "jerk_weight": 1.0,
+    "endpoint_weight": 1000000.0,
+    "command_fps": 60.0
+  },
+  "static_lock": {
+    "enabled": true,
+    "window_sec": 0.4,
+    "max_net_displacement_m": 0.006,
+    "max_radius_m": 0.0065,
+    "min_candidate_frames": 4,
+    "transition_frames": 4,
+    "expand_frames": 3,
+    "merge_gap_frames": 3,
+    "max_anchor_deviation_m": 0.005
+  },
+  "relative_workspace_min_m": [-0.3, -0.3, -0.25],
+  "relative_workspace_max_m": [0.3, 0.35, 0.3],
+  "max_target_speed_mps": 0.8,
+  "max_joint_speed_rad_s": 2.5,
+  "ik_iterations": 80,
+  "ik_damping": 0.03,
+  "ik_step_limit_rad": 0.15,
+  "ik_posture_gain": 0.03,
+  "ik_tolerance_m": 0.00002,
+  "render_width": 960,
+  "render_height": 540,
+  "render_fps": 60.0
+}

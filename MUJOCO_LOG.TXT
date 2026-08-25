@@ -1,0 +1,6 @@
+WARNING Tue Aug 25 10:07:42 2026: Attach conflict when attaching 'ur5e' to 'dual_ur5e', policy is 'warning'
+integrator: parent has 0 (default), child has 3, keeping parent value
+
+WARNING Tue Aug 25 10:07:42 2026: Attach conflict when attaching 'ur5e' to 'dual_ur5e', policy is 'warning'
+integrator: parent has 0 (default), child has 3, keeping parent value
+

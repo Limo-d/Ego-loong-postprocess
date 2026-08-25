@@ -1,0 +1,31 @@
+[Unit]
+Description=Rclone SMB mount nas173:%i
+Documentation=https://rclone.org/smb/ https://rclone.org/commands/rclone_mount/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/mkdir -p %h/NetworkDrive/%i
+ExecStartPre=/usr/bin/mkdir -p %h/.cache/rclone/nas173/%i
+ExecStartPre=/usr/bin/mkdir -p %h/.local/state/rclone
+ExecStart=%h/.local/bin/rclone mount nas173:%i %h/NetworkDrive/%i \
+  --config=%h/.config/rclone/rclone.conf \
+  --vfs-cache-mode=full \
+  --cache-dir=%h/.cache/rclone/nas173/%i \
+  --vfs-cache-max-size=20G \
+  --vfs-cache-max-age=24h \
+  --vfs-write-back=5s \
+  --dir-cache-time=10s \
+  --attr-timeout=1s \
+  --smb-idle-timeout=0 \
+  --umask=002 \
+  --log-file=%h/.local/state/rclone/nas173-%i.log \
+  --log-level=INFO
+ExecStop=/usr/bin/fusermount3 -u %h/NetworkDrive/%i
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

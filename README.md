@@ -266,6 +266,22 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `HAMER_BRANCH_JUMP_THRESHOLD_DEG` | `75` | 相邻 HaMeR 手掌法向超过此角度时视为姿态分支跳变候选 |
 | `HAMER_BRANCH_BRIDGE_GAP_FRAMES` | `3` | 合并异常分支内部短暂返回正常分支的最大帧数 |
 | `HAMER_BRANCH_MAX_REJECT_FRAMES` | `60` | 短期跳入后又返回原分支时，允许拒绝并用前后 HaMeR 姿态插值的最大帧数 |
+| `HAMER_GLOBAL_MAX_TRANSLATION_STEP_M` | `0.02` | world-frame wrist translation 的单帧速度软上限，单位米 |
+| `HAMER_GLOBAL_W_TRANSLATION_SPEED` | `4000` | 超过平移软上限后的惩罚权重 |
+| `HAMER_GLOBAL_W_TRANSLATION_JERK` | `120` | wrist translation 三阶差分（jerk）平滑权重 |
+| `HAMER_GLOBAL_TRANSLATION_OUTLIER_THRESHOLD_M` | `0.025` | root 与局部匀速预测偏差超过此值时标记异常并降低观测权重 |
+| `HAMER_GLOBAL_MIN_ROOT_OBSERVATION_WEIGHT` | `0.1` | 异常 root 观测的最小保留权重，避免直接删除真实快速动作 |
+| `MOTION_FILTER_MIN_TRACK_LENGTH` | `15` | 每只手连续有效轨迹的最少帧数 |
+| `MOTION_FILTER_MIN_HAND_VALID_RATIO` | `0.90` | 每只手有效帧比例的 episode 级下限 |
+| `MOTION_FILTER_MAX_TERMINAL_INVALID_FRAMES` | `5` | 末尾连续无效帧超过该值时启动尾段清洗 |
+| `MOTION_FILTER_TERMINAL_TRIM_LOOKBACK_FRAMES` | `30` | 从末尾失效点向前寻找快速运动起点的窗口长度 |
+| `MOTION_FILTER_TERMINAL_TRIM_PRE_ROLL_FRAMES` | `15` | 找到末尾快速运动起点后，再向前保守裁掉的帧数 |
+| `MOTION_FILTER_TERMINAL_FAST_TRANSLATION_M` | `0.012` | 尾段快速运动起点的 wrist 平移阈值，单位米/帧 |
+| `MOTION_FILTER_TERMINAL_FAST_ROTATION_DEG` | `5.0` | 尾段快速运动起点的 wrist 旋转阈值，单位度/帧 |
+| `MOTION_FILTER_SPIKE_SIGMA_MULTIPLIER` | `3.0` | 基于二阶差分的鲁棒尖峰阈值倍数 |
+| `MOTION_FILTER_MAX_SPIKE_FRAME_FRACTION` | `0.05` | 非诊断信号允许的最大尖峰帧比例 |
+| `MOTION_FILTER_STATIC_ENERGY_THRESHOLD_M` | `0.002` | 单帧双手静止运动能量阈值；静止仅标记，不自动拒绝 |
+| `MOTION_FILTER_STATIC_EPISODE_FRACTION` | `0.90` | 判为静止候选所需的双手静止帧比例 |
 | `WRIST_TRACK_ALPHA` | `0.25` | wrist 3D/root 时间滤波系数，由子流程读取 |
 | `WRIST_TRACK_MAX_STEP_M` | `0.007` | wrist 3D/root 单帧最大步长，由子流程读取 |
 | `REVIEW_HAND_DISPLAY_ROTATE_DEG` | `45` | 网页 3D 手部显示旋转参数；当前默认开启 `wrist -> middle_mcp` 竖直对齐时主要用于兼容旧命令 |
@@ -308,6 +324,30 @@ outputs/web/index.html
 ```
 
 默认仍保留左右手各自的 fusion、平滑、FK、标定和腕部追踪数据及 summary，只生成 stable bbox 和双手 HaMeR 2D 平滑视频，不生成双手 3D MP4；3D 轨迹通过 `outputs/web/index.html` 查看。需要恢复旧版单手/中间调试视频时设置 `RENDER_DEBUG_VIDEOS=1`，需要额外生成双手 3D MP4 时设置 `RENDER_FINAL_VIDEO=1`。
+
+### 稳定手掌动作坐标系
+
+在构建动作坐标系前，`OptimizeHamerGlobalTrajectory.py` 固定 glove FK 的 wrist-relative 局部手形和现有尺度，仅在共享 world frame 中平滑每帧 wrist translation 与 palm `SO(3)` orientation。当前骨长标定尚未可靠，因此不使用 FK→RGB 重投影，也不允许优化器改变手指局部姿态或尺度。平移部分对偏离局部匀速预测的 root 观测进行鲁棒降权，并联合使用二阶平滑、jerk 正则和 2 cm/frame 速度软约束；旋转部分保留 glove orientation 观测、速度/二阶平滑和超过 41°/frame 的跳变惩罚。每帧的 root 权重、预测残差和异常标记保存在 `optimized_trajectory` 中。
+
+最终轨迹中每只手的 `hands.<side>.palm_frame` 使用统一的右手系 `ego_loong_glove_fk_palm_v5`，直接继承 `optimized_trajectory` 的全局时序优化 wrist root 与 palm rotation。`+x` 由 wrist 指向四个 MCP 的均值，`+z` 为 glove/FK 手形的手背法向，`+y = +z × +x`。最终局部手指姿态继续来自 FK。HaMeR 掌方向不进入最终 policy action，仅用于视觉诊断、深度定位和异常过滤。
+
+该字段同时提供 camera/world 下的 wrist 和 palm pose、四元数、旋转矩阵、连续 6D rotation，以及未平滑/平滑后的帧间旋转和角速度。最终 21 点始终来自 FK 局部姿态；HaMeR+depth 只通过上游 wrist tracker 提供根位置。对应统计写入：
+
+```text
+outputs/summaries/stable_palm_frame_summary.json
+```
+
+### 轨迹质量过滤和末尾坏帧清洗
+
+`FilterTrajectoryQuality.py` 在 episode 和 frame 两级检查 camera、wrist、finger 的平移、旋转、四元数和二阶差分尖峰；当前不启用时长过滤，也不启用 chunk 过滤。持续的真实快速动作不会仅因速度较大被当作尖峰，尖峰判断使用运动量的二阶差分。原始 wrist 信号用于诊断和物理硬阈值检查，最终是否可用主要依据全局优化后的 wrist/finger 轨迹。
+
+若某只手在 episode 末尾连续失效超过 5 帧，过滤器会向前最多 30 帧寻找 wrist 快速运动的起点，再从该起点额外向前回退 15 帧作为实际裁剪点，以清除快速动作开始前后的不稳定过渡。轨迹 JSONL、review web 和后续渲染都使用裁剪后的帧范围；ROS bag、RGB/depth 和其他原始采集文件不会被删除。裁剪起止帧、原因和原始/输出帧数写入：
+
+```text
+outputs/summaries/motion_filter_summary.json
+```
+
+静止运动能量按每只手 `sqrt(wrist_translation^2 + (0.1 * wrist_rotation_rad)^2 + fingertip_local_rms^2)` 计算；只有左右手同时低于 `0.002 m/frame` 才将该帧视为静止。整段双手静止比例达到 90% 时仅标记为 `static_candidate`，默认不会自动判废。
 
 ## 可视化网页
 

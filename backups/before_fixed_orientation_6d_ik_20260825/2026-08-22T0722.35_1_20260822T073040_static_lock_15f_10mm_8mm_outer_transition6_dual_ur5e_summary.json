@@ -1,0 +1,209 @@
+{
+  "trajectory": "/home/lenovo/Ego-loong-postprocess/postprocess_data/2026-08-22T0722.35_1_20260822T073040/outputs/data/trajectory_wristroot_track_cameraoptical.jsonl",
+  "source_frames": 606,
+  "frames": 1221,
+  "duration_sec": 20.334156032,
+  "mapping": "frame0-anchored, conditioned and static-locked wrist translation only",
+  "input_coordinate": "camera",
+  "translation_scale": 1.0,
+  "command_fps": 60.0,
+  "action_conditioning": {
+    "left": {
+      "deviation_p95_m": 0.001879946485574558,
+      "deviation_max_m": 0.005390176859785671,
+      "endpoint_error_m": 0.0,
+      "path_length_ratio": 0.8370827824684736,
+      "step_p95_before_m": 0.008309102034835735,
+      "step_p95_after_m": 0.007800651784848818,
+      "acceleration_p95_before_m_per_frame2": 0.004524358808386552,
+      "acceleration_p95_after_m_per_frame2": 0.001720479824997498
+    },
+    "right": {
+      "deviation_p95_m": 0.0026255528642355514,
+      "deviation_max_m": 0.0059464794027634,
+      "endpoint_error_m": 0.0,
+      "path_length_ratio": 0.8942499306522129,
+      "step_p95_before_m": 0.009915538920290165,
+      "step_p95_after_m": 0.009223915586892993,
+      "acceleration_p95_before_m_per_frame2": 0.005770927968134306,
+      "acceleration_p95_after_m_per_frame2": 0.0025649289239749597
+    }
+  },
+  "static_lock": {
+    "left": {
+      "candidate_frames": 250,
+      "locked_core_frames": 140,
+      "segments": [
+        {
+          "start_frame": 7,
+          "end_frame": 19,
+          "start_sec": 0.233332992,
+          "end_sec": 0.633333248,
+          "locked_core_start_frame": 7,
+          "locked_core_end_frame": 19
+        },
+        {
+          "start_frame": 31,
+          "end_frame": 61,
+          "start_sec": 1.033332224,
+          "end_sec": 2.033539328,
+          "locked_core_start_frame": 31,
+          "locked_core_end_frame": 61
+        },
+        {
+          "start_frame": 253,
+          "end_frame": 264,
+          "start_sec": 8.500128768,
+          "end_sec": 8.8672256,
+          "locked_core_start_frame": 253,
+          "locked_core_end_frame": 264
+        },
+        {
+          "start_frame": 391,
+          "end_frame": 423,
+          "start_sec": 13.13388928,
+          "end_sec": 14.200554752,
+          "locked_core_start_frame": 391,
+          "locked_core_end_frame": 423
+        },
+        {
+          "start_frame": 435,
+          "end_frame": 461,
+          "start_sec": 14.600554496,
+          "end_sec": 15.467220992,
+          "locked_core_start_frame": 435,
+          "locked_core_end_frame": 461
+        },
+        {
+          "start_frame": 477,
+          "end_frame": 500,
+          "start_sec": 16.000553984,
+          "end_sec": 16.800902912,
+          "locked_core_start_frame": 477,
+          "locked_core_end_frame": 500
+        }
+      ],
+      "rejected_segments": [
+        {
+          "start_frame": 215,
+          "end_frame": 240,
+          "max_anchor_deviation_m": 0.009331073552382997
+        },
+        {
+          "start_frame": 282,
+          "end_frame": 376,
+          "max_anchor_deviation_m": 0.014870448677423613
+        }
+      ],
+      "deviation_p95_m": 0.004070990692752986,
+      "deviation_max_m": 0.006522743801752836
+    },
+    "right": {
+      "candidate_frames": 158,
+      "locked_core_frames": 89,
+      "segments": [
+        {
+          "start_frame": 7,
+          "end_frame": 20,
+          "start_sec": 0.233332992,
+          "end_sec": 0.66666624,
+          "locked_core_start_frame": 7,
+          "locked_core_end_frame": 20
+        },
+        {
+          "start_frame": 35,
+          "end_frame": 53,
+          "start_sec": 1.16666624,
+          "end_sec": 1.766873856,
+          "locked_core_start_frame": 35,
+          "locked_core_end_frame": 53
+        },
+        {
+          "start_frame": 335,
+          "end_frame": 341,
+          "start_sec": 11.233891072,
+          "end_sec": 11.433890304,
+          "locked_core_start_frame": 335,
+          "locked_core_end_frame": 341
+        },
+        {
+          "start_frame": 352,
+          "end_frame": 356,
+          "start_sec": 11.833890048,
+          "end_sec": 11.967223552,
+          "locked_core_start_frame": 352,
+          "locked_core_end_frame": 356
+        },
+        {
+          "start_frame": 484,
+          "end_frame": 489,
+          "start_sec": 16.26725632,
+          "end_sec": 16.434235392,
+          "locked_core_start_frame": 484,
+          "locked_core_end_frame": 489
+        },
+        {
+          "start_frame": 530,
+          "end_frame": 537,
+          "start_sec": 17.834157824,
+          "end_sec": 18.067491328,
+          "locked_core_start_frame": 530,
+          "locked_core_end_frame": 537
+        },
+        {
+          "start_frame": 554,
+          "end_frame": 583,
+          "start_sec": 18.634157312,
+          "end_sec": 19.600823808,
+          "locked_core_start_frame": 554,
+          "locked_core_end_frame": 583
+        }
+      ],
+      "rejected_segments": [
+        {
+          "start_frame": 98,
+          "end_frame": 166,
+          "max_anchor_deviation_m": 0.00933459049689676
+        }
+      ],
+      "deviation_p95_m": 0.0028584101979177772,
+      "deviation_max_m": 0.007370732925400078
+    },
+    "parameters": {
+      "window_sec": 0.5,
+      "window_frames": 15,
+      "max_net_displacement_m": 0.01,
+      "max_radius_m": 0.01,
+      "min_candidate_frames": 4,
+      "transition_frames": 6,
+      "expand_frames": 0,
+      "merge_gap_frames": 3,
+      "transition_outside_candidate": true,
+      "candidate_merge_gap_frames": 9,
+      "max_anchor_deviation_m": 0.008
+    }
+  },
+  "target_speed_clipped_frames": {
+    "left": 0,
+    "right": 0
+  },
+  "joint_speed_clipped_frames": {
+    "left": 0,
+    "right": 0
+  },
+  "ik_error_mean_m": {
+    "left": 8.201320794193348e-06,
+    "right": 1.0041947541546656e-05
+  },
+  "ik_error_p95_m": {
+    "left": 1.6782007972484323e-05,
+    "right": 1.8046952544128043e-05
+  },
+  "ik_error_max_m": {
+    "left": 1.996686230663415e-05,
+    "right": 2.332229483359973e-05
+  },
+  "npz": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/outputs/2026-08-22T0722.35_1_20260822T073040_static_lock_15f_10mm_8mm_outer_transition6_dual_ur5e.npz",
+  "video": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/outputs/2026-08-22T0722.35_1_20260822T073040_static_lock_15f_10mm_8mm_outer_transition6_dual_ur5e.mp4",
+  "camera_config": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/viewer_camera.json"
+}

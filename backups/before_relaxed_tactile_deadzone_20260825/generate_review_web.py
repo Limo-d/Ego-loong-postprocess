@@ -60,8 +60,8 @@ TACTILE_BASELINE_FRAMES = 24
 TACTILE_NOISE_GATE = 1.0
 TACTILE_EMA_RISE = 0.58
 TACTILE_EMA_FALL = 0.22
-TACTILE_CONTACT_THRESHOLD = 2.0
-TACTILE_DISPLAY_DEADZONE = 2.0
+TACTILE_CONTACT_THRESHOLD = 3.0
+TACTILE_DISPLAY_DEADZONE = 3.0
 TACTILE_MIN_FILTERED_VALUE = max(0.25, TACTILE_NOISE_GATE * 0.35)
 TACTILE_MIN_SCALE = 1.0
 TACTILE_DISPLAY_SCALE_MULTIPLIER = 1.60
@@ -792,7 +792,6 @@ def build_tactile_web_data(traj_path: Path, frame_count: int) -> Dict[str, Any]:
         "has_right": bool(has_right),
         "filter": {
             "source": "Ego-Loong-Live",
-            "profile": "offline_relaxed",
             "baseline_frames": TACTILE_BASELINE_FRAMES,
             "noise_gate": TACTILE_NOISE_GATE,
             "ema_rise": TACTILE_EMA_RISE,

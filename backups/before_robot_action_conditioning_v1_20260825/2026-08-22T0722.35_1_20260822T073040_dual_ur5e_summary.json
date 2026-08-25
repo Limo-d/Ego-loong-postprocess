@@ -1,0 +1,31 @@
+{
+  "trajectory": "/home/lenovo/Ego-loong-postprocess/postprocess_data/2026-08-22T0722.35_1_20260822T073040/outputs/data/trajectory_wristroot_track_cameraoptical.jsonl",
+  "frames": 606,
+  "duration_sec": 20.334156032,
+  "mapping": "frame0-anchored wrist translation only",
+  "input_coordinate": "camera",
+  "translation_scale": 1.0,
+  "target_speed_clipped_frames": {
+    "left": 0,
+    "right": 0
+  },
+  "joint_speed_clipped_frames": {
+    "left": 0,
+    "right": 0
+  },
+  "ik_error_mean_m": {
+    "left": 5.562588584348765e-05,
+    "right": 5.1464351200678776e-05
+  },
+  "ik_error_p95_m": {
+    "left": 0.00039463279037251034,
+    "right": 0.0002986415357035205
+  },
+  "ik_error_max_m": {
+    "left": 0.0004978670104074692,
+    "right": 0.00047919724605992536
+  },
+  "npz": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/outputs/2026-08-22T0722.35_1_20260822T073040_dual_ur5e.npz",
+  "video": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/outputs/2026-08-22T0722.35_1_20260822T073040_dual_ur5e.mp4",
+  "camera_config": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/viewer_camera.json"
+}

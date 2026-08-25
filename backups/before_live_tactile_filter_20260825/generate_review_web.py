@@ -57,14 +57,10 @@ TACTILE_FRAME_H = 328
 TRAJECTORY_FRAME_W = 676
 TRAJECTORY_FRAME_H = 328
 TACTILE_BASELINE_FRAMES = 24
-TACTILE_NOISE_GATE = 1.0
-TACTILE_EMA_RISE = 0.58
-TACTILE_EMA_FALL = 0.22
-TACTILE_CONTACT_THRESHOLD = 2.0
-TACTILE_DISPLAY_DEADZONE = 2.0
-TACTILE_MIN_FILTERED_VALUE = max(0.25, TACTILE_NOISE_GATE * 0.35)
-TACTILE_MIN_SCALE = 1.0
+TACTILE_MIN_SCALE = 0.02
 TACTILE_DISPLAY_SCALE_MULTIPLIER = 1.60
+TACTILE_SENSOR_DEADZONE_PERCENTILE = 60.0
+TACTILE_SENSOR_DEADZONE_MIN = 0.08
 TACTILE_BG_TOP_BGR = (250, 245, 237)  # Live UI #edf5fa, stored as BGR.
 TACTILE_BG_BOTTOM_BGR = (246, 238, 228)
 TACTILE_CANVAS_BG = "#e4eef6"
@@ -686,46 +682,23 @@ def _render_live_tactile_frame(left_values: np.ndarray, right_values: np.ndarray
 
 
 def _tactile_delta(values: np.ndarray) -> tuple[np.ndarray, float]:
-    """Apply the same baseline/gate/asymmetric-EMA policy as Ego-Loong-Live.
-
-    The returned values are display-only pressure above the contact deadzone.
-    Raw pressure stored in the trajectory is never modified.
-    """
     if values.size == 0:
         return values, 1.0
     n_base = min(TACTILE_BASELINE_FRAMES, values.shape[0])
     baseline = np.nanmedian(values[:n_base], axis=0) if n_base > 0 else np.zeros(TACTILE_SENSOR_COUNT)
-    baseline = np.nan_to_num(baseline, nan=0.0, posinf=0.0, neginf=0.0)
-    filtered = np.zeros(TACTILE_SENSOR_COUNT, dtype=np.float64)
-    smoothed = np.zeros_like(values, dtype=np.float64)
-
-    # Live spends the initial baseline window collecting samples and renders it
-    # as zero. Reproduce that behavior instead of showing baseline acquisition.
-    for frame_index in range(n_base, values.shape[0]):
-        sample = np.asarray(values[frame_index], dtype=np.float64)
-        sample = np.where(np.isfinite(sample), sample, baseline)
-        current = np.maximum(0.0, sample - baseline)
-        quiet = current <= TACTILE_NOISE_GATE
-        current[quiet] = 0.0
-        baseline[quiet] = baseline[quiet] * 0.999 + sample[quiet] * 0.001
-        alpha = np.where(current >= filtered, TACTILE_EMA_RISE, TACTILE_EMA_FALL)
-        filtered = filtered * (1.0 - alpha) + current * alpha
-        filtered[filtered < TACTILE_MIN_FILTERED_VALUE] = 0.0
-        smoothed[frame_index] = filtered
-
-    finite = smoothed[np.isfinite(smoothed)]
+    delta = np.maximum(0.0, values - baseline[None, :])
+    finite = delta[np.isfinite(delta)]
     if finite.size == 0:
         return np.zeros_like(values), 1.0
-    # As in Live, retain small filtered values for diagnostics but do not draw
-    # them. Subtracting the contact deadzone prevents clip auto-ranging from
-    # magnifying idle residuals into flashing dots.
-    display = np.maximum(0.0, smoothed - TACTILE_DISPLAY_DEADZONE)
-    filtered_vmax = float(np.percentile(finite, 99.0))
-    if not np.isfinite(filtered_vmax):
-        filtered_vmax = TACTILE_DISPLAY_DEADZONE
-    display_vmax = max(filtered_vmax - TACTILE_DISPLAY_DEADZONE, TACTILE_MIN_SCALE)
-    vmax = display_vmax * TACTILE_DISPLAY_SCALE_MULTIPLIER
-    return display, vmax
+    raw_vmax = float(np.percentile(finite, 99.0))
+    if not np.isfinite(raw_vmax) or raw_vmax <= 1e-9:
+        raw_vmax = float(np.nanmax(finite)) if finite.size else 1.0
+    sensor_floor = np.nanpercentile(delta, TACTILE_SENSOR_DEADZONE_PERCENTILE, axis=0)
+    sensor_floor = np.nan_to_num(sensor_floor, nan=0.0, posinf=0.0, neginf=0.0)
+    sensor_floor = np.maximum(sensor_floor, TACTILE_SENSOR_DEADZONE_MIN)
+    delta = np.maximum(0.0, delta - sensor_floor[None, :])
+    vmax = max(raw_vmax, TACTILE_MIN_SCALE) * TACTILE_DISPLAY_SCALE_MULTIPLIER
+    return delta, vmax
 
 
 def load_tactile_rows(traj_path: Path, frame_count: int) -> tuple[np.ndarray, np.ndarray, bool, bool]:
@@ -790,16 +763,6 @@ def build_tactile_web_data(traj_path: Path, frame_count: int) -> Dict[str, Any]:
         "right": right_display.tolist(),
         "has_left": bool(has_left),
         "has_right": bool(has_right),
-        "filter": {
-            "source": "Ego-Loong-Live",
-            "profile": "offline_relaxed",
-            "baseline_frames": TACTILE_BASELINE_FRAMES,
-            "noise_gate": TACTILE_NOISE_GATE,
-            "ema_rise": TACTILE_EMA_RISE,
-            "ema_fall": TACTILE_EMA_FALL,
-            "contact_threshold": TACTILE_CONTACT_THRESHOLD,
-            "display_deadzone": TACTILE_DISPLAY_DEADZONE,
-        },
     }
 
 

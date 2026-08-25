@@ -47,19 +47,17 @@ except ModuleNotFoundError:
 SIDES = ("right", "left")
 
 
+def _initial_side(box: np.ndarray, width: int, image_left_side: str) -> str:
+    # The acquisition image may be mirrored or mounted with either physical
+    # hand on image-left. This is only a bootstrap; temporal association then
+    # preserves the configured identities.
+    if float(bbox_center(box)[0]) < width * 0.5:
+        return image_left_side
+    return "right" if image_left_side == "left" else "left"
+
+
 def _candidate_cost(box: np.ndarray, prev_box: np.ndarray, score: float) -> float:
     return float(np.linalg.norm(bbox_center(box) - bbox_center(prev_box))) - 80.0 * bbox_iou(box, prev_box) - 10.0 * score
-
-
-def _independent_reinit_box(box: np.ndarray, matched_box: np.ndarray, width: int) -> bool:
-    """Return whether ``box`` is clearly separate from the matched hand.
-
-    Missing-side recovery must be conservative: an overlapping or nearby box
-    may be a duplicate/fragment of the already matched hand. Waiting for a
-    later unambiguous frame is safer than guessing an identity.
-    """
-    center_distance = float(np.linalg.norm(bbox_center(box) - bbox_center(matched_box)))
-    return bbox_iou(box, matched_box) <= 0.35 and center_distance >= 0.05 * float(width)
 
 
 def _allowed(box: np.ndarray, prev_box: np.ndarray, score: float, lost: int, elapsed_frames: float, args: argparse.Namespace) -> bool:
@@ -107,9 +105,6 @@ def track_boxes(data: Dict, width: int, height: int, args: argparse.Namespace) -
     prev_state: Dict[str, Optional[np.ndarray]] = {side: None for side in SIDES}
     previous_time: Dict[str, Optional[float]] = {side: None for side in SIDES}
     lost = {side: 0 for side in SIDES}
-    ambiguous_startup_single_frames = 0
-    safe_missing_side_reinitializations = 0
-    ambiguous_missing_side_frames = 0
 
     for i, frame in enumerate(frames):
         detections = []
@@ -152,28 +147,14 @@ def track_boxes(data: Dict, width: int, height: int, args: argparse.Namespace) -
                 image_right_side = "right" if args.image_left_side == "left" else "left"
                 assignments[args.image_left_side], assignments[image_right_side] = ordered[0], ordered[-1]
                 used.update((ordered[0], ordered[-1]))
-            elif remaining:
-                ambiguous_startup_single_frames += 1
         else:
-            uninitialized = [side for side in SIDES if prev_box[side] is None]
-            if len(uninitialized) == 1 and remaining:
-                missing_side = uninitialized[0]
-                matched_side = "left" if missing_side == "right" else "right"
-                matched_idx = assignments.get(matched_side)
-                if matched_idx is not None:
-                    matched_box = detections[matched_idx][0]
-                    independent = [
-                        idx for idx in remaining
-                        if _independent_reinit_box(detections[idx][0], matched_box, width)
-                    ]
-                    if len(independent) == 1:
-                        assignments[missing_side] = independent[0]
-                        used.add(independent[0])
-                        safe_missing_side_reinitializations += 1
-                    else:
-                        ambiguous_missing_side_frames += 1
-                else:
-                    ambiguous_missing_side_frames += 1
+            for det_idx in remaining:
+                preferred = _initial_side(detections[det_idx][0], width, args.image_left_side)
+                other = "left" if preferred == "right" else "right"
+                side = preferred if preferred not in assignments and prev_box[preferred] is None else other
+                if side not in assignments and prev_box[side] is None:
+                    assignments[side] = det_idx
+                    used.add(det_idx)
 
         for side in SIDES:
             det_idx = assignments.get(side)
@@ -230,9 +211,6 @@ def track_boxes(data: Dict, width: int, height: int, args: argparse.Namespace) -
         "right_interpolated": int(interpolated["right"].sum()),
         "left_interpolated": int(interpolated["left"].sum()),
         "both_output_frames": int(sum(states["right"][i] is not None and states["left"][i] is not None for i in range(len(frames)))),
-        "ambiguous_startup_single_frames": int(ambiguous_startup_single_frames),
-        "safe_missing_side_reinitializations": int(safe_missing_side_reinitializations),
-        "ambiguous_missing_side_frames": int(ambiguous_missing_side_frames),
     }
     return output, stats
 

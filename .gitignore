@@ -13,6 +13,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.venv-mujoco/
 venv/
 
 # ROS/colcon build products
@@ -43,6 +44,8 @@ venv/
 *.tar.gz
 *.log
 /.docker-assets/
+/third_party/mujoco_menagerie/
+/simulation/dual_ur5e/outputs/
 
 # Local scratch and backup files
 *.bak

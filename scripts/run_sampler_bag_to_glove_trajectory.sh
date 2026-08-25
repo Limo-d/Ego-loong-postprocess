@@ -156,6 +156,25 @@ ALPHA_ANGLE="${ALPHA_ANGLE:-0.45}"
 ALPHA_QUAT="${ALPHA_QUAT:-0.45}"
 GLOVE_NEUTRAL_FRAMES="${GLOVE_NEUTRAL_FRAMES:-30}"
 PALM_LEVEL_FRAMES="${PALM_LEVEL_FRAMES:-30}"
+HAMER_GLOBAL_ROOT_ITERATIONS="${HAMER_GLOBAL_ROOT_ITERATIONS:-120}"
+HAMER_GLOBAL_SMOOTH_ITERATIONS="${HAMER_GLOBAL_SMOOTH_ITERATIONS:-70}"
+HAMER_GLOBAL_MAX_TRANSLATION_STEP_M="${HAMER_GLOBAL_MAX_TRANSLATION_STEP_M:-0.02}"
+HAMER_GLOBAL_W_TRANSLATION_SPEED="${HAMER_GLOBAL_W_TRANSLATION_SPEED:-4000.0}"
+HAMER_GLOBAL_W_TRANSLATION_JERK="${HAMER_GLOBAL_W_TRANSLATION_JERK:-120.0}"
+HAMER_GLOBAL_TRANSLATION_OUTLIER_THRESHOLD_M="${HAMER_GLOBAL_TRANSLATION_OUTLIER_THRESHOLD_M:-0.025}"
+HAMER_GLOBAL_MIN_ROOT_OBSERVATION_WEIGHT="${HAMER_GLOBAL_MIN_ROOT_OBSERVATION_WEIGHT:-0.1}"
+MOTION_FILTER_MIN_TRACK_LENGTH="${MOTION_FILTER_MIN_TRACK_LENGTH:-15}"
+MOTION_FILTER_MIN_HAND_VALID_RATIO="${MOTION_FILTER_MIN_HAND_VALID_RATIO:-0.90}"
+MOTION_FILTER_MAX_TERMINAL_INVALID_FRAMES="${MOTION_FILTER_MAX_TERMINAL_INVALID_FRAMES:-5}"
+MOTION_FILTER_TERMINAL_TRIM_LOOKBACK_FRAMES="${MOTION_FILTER_TERMINAL_TRIM_LOOKBACK_FRAMES:-30}"
+MOTION_FILTER_TERMINAL_TRIM_PRE_ROLL_FRAMES="${MOTION_FILTER_TERMINAL_TRIM_PRE_ROLL_FRAMES:-15}"
+MOTION_FILTER_TERMINAL_FAST_TRANSLATION_M="${MOTION_FILTER_TERMINAL_FAST_TRANSLATION_M:-0.012}"
+MOTION_FILTER_TERMINAL_FAST_ROTATION_DEG="${MOTION_FILTER_TERMINAL_FAST_ROTATION_DEG:-5.0}"
+MOTION_FILTER_QUATERNION_TOLERANCE="${MOTION_FILTER_QUATERNION_TOLERANCE:-0.001}"
+MOTION_FILTER_SPIKE_SIGMA_MULTIPLIER="${MOTION_FILTER_SPIKE_SIGMA_MULTIPLIER:-3.0}"
+MOTION_FILTER_MAX_SPIKE_FRAME_FRACTION="${MOTION_FILTER_MAX_SPIKE_FRAME_FRACTION:-0.05}"
+MOTION_FILTER_STATIC_ENERGY_THRESHOLD_M="${MOTION_FILTER_STATIC_ENERGY_THRESHOLD_M:-0.002}"
+MOTION_FILTER_STATIC_EPISODE_FRACTION="${MOTION_FILTER_STATIC_EPISODE_FRACTION:-0.90}"
 WRIST_TRACK_ALPHA="${WRIST_TRACK_ALPHA:-0.25}"
 WRIST_TRACK_ACCEPT_STEP_M="${WRIST_TRACK_ACCEPT_STEP_M:-0.035}"
 WRIST_TRACK_PENDING_RADIUS_M="${WRIST_TRACK_PENDING_RADIUS_M:-0.035}"
@@ -924,6 +943,9 @@ FINAL_TRAJECTORY="${DUAL_FK_DIR}/trajectory_wristroot_track_cameraoptical.jsonl"
 FINAL_TRAJECTORY_SUMMARY="${DUAL_FK_DIR}/trajectory_wristroot_track_cameraoptical_summary.json"
 PALM_LEVEL_SUMMARY="${DUAL_FK_DIR}/palm_plane_level_summary.json"
 WORLD_REBASE_SUMMARY="${DUAL_FK_DIR}/world_rebase_first_camera_summary.json"
+HAMER_GLOBAL_SUMMARY="${DUAL_FK_DIR}/hamer_global_trajectory_summary.json"
+PALM_FRAME_SUMMARY="${DUAL_FK_DIR}/stable_palm_frame_summary.json"
+MOTION_FILTER_SUMMARY="${DUAL_FK_DIR}/motion_filter_summary.json"
 FINAL_TRAJECTORY_MP4="${DUAL_FK_DIR}/trajectory_3d_world_wristroot_track_cameraoptical.mp4"
 FINAL_TRAJECTORY_VIDEO_SUMMARY="${DUAL_FK_DIR}/trajectory_3d_world_wristroot_track_cameraoptical_summary.json"
 glove_cache_args=(
@@ -947,6 +969,9 @@ glove_cache_args=(
   --code "${ROOT}/preprocess/RenderDualVisual2DSmooth.py"
   --code "${ROOT}/preprocess/LevelDualHandPalmPlane.py"
   --code "${ROOT}/preprocess/RebaseTrajectoryWorldToFirstCamera.py"
+  --code "${ROOT}/preprocess/OptimizeHamerGlobalTrajectory.py"
+  --code "${ROOT}/preprocess/BuildStablePalmFrames.py"
+  --code "${ROOT}/preprocess/FilterTrajectoryQuality.py"
   --code "${ROOT}/preprocess/VisualizeVisual2DSmooth.py"
   --param "fps=${FPS}"
   --param "glove_sides=${ACTIVE_GLOVE_SIDES_CSV}"
@@ -961,6 +986,25 @@ glove_cache_args=(
   --param "alpha_quat=${ALPHA_QUAT}"
   --param "glove_neutral_frames=${GLOVE_NEUTRAL_FRAMES}"
   --param "palm_level_frames=${PALM_LEVEL_FRAMES}"
+  --param "hamer_global_root_iterations=${HAMER_GLOBAL_ROOT_ITERATIONS}"
+  --param "hamer_global_smooth_iterations=${HAMER_GLOBAL_SMOOTH_ITERATIONS}"
+  --param "hamer_global_max_translation_step_m=${HAMER_GLOBAL_MAX_TRANSLATION_STEP_M}"
+  --param "hamer_global_w_translation_speed=${HAMER_GLOBAL_W_TRANSLATION_SPEED}"
+  --param "hamer_global_w_translation_jerk=${HAMER_GLOBAL_W_TRANSLATION_JERK}"
+  --param "hamer_global_translation_outlier_threshold_m=${HAMER_GLOBAL_TRANSLATION_OUTLIER_THRESHOLD_M}"
+  --param "hamer_global_min_root_observation_weight=${HAMER_GLOBAL_MIN_ROOT_OBSERVATION_WEIGHT}"
+  --param "motion_filter_min_track_length=${MOTION_FILTER_MIN_TRACK_LENGTH}"
+  --param "motion_filter_min_hand_valid_ratio=${MOTION_FILTER_MIN_HAND_VALID_RATIO}"
+  --param "motion_filter_max_terminal_invalid_frames=${MOTION_FILTER_MAX_TERMINAL_INVALID_FRAMES}"
+  --param "motion_filter_terminal_trim_lookback_frames=${MOTION_FILTER_TERMINAL_TRIM_LOOKBACK_FRAMES}"
+  --param "motion_filter_terminal_trim_pre_roll_frames=${MOTION_FILTER_TERMINAL_TRIM_PRE_ROLL_FRAMES}"
+  --param "motion_filter_terminal_fast_translation_m=${MOTION_FILTER_TERMINAL_FAST_TRANSLATION_M}"
+  --param "motion_filter_terminal_fast_rotation_deg=${MOTION_FILTER_TERMINAL_FAST_ROTATION_DEG}"
+  --param "motion_filter_quaternion_tolerance=${MOTION_FILTER_QUATERNION_TOLERANCE}"
+  --param "motion_filter_spike_sigma_multiplier=${MOTION_FILTER_SPIKE_SIGMA_MULTIPLIER}"
+  --param "motion_filter_max_spike_frame_fraction=${MOTION_FILTER_MAX_SPIKE_FRAME_FRACTION}"
+  --param "motion_filter_static_energy_threshold_m=${MOTION_FILTER_STATIC_ENERGY_THRESHOLD_M}"
+  --param "motion_filter_static_episode_fraction=${MOTION_FILTER_STATIC_EPISODE_FRACTION}"
   --param "wrist_track_alpha=${WRIST_TRACK_ALPHA}"
   --param "wrist_track_accept_step_m=${WRIST_TRACK_ACCEPT_STEP_M}"
   --param "wrist_track_pending_radius_m=${WRIST_TRACK_PENDING_RADIUS_M}"
@@ -987,6 +1031,9 @@ glove_cache_args=(
   --output "${FINAL_TRAJECTORY}"
   --output "${FINAL_TRAJECTORY_SUMMARY}"
   --output "${WORLD_REBASE_SUMMARY}"
+  --output "${HAMER_GLOBAL_SUMMARY}"
+  --output "${PALM_FRAME_SUMMARY}"
+  --output "${MOTION_FILTER_SUMMARY}"
 )
 if [[ "${PALM_LEVEL_FRAMES}" -gt 0 ]]; then
   glove_cache_args+=(--output "${PALM_LEVEL_SUMMARY}")
@@ -1100,6 +1147,43 @@ else
     --input_jsonl "${FINAL_TRAJECTORY}" \
     --output_jsonl "${FINAL_TRAJECTORY}" \
     --summary_json "${WORLD_REBASE_SUMMARY}"
+  printf '\n  [9/11:dual-hand-global] Smooth FK wrist translation/orientation in world frame\n'
+  hamer_global_args=(
+    --input_jsonl "${FINAL_TRAJECTORY}"
+    --output_jsonl "${FINAL_TRAJECTORY}"
+    --summary_json "${HAMER_GLOBAL_SUMMARY}"
+    --sides "${ACTIVE_GLOVE_SIDES_CSV}"
+    --root_iterations "${HAMER_GLOBAL_ROOT_ITERATIONS}"
+    --smooth_iterations "${HAMER_GLOBAL_SMOOTH_ITERATIONS}"
+    --max_translation_step_m "${HAMER_GLOBAL_MAX_TRANSLATION_STEP_M}"
+    --w_translation_speed "${HAMER_GLOBAL_W_TRANSLATION_SPEED}"
+    --w_translation_jerk "${HAMER_GLOBAL_W_TRANSLATION_JERK}"
+    --translation_outlier_threshold_m "${HAMER_GLOBAL_TRANSLATION_OUTLIER_THRESHOLD_M}"
+    --min_root_observation_weight "${HAMER_GLOBAL_MIN_ROOT_OBSERVATION_WEIGHT}"
+  )
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/OptimizeHamerGlobalTrajectory.py" "${hamer_global_args[@]}"
+  printf '\n  [9/11:dual-palm-frame] Build stable camera/world wrist and palm action frames\n'
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/BuildStablePalmFrames.py" \
+    --input_jsonl "${FINAL_TRAJECTORY}" \
+    --output_jsonl "${FINAL_TRAJECTORY}" \
+    --summary_json "${PALM_FRAME_SUMMARY}"
+  printf '\n  [9/11:quality-filter] Label frame/episode motion quality (no duration/chunk filtering)\n'
+  "${HAMER_PYTHON}" "${ROOT}/preprocess/FilterTrajectoryQuality.py" \
+    --input_jsonl "${FINAL_TRAJECTORY}" \
+    --output_jsonl "${FINAL_TRAJECTORY}" \
+    --summary_json "${MOTION_FILTER_SUMMARY}" \
+    --min_track_length "${MOTION_FILTER_MIN_TRACK_LENGTH}" \
+    --min_hand_valid_ratio "${MOTION_FILTER_MIN_HAND_VALID_RATIO}" \
+    --max_terminal_invalid_frames "${MOTION_FILTER_MAX_TERMINAL_INVALID_FRAMES}" \
+    --terminal_trim_lookback_frames "${MOTION_FILTER_TERMINAL_TRIM_LOOKBACK_FRAMES}" \
+    --terminal_trim_pre_roll_frames "${MOTION_FILTER_TERMINAL_TRIM_PRE_ROLL_FRAMES}" \
+    --terminal_fast_translation_m "${MOTION_FILTER_TERMINAL_FAST_TRANSLATION_M}" \
+    --terminal_fast_rotation_deg "${MOTION_FILTER_TERMINAL_FAST_ROTATION_DEG}" \
+    --quaternion_tolerance "${MOTION_FILTER_QUATERNION_TOLERANCE}" \
+    --spike_sigma_multiplier "${MOTION_FILTER_SPIKE_SIGMA_MULTIPLIER}" \
+    --max_spike_frame_fraction "${MOTION_FILTER_MAX_SPIKE_FRAME_FRACTION}" \
+    --static_energy_threshold_m "${MOTION_FILTER_STATIC_ENERGY_THRESHOLD_M}" \
+    --static_episode_fraction "${MOTION_FILTER_STATIC_EPISODE_FRACTION}"
   if [[ "${RENDER_HAMER_SMOOTH_VIDEO}" == "1" ]]; then
     printf '\n  [9/11:dual-2d] Render branch-corrected left/right HaMeR smooth video\n'
     "${HAMER_PYTHON}" "${ROOT}/preprocess/RenderDualVisual2DSmooth.py" \
@@ -1145,6 +1229,9 @@ collect_cache_args=(
   --output "${OUTPUT_DIR}/manifest.json"
   --output "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
   --output "${OUTPUT_DIR}/summaries/world_rebase_first_camera_summary.json"
+  --output "${OUTPUT_DIR}/summaries/hamer_global_trajectory_summary.json"
+  --output "${OUTPUT_DIR}/summaries/stable_palm_frame_summary.json"
+  --output "${OUTPUT_DIR}/summaries/motion_filter_summary.json"
 )
 if [[ "${RENDER_STABLE_BBOX_VIDEO}" == "1" ]]; then
   collect_cache_args+=(--output "${OUTPUT_DIR}/videos/02_stable_bbox.mp4")
