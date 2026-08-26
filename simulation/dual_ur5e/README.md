@@ -1,7 +1,8 @@
 # Dual UR5e MuJoCo wrist replay
 
-This is the first, Retarget-independent simulation bridge. It maps the optimized
-left/right human wrist translations to two UR5e end-effectors.
+This is the Retarget-independent simulation bridge. It maps optimized human
+wrist trajectories and canonical grasp commands to dual UR5e arms fitted with
+AgiBot OmniPicker grippers.
 
 The mapping is intentionally conservative:
 
@@ -24,6 +25,9 @@ The mapping is intentionally conservative:
     never sped up, until TCP translation/rotation and joint velocity/
     acceleration limits are satisfied; then resample commands to 60 Hz with
     continuous joint velocity.
+12. Map canonical grasp `0=open, 1=closed` to the official OmniPicker master
+    coordinate `outer_joint1 = 0.785398 * (1-command)` and write all eight
+    official mimic-joint coordinates per hand.
 
 Absolute human wrist position is never sent directly to the robot, so a mismatch
 between the human starting pose and the robot initial pose is expected and safe.
@@ -38,6 +42,11 @@ The setup creates `.venv-mujoco` and sparsely downloads Google DeepMind's
 BSD-3-Clause UR5e model from:
 https://github.com/google-deepmind/mujoco_menagerie/tree/main/universal_robots_ur5e
 
+The OmniPicker link geometry and kinematics come from AgiBot's official Genie
+Sim repository. `omnipicker.xml` transcribes its link transforms, limits,
+masses and mimic ratios. The included `assets/omnipicker/ur5e_adapter.stl` is
+generated from the user-supplied `连接件.STEP` (63 x 63 x 16 mm).
+
 ## Headless replay and MP4
 
 ```bash
@@ -49,7 +58,8 @@ MUJOCO_GL=egl .venv-mujoco/bin/python simulation/dual_ur5e/replay_trajectory.py 
 Outputs are written under `simulation/dual_ur5e/outputs/`:
 
 - `*_dual_ur5e.mp4`: MuJoCo replay.
-- `*_dual_ur5e.npz`: times, 12 joint angles, targets and IK errors.
+- `*_dual_ur5e.npz`: times, 12 arm joints, 16 OmniPicker joints, physical
+  master-joint commands, targets and IK errors.
 - `*_dual_ur5e_summary.json`: clipping and tracking-quality summary.
 
 For an interactive local window, omit `MUJOCO_GL=egl` and use `--viewer`.
@@ -59,12 +69,14 @@ temporary by default, preserving the reference-video view. Add
 
 ## Current boundary
 
-This version replays human wrist translation while holding each robot's initial
-end-effector orientation fixed. It does not yet command human wrist rotation,
-grippers, collisions, or a real robot. Those layers should be added only after
-the coordinate mapping and left/right behavior are visually verified.
+`config.json` remains the conservative fixed-orientation profile.
+`config_relative_human_orientation.json` additionally commands filtered
+relative human wrist rotation and enables the complete OmniPicker replay.
+Neither path talks to a real robot yet. Object contact dynamics, grasp-force
+control, table/payload geometry and the real controller protocol remain future
+hardware-enablement work.
 
-`config_relative_human_orientation.json` is an opt-in comparison profile. It
+`config_relative_human_orientation.json` maps
 maps the glove-FK palm rotation relative to frame 0 into robot axes, applies a
 0.5 rotation scale, repairs isolated SO(3) midpoint spikes by geodesic
 interpolation, and applies rotation-vector acceleration/jerk regularization.
@@ -99,14 +111,25 @@ The command path starts and ends with zero joint velocity and one second of
 hold. A final safety gate reports `PASS`/`FAIL` for joint soft-limit margin,
 scaled 6D Jacobian condition, endpoint velocity, time-scaling limits, and
 sampled signed clearances for non-adjacent self links, the other arm, and the
-floor. Its current collision scope is the dual-UR5e capsule model only; a real
-deployment must add the actual grippers, table, payload and surrounding
-obstacles before treating a `PASS` as hardware authorization.
+floor. The scope includes the dual-UR5e capsules, official OmniPicker collision
+meshes, and the supplied STEP adapter. Tight wrist/flange mounting pairs are
+reported separately with a 0.5 mm numerical penetration tolerance. A real
+deployment must still add the table, payload and surrounding obstacles before
+treating a `PASS` as hardware authorization.
 
 The relative-orientation profile also derives a robot-independent canonical
 gripper command (`0=open`, `1=closed`) from calibrated multi-finger flexion,
 usable thumb-to-fingertip spans, and baseline-corrected tactile confidence.
 The command has median/EMA filtering, deadband, normalized speed limiting and
 a hysteretic OPEN/CLOSING/GRASPED/OPENING state machine. It is resampled through
-the same bimanual time law as the arms. This is not yet a physical gripper
-stroke or device command; the NPZ and SVG retain its signals for review first.
+the same bimanual time law as the arms and converted to the physical OmniPicker
+master-joint angle. The NPZ retains both canonical and physical commands. This
+is a kinematic replay command, not yet a force/current command for hardware.
+
+To regenerate the adapter STL after updating the STEP file:
+
+```bash
+.venv-step/bin/python simulation/dual_ur5e/convert_step_adapter.py \
+  /path/to/连接件.STEP \
+  simulation/dual_ur5e/assets/omnipicker/ur5e_adapter.stl
+```

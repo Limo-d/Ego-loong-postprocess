@@ -1,5 +1,16 @@
 {
   "model_path": "third_party/mujoco_menagerie/universal_robots_ur5e/ur5e.xml",
+  "robot_gripper": {
+    "enabled": true,
+    "type": "agibot_omnipicker",
+    "model_path": "simulation/dual_ur5e/omnipicker.xml",
+    "canonical_convention": "0=open, 1=closed",
+    "open_joint_rad": 0.78539816339,
+    "ur5e_mount_translation_m": [0.0, 0.0, 0.0],
+    "ur5e_adapter_step": "/home/lenovo/Downloads/连接件.STEP",
+    "ur5e_adapter_size_m": [0.063, 0.063, 0.016],
+    "ur5e_adapter_status": "user-supplied STEP geometry; mating-frame rotation still requires hardware verification"
+  },
   "base_positions_m": {
     "left": [-0.45, 0.0, 0.02],
     "right": [0.45, 0.0, 0.02]

@@ -1,0 +1,113 @@
+<mujoco model="agibot_omnipicker">
+  <!--
+    Kinematics, masses and collision meshes are adapted from AgiBotTech/genie_sim:
+    source/geniesim_ros/.../g2/xacro/gripper.omnipicker.urdf.xacro
+
+    The official model is an eight-hinge closed-loop gripper.  Replay is
+    kinematic, so the application writes the official mimic relationship into
+    every hinge explicitly.  outer_joint1 is the physical command coordinate:
+    0.785398 rad = open, 0 rad = closed.
+  -->
+  <compiler angle="radian" meshdir="assets/omnipicker"/>
+  <option timestep="0.002" integrator="implicitfast"/>
+
+  <default>
+    <joint type="hinge" axis="0 0 1" damping="0.05" armature="0.001"/>
+    <geom type="mesh" group="3" rgba="0.22 0.24 0.28 1"
+      friction="1.2 0.02 0.002" solref="0.004 1" solimp="0.95 0.99 0.002"/>
+    <default class="visual">
+      <geom type="mesh" group="2" contype="0" conaffinity="0"
+        rgba="0.52 0.66 0.72 1"/>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="base_mesh" file="base_link.STL"/>
+    <mesh name="inner_link1_mesh" file="inner_link1.STL"/>
+    <mesh name="inner_link2_mesh" file="inner_link2.STL"/>
+    <mesh name="inner_link3_mesh" file="inner_link3.STL"/>
+    <mesh name="inner_link4_mesh" file="inner_link4.STL"/>
+    <mesh name="outer_link1_mesh" file="outer_link1.STL"/>
+    <mesh name="outer_link2_mesh" file="outer_link2.STL"/>
+    <mesh name="outer_link3_mesh" file="outer_link3.STL"/>
+    <mesh name="outer_link4_mesh" file="outer_link4.STL"/>
+    <mesh name="ur5e_adapter_mesh" file="ur5e_adapter.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
+  <worldbody>
+    <!-- User-supplied UR5e adapter: STEP bounds 63 x 63 x 16 mm, +Z outward. -->
+    <body name="ur5e_adapter_link">
+      <geom name="ur5e_adapter_visual" class="visual" mesh="ur5e_adapter_mesh"
+        rgba="0.35 0.37 0.40 1"/>
+      <geom name="ur5e_adapter_collision" mesh="ur5e_adapter_mesh"/>
+      <!-- Preserve AgiBot's base/camera separation after the 16 mm adapter. -->
+      <body name="base_link" pos="0 0 0.0211" euler="0 0 1.57079632679">
+      <inertial pos="-0.00013356 0.000015301 0.03322" mass="0.23588"
+        diaginertia="0.00023759547 0.00020118956 0.0001405122"/>
+      <geom name="base_visual" class="visual" mesh="base_mesh" rgba="0.20 0.24 0.28 1"/>
+      <geom name="base_collision" mesh="base_mesh"/>
+      <site name="tcp" pos="0 0 0.105" size="0.006" rgba="0.95 0.8 0.1 0.8"/>
+
+      <body name="inner_link1" pos="0 -0.0195 0.0565"
+        euler="0.14649265359 -1.57079632679 -0.15964">
+        <joint name="inner_joint1" range="-0.78539816339 0"/>
+        <inertial pos="0.0094685 0.0068806 0.000065437" mass="0.025428"
+          diaginertia="0.0000091720834 0.0000038334008 0.000010471027"/>
+        <geom name="inner_link1_visual" class="visual" mesh="inner_link1_mesh"/>
+        <geom name="inner_link1_collision" mesh="inner_link1_mesh"/>
+        <body name="inner_link3" pos="0.030852 -0.018551 0" euler="3.14159265359 0 0">
+          <joint name="inner_joint3" range="-2 2"/>
+          <inertial pos="0.0088027 -0.007035 0.000016424" mass="0.0040132"
+            diaginertia="0.000000079130353 0.00000038423887 0.00000036185602"/>
+          <geom name="inner_link3_visual" class="visual" mesh="inner_link3_mesh"/>
+          <geom name="inner_link3_collision" mesh="inner_link3_mesh"/>
+          <body name="inner_link4" pos="0.018118 -0.01574 0">
+            <joint name="inner_joint4" range="-2 2"/>
+            <inertial pos="0.012508 -0.0079729 0.000094339" mass="0.018029"
+              diaginertia="0.0000013444465 0.0000042280185 0.0000039817261"/>
+            <geom name="inner_link4_visual" class="visual" mesh="inner_link4_mesh"/>
+            <geom name="inner_link4_collision" mesh="inner_link4_mesh"/>
+            <body name="inner_link2" pos="0 -0.01 0">
+              <joint name="inner_joint0" range="-2 2"/>
+              <inertial pos="0.014869 -0.0036066 0.00029307" mass="0.022591"
+                diaginertia="0.0000048113168 0.000029805385 0.000025403463"/>
+              <geom name="inner_link2_visual" class="visual" mesh="inner_link2_mesh"/>
+              <geom name="inner_link2_collision" mesh="inner_link2_mesh"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="outer_link1" pos="0 0.0195 0.0565"
+        euler="0.14649265359 -1.57079632679 -0.15964">
+        <joint name="outer_joint1" range="0 0.78539816339"/>
+        <inertial pos="0.0095051 -0.0068479 0.000068268" mass="0.025428"
+          diaginertia="0.0000091470314 0.000003801901 0.000010413078"/>
+        <geom name="outer_link1_visual" class="visual" mesh="outer_link1_mesh"/>
+        <geom name="outer_link1_collision" mesh="outer_link1_mesh"/>
+        <body name="outer_link3" pos="0.030852 0.018551 0" euler="3.14159265359 0 0">
+          <joint name="outer_joint3" range="-2 2"/>
+          <inertial pos="0.0088027 0.007035 -0.000016424" mass="0.0040132"
+            diaginertia="0.000000079130353 0.00000038423887 0.00000036185602"/>
+          <geom name="outer_link3_visual" class="visual" mesh="outer_link3_mesh"/>
+          <geom name="outer_link3_collision" mesh="outer_link3_mesh"/>
+          <body name="outer_link4" pos="0.018118 0.01574 0">
+            <joint name="outer_joint4" range="-2 2"/>
+            <inertial pos="0.016206 0.0094593 0.000047668" mass="0.035835"
+              diaginertia="0.000017278545 0.000011480484 0.0000058972392"/>
+            <geom name="outer_link4_visual" class="visual" mesh="outer_link4_mesh"/>
+            <geom name="outer_link4_collision" mesh="outer_link4_mesh"/>
+            <body name="outer_link2" pos="0 0.01 0">
+              <joint name="outer_joint0" range="-2 2"/>
+              <inertial pos="0.016268 0.0040555 0.00030323" mass="0.025142"
+                diaginertia="0.0000066962753 0.000035571481 0.000029443722"/>
+              <geom name="outer_link2_visual" class="visual" mesh="outer_link2_mesh"/>
+              <geom name="outer_link2_collision" mesh="outer_link2_mesh"/>
+            </body>
+          </body>
+        </body>
+      </body>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>

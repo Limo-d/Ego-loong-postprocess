@@ -31,6 +31,16 @@ JOINT_NAMES = (
     "wrist_2_joint",
     "wrist_3_joint",
 )
+OMNIPICKER_MIMIC_FROM_OUTER = {
+    "inner_joint1": -1.0,
+    "inner_joint3": -0.1,
+    "inner_joint4": -0.25,
+    "inner_joint0": 0.7,
+    "outer_joint1": 1.0,
+    "outer_joint3": -0.1,
+    "outer_joint4": 0.25,
+    "outer_joint0": -0.7,
+}
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -39,6 +49,13 @@ def load_config(path: Path) -> dict[str, Any]:
     if not model_path.is_absolute():
         model_path = ROOT / model_path
     config["model_path"] = str(model_path.resolve())
+    gripper = config.get("robot_gripper") or {}
+    if gripper.get("model_path"):
+        gripper_path = Path(gripper["model_path"])
+        if not gripper_path.is_absolute():
+            gripper_path = ROOT / gripper_path
+        gripper["model_path"] = str(gripper_path.resolve())
+        config["robot_gripper"] = gripper
     return config
 
 
@@ -94,8 +111,25 @@ def build_model(config: dict[str, Any]) -> tuple[mujoco.MjModel, mujoco.MjData]:
   </worldbody>
 </mujoco>"""
     )
+    gripper = config.get("robot_gripper") or {}
+    use_gripper = bool(gripper.get("enabled", False))
     for side in SIDES:
         child = mujoco.MjSpec.from_file(config["model_path"])
+        if use_gripper:
+            gripper_spec = mujoco.MjSpec.from_file(gripper["model_path"])
+            mount_translation = np.asarray(
+                gripper.get("ur5e_mount_translation_m", [0.0, 0.0, 0.0]),
+                dtype=np.float64,
+            )
+            if mount_translation.shape != (3,):
+                raise ValueError("robot_gripper.ur5e_mount_translation_m must have 3 values")
+            gripper_root = gripper_spec.body("base_link")
+            gripper_root.pos = np.asarray(gripper_root.pos) + mount_translation
+            child.attach(
+                gripper_spec,
+                prefix="omnipicker_",
+                site=child.site("attachment_site"),
+            )
         mount = scene.worldbody.add_frame(
             name=f"{side}_mount",
             pos=config["base_positions_m"][side],
@@ -104,8 +138,13 @@ def build_model(config: dict[str, Any]) -> tuple[mujoco.MjModel, mujoco.MjData]:
     model = scene.compile()
     data = mujoco.MjData(model)
     home = np.asarray(config["home_q_rad"], dtype=np.float64)
-    data.qpos[:] = np.tile(home, 2)
-    data.ctrl[:] = data.qpos
+    data.qpos[:] = 0.0
+    for side in SIDES:
+        qpos_ids, _ = joint_addresses(model, side)
+        data.qpos[qpos_ids] = home
+        if use_gripper:
+            set_omnipicker_qpos(model, data.qpos, side, 0.0, config)
+    set_controls_from_qpos(model, data)
     mujoco.mj_forward(model, data)
     return model, data
 
@@ -521,6 +560,71 @@ def joint_addresses(model: mujoco.MjModel, side: str) -> tuple[np.ndarray, np.nd
     return np.asarray(qpos, dtype=int), np.asarray(dofs, dtype=int)
 
 
+def end_effector_site_id(model: mujoco.MjModel, side: str) -> int:
+    """Use the OmniPicker TCP when fitted, otherwise the bare UR5e flange site."""
+    gripper_tcp = f"{side}_omnipicker_tcp"
+    site_id = int(mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, gripper_tcp))
+    if site_id >= 0:
+        return site_id
+    return int(model.site(f"{side}_attachment_site").id)
+
+
+def set_omnipicker_qpos(
+    model: mujoco.MjModel,
+    qpos: np.ndarray,
+    side: str,
+    canonical_command: float,
+    config: dict[str, Any],
+) -> None:
+    """Map canonical 0=open, 1=closed onto the official mimic coordinates."""
+    settings = config.get("robot_gripper") or {}
+    open_angle = float(settings.get("open_joint_rad", np.pi / 4.0))
+    command = float(np.clip(canonical_command, 0.0, 1.0))
+    outer_joint = open_angle * (1.0 - command)
+    for suffix, multiplier in OMNIPICKER_MIMIC_FROM_OUTER.items():
+        joint = model.joint(f"{side}_omnipicker_{suffix}")
+        qpos[int(joint.qposadr[0])] = multiplier * outer_joint
+
+
+def apply_omnipicker_commands(
+    model: mujoco.MjModel,
+    qpos: np.ndarray,
+    gripper_artifacts: dict[str, dict[str, np.ndarray]],
+    config: dict[str, Any],
+) -> None:
+    settings = config.get("robot_gripper") or {}
+    if not bool(settings.get("enabled", False)):
+        return
+    for side in SIDES:
+        commands = np.asarray(gripper_artifacts[side]["command"], dtype=np.float64)
+        if len(commands) != len(qpos):
+            raise ValueError(
+                f"{side} OmniPicker command length {len(commands)} != qpos length {len(qpos)}"
+            )
+        for frame, command in enumerate(commands):
+            set_omnipicker_qpos(model, qpos[frame], side, float(command), config)
+
+
+def set_controls_from_qpos(model: mujoco.MjModel, data: mujoco.MjData) -> None:
+    """Set joint-position actuators without assuming nu == nq."""
+    data.ctrl[:] = 0.0
+    for actuator_id in range(model.nu):
+        joint_id = int(model.actuator_trnid[actuator_id, 0])
+        if joint_id < 0:
+            continue
+        qpos_address = int(model.jnt_qposadr[joint_id])
+        value = float(data.qpos[qpos_address])
+        if int(model.actuator_ctrllimited[actuator_id]):
+            value = float(
+                np.clip(
+                    value,
+                    model.actuator_ctrlrange[actuator_id, 0],
+                    model.actuator_ctrlrange[actuator_id, 1],
+                )
+            )
+        data.ctrl[actuator_id] = value
+
+
 def clamp_joint_ranges(model: mujoco.MjModel, qpos: np.ndarray, side: str) -> None:
     for suffix in JOINT_NAMES:
         joint = model.joint(f"{side}_{suffix}")
@@ -848,7 +952,7 @@ def solve_pose_ik(
     home: np.ndarray,
     config: dict[str, Any],
 ) -> tuple[float, float]:
-    site_id = int(model.site(f"{side}_attachment_site").id)
+    site_id = end_effector_site_id(model, side)
     qpos_ids, dof_ids = joint_addresses(model, side)
     damping = float(config["ik_damping"])
     orientation_weight = float(config.get("ik_orientation_weight_m_per_rad", 0.25))
@@ -922,23 +1026,19 @@ def solve_pose_ik(
 
 
 def condition_joint_trajectory(
-    qpos: np.ndarray, config: dict[str, Any]
+    qpos: np.ndarray, model: mujoco.MjModel, config: dict[str, Any]
 ) -> tuple[np.ndarray, dict[str, Any]]:
     settings = config.get("joint_conditioning") or {}
     passes = int(settings.get("binomial_passes", 0))
     if not bool(settings.get("enabled", False)) or passes <= 0 or len(qpos) < 5:
         return qpos.copy(), {"enabled": False, "binomial_passes": 0}
     output = qpos.copy()
+    active_ids = np.concatenate([joint_addresses(model, side)[0] for side in SIDES])
     kernel = np.asarray([1.0, 4.0, 6.0, 4.0, 1.0], dtype=np.float64) / 16.0
     for _ in range(passes):
         padded = np.pad(output, ((2, 2), (0, 0)), mode="edge")
-        output = np.stack(
-            [
-                np.convolve(padded[:, joint], kernel, mode="valid")
-                for joint in range(output.shape[1])
-            ],
-            axis=1,
-        )
+        for joint in active_ids:
+            output[:, joint] = np.convolve(padded[:, joint], kernel, mode="valid")
     if bool(settings.get("preserve_endpoints", True)):
         output[0] = qpos[0]
         output[-1] = qpos[-1]
@@ -947,8 +1047,9 @@ def condition_joint_trajectory(
         "binomial_passes": passes,
         "preserve_endpoints": bool(settings.get("preserve_endpoints", True)),
     }
-    for side, joint_slice in (("left", slice(0, 6)), ("right", slice(6, 12))):
-        deviation = np.linalg.norm(output[:, joint_slice] - qpos[:, joint_slice], axis=1)
+    for side in SIDES:
+        side_ids, _ = joint_addresses(model, side)
+        deviation = np.linalg.norm(output[:, side_ids] - qpos[:, side_ids], axis=1)
         metrics[side] = {
             "joint_deviation_p95_deg": float(np.rad2deg(np.percentile(deviation, 95))),
             "joint_deviation_max_deg": float(np.rad2deg(np.max(deviation))),
@@ -1313,11 +1414,33 @@ def execution_safety_audit(
         return body_name(geom).split("_", 1)[0]
 
     self_pairs: list[tuple[int, int]] = []
+    mounting_pairs: list[tuple[int, int]] = []
     interarm_pairs: list[tuple[int, int]] = []
     for offset, first in enumerate(collision_geoms):
         for second in collision_geoms[offset + 1 :]:
             if robot_side(first) != robot_side(second):
                 interarm_pairs.append((first, second))
+                continue
+            first_name = body_name(first)
+            second_name = body_name(second)
+            names = {first_name, second_name}
+            if any(
+                name.endswith("wrist_2_link") or name.endswith("wrist_3_link")
+                for name in names
+            ) and any(
+                name.endswith("_omnipicker_camera_link")
+                or name.endswith("_omnipicker_base_link")
+                or name.endswith("_omnipicker_ur5e_adapter_link")
+                for name in names
+            ):
+                # Flange, adapter and nearby camera shell are a deliberately
+                # tight mounting assembly, so audit them under a small
+                # penetration tolerance instead of the 20 mm link clearance.
+                mounting_pairs.append((first, second))
+                continue
+            if "_omnipicker_" in first_name and "_omnipicker_" in second_name:
+                # Opposing adaptive fingers intentionally approach/contact each
+                # other.  Arm-to-gripper and gripper-to-world checks remain on.
                 continue
             if body_tree_distance(
                 model, int(model.geom_bodyid[first]), int(model.geom_bodyid[second])
@@ -1335,12 +1458,16 @@ def execution_safety_audit(
         sample_frames.append(len(qpos) - 1)
     closest: dict[str, dict[str, Any]] = {
         key: {"distance_m": distance_query_max, "frame": 0, "bodies": []}
-        for key in ("self", "interarm", "environment")
+        for key in ("self", "mounting", "interarm", "environment")
     }
     for frame in sample_frames:
         data.qpos[:] = qpos[frame]
         mujoco.mj_forward(model, data)
-        for kind, pairs in (("self", self_pairs), ("interarm", interarm_pairs)):
+        for kind, pairs in (
+            ("self", self_pairs),
+            ("mounting", mounting_pairs),
+            ("interarm", interarm_pairs),
+        ):
             for first, second in pairs:
                 distance = float(
                     mujoco.mj_geomDistance(
@@ -1374,7 +1501,7 @@ def execution_safety_audit(
     orientation_weight = float(config.get("ik_orientation_weight_m_per_rad", 0.25))
     for side in SIDES:
         qpos_ids, dof_ids = joint_addresses(model, side)
-        site_id = int(model.site(f"{side}_attachment_site").id)
+        site_id = end_effector_site_id(model, side)
         conditions: list[float] = []
         minimum_sigmas: list[float] = []
         margins: list[float] = []
@@ -1422,6 +1549,9 @@ def execution_safety_audit(
 
     thresholds = {
         "self_clearance_m": float(settings.get("min_self_clearance_m", 0.02)),
+        "mounting_clearance_m": float(
+            settings.get("min_mounting_clearance_m", -0.0005)
+        ),
         "interarm_clearance_m": float(settings.get("min_interarm_clearance_m", 0.05)),
         "environment_clearance_m": float(
             settings.get("min_environment_clearance_m", 0.015)
@@ -1435,6 +1565,7 @@ def execution_safety_audit(
     violations: list[str] = []
     for kind, threshold_key in (
         ("self", "self_clearance_m"),
+        ("mounting", "mounting_clearance_m"),
         ("interarm", "interarm_clearance_m"),
         ("environment", "environment_clearance_m"),
     ):
@@ -1461,7 +1592,12 @@ def execution_safety_audit(
         "enabled": True,
         "verdict": "PASS" if not violations else "FAIL",
         "violations": violations,
-        "model_scope": "dual UR5e collision capsules and floor; no gripper, table, payload, or external obstacles",
+        "model_scope": (
+            "dual UR5e + AgiBot OmniPicker collision meshes and floor; "
+            "internal same-gripper finger contacts excluded; no table, payload, or external obstacles"
+            if any("_omnipicker_" in body_name(geom) for geom in collision_geoms)
+            else "dual UR5e collision capsules and floor; no gripper, table, payload, or external obstacles"
+        ),
         "collision_sample_stride": stride,
         "collision_sample_rate_hz_approx": float(config["render_fps"]) / stride,
         "closest_clearance": closest,
@@ -1891,7 +2027,7 @@ def render_video(
     ) as writer:
         for frame in range(len(qpos)):
             data.qpos[:] = qpos[frame]
-            data.ctrl[:] = qpos[frame]
+            set_controls_from_qpos(model, data)
             set_target_markers(model, data, targets, frame)
             mujoco.mj_forward(model, data)
             renderer.update_scene(data, camera=render_camera)
@@ -1921,7 +2057,7 @@ def play_viewer(
                 while time.monotonic() < deadline:
                     time.sleep(0.001)
                 data.qpos[:] = qpos[frame]
-                data.ctrl[:] = qpos[frame]
+                set_controls_from_qpos(model, data)
                 set_target_markers(model, data, targets, frame)
                 mujoco.mj_forward(model, data)
                 viewer.sync()
@@ -1969,11 +2105,11 @@ def main() -> None:
     model, data = build_model(config)
     home = np.asarray(config["home_q_rad"], dtype=np.float64)
     initial_sites = {
-        side: data.site_xpos[int(model.site(f"{side}_attachment_site").id)].copy()
+        side: data.site_xpos[end_effector_site_id(model, side)].copy()
         for side in SIDES
     }
     initial_site_rotations = {
-        side: data.site_xmat[int(model.site(f"{side}_attachment_site").id)]
+        side: data.site_xmat[end_effector_site_id(model, side)]
         .reshape(3, 3)
         .copy()
         for side in SIDES
@@ -2053,7 +2189,7 @@ def main() -> None:
             data.qpos[ids] = previous[ids] + clipped
         mujoco.mj_forward(model, data)
         for side_index, side in enumerate(SIDES):
-            site_id = int(model.site(f"{side}_attachment_site").id)
+            site_id = end_effector_site_id(model, side)
             position_errors[frame, side_index] = np.linalg.norm(
                 targets[side][frame] - data.site_xpos[site_id]
             )
@@ -2071,7 +2207,7 @@ def main() -> None:
         previous = data.qpos.copy()
 
     qpos_ik_raw = qpos.copy()
-    qpos, joint_conditioning_metrics = condition_joint_trajectory(qpos_ik_raw, config)
+    qpos, joint_conditioning_metrics = condition_joint_trajectory(qpos_ik_raw, model, config)
     pre_retime_times = times.copy()
     qpos_pre_retime = qpos.copy()
     qpos_ik_raw_pre_retime = qpos_ik_raw.copy()
@@ -2104,7 +2240,7 @@ def main() -> None:
         data.qpos[:] = qpos[frame]
         mujoco.mj_forward(model, data)
         for side_index, side in enumerate(SIDES):
-            site_id = int(model.site(f"{side}_attachment_site").id)
+            site_id = end_effector_site_id(model, side)
             position_errors[frame, side_index] = np.linalg.norm(
                 targets[side][frame] - data.site_xpos[site_id]
             )
@@ -2119,9 +2255,6 @@ def main() -> None:
                 )
             )
 
-    safety_audit = execution_safety_audit(
-        model, qpos, times, config, time_scaling_metrics
-    )
     gripper_artifacts, gripper_metrics = build_gripper_commands(
         rows,
         source_times,
@@ -2129,6 +2262,27 @@ def main() -> None:
         retimed_path_times,
         times,
         config,
+    )
+    if gripper_artifacts:
+        apply_omnipicker_commands(model, qpos, gripper_artifacts, config)
+        apply_omnipicker_commands(model, qpos_ik_raw, gripper_artifacts, config)
+        robot_gripper = config.get("robot_gripper") or {}
+        if bool(robot_gripper.get("enabled", False)):
+            gripper_metrics["specific_robot_gripper_mapping"] = True
+            (gripper_metrics.get("parameters") or {})[
+                "specific_robot_gripper_mapping"
+            ] = True
+            gripper_metrics["robot_gripper"] = str(
+                robot_gripper.get("type", "agibot_omnipicker")
+            )
+            gripper_metrics["physical_mapping"] = (
+                "outer_joint1_rad = open_joint_rad * (1 - canonical_command)"
+            )
+            gripper_metrics["open_joint_rad"] = float(
+                robot_gripper.get("open_joint_rad", np.pi / 4.0)
+            )
+    safety_audit = execution_safety_audit(
+        model, qpos, times, config, time_scaling_metrics
     )
     name = args.name or trajectory_path.parents[2].name
     output_dir = Path(args.output_dir).expanduser().resolve()
@@ -2139,6 +2293,20 @@ def main() -> None:
     gripper_svg_path = output_dir / f"{name}_gripper_commands.svg"
     if gripper_artifacts:
         write_gripper_svg(gripper_svg_path, times, gripper_artifacts)
+    omnipicker_outer_joint: dict[str, np.ndarray] = {}
+    for side in SIDES:
+        joint_id = int(
+            mujoco.mj_name2id(
+                model,
+                mujoco.mjtObj.mjOBJ_JOINT,
+                f"{side}_omnipicker_outer_joint1",
+            )
+        )
+        omnipicker_outer_joint[side] = (
+            qpos[:, int(model.jnt_qposadr[joint_id])]
+            if joint_id >= 0
+            else np.full(len(qpos), np.nan, dtype=np.float64)
+        )
     np.savez_compressed(
         npz_path,
         times_sec=times,
@@ -2203,6 +2371,8 @@ def main() -> None:
         right_gripper_contact=gripper_artifacts["right"]["contact"],
         left_gripper_state=gripper_artifacts["left"]["state"],
         right_gripper_state=gripper_artifacts["right"]["state"],
+        left_omnipicker_outer_joint_rad=omnipicker_outer_joint["left"],
+        right_omnipicker_outer_joint_rad=omnipicker_outer_joint["right"],
     )
     summary = {
         "trajectory": str(trajectory_path),
@@ -2227,6 +2397,7 @@ def main() -> None:
         "time_scaling": time_scaling_metrics,
         "safety_audit": safety_audit,
         "gripper_mapping": gripper_metrics,
+        "robot_gripper": config.get("robot_gripper") or {"enabled": False},
         "target_speed_clipped_frames": speed_clips,
         "joint_speed_clipped_frames": velocity_clips,
         "ik_error_mean_m": dict(zip(SIDES, np.mean(position_errors, axis=0).tolist())),
