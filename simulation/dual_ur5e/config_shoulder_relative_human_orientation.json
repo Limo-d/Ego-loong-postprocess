@@ -1,0 +1,52 @@
+{
+  "extends": "config_relative_human_orientation.json",
+  "layout_name": "symmetric_shoulder_mount_prototype",
+  "layout_status": "simulation prototype; dimensions require batch-data and hardware validation",
+  "base_positions_m": {
+    "left": [-0.26, 0.0, 0.95],
+    "right": [0.26, 0.0, 0.95]
+  },
+  "base_rpy_deg": {
+    "left": [0.0, -90.0, 0.0],
+    "right": [0.0, 90.0, 0.0]
+  },
+  "home_q_rad_by_side": {
+    "left": [-1.102925, -0.255012, 1.553442, 1.648100, -2.030950, 1.483578],
+    "right": [-2.565000, -0.254243, 1.522790, 1.560938, -0.599641, -1.310621]
+  },
+  "base_pose_search": {
+    "position_tolerance_m": 0.005,
+    "orientation_tolerance_deg": 5.0,
+    "kinematic_reach_m": 0.95,
+    "minimum_base_distance_m": 0.08,
+    "maximum_reach_ratio": 0.90,
+    "target_reach_ratio": 0.65,
+    "reach_penalty_weight": 5.0,
+    "horizontal_deadband_deg": 5.0,
+    "horizontal_penalty_weight": 0.20,
+    "safety_violation_penalty": 2.0,
+    "batch_anchor_position_tolerance_m": 0.01,
+    "batch_anchor_orientation_tolerance_deg": 5.0
+  },
+  "torso_geometry": {
+    "enabled": true,
+    "collision_enabled": true,
+    "visual_style": "rectangular_body",
+    "column_position_m": [0.0, 0.0, 0.47],
+    "column_half_size_m": [0.0745, 0.0745, 0.47],
+    "beam_position_m": [0.0, 0.0, 0.95],
+    "beam_half_size_m": [0.26, 0.0745, 0.0745],
+    "beam_collision_shape": "cylinder",
+    "beam_capsule_size_m": [0.0745, 0.1655],
+    "beam_cylinder_size_m": [0.0745, 0.26],
+    "collision_rgba": [0.0, 0.0, 0.0, 0.0],
+    "shell_rgba": [0.74, 0.78, 0.82, 1.0],
+    "pedestal_position_m": [0.0, 0.0, 0.07],
+    "pedestal_half_size_m": [0.15, 0.12, 0.07],
+    "mast_position_m": [0.0, 0.0, 0.51],
+    "mast_half_size_m": [0.0745, 0.0745, 0.37],
+    "shoulder_position_m": [0.0, 0.0, 0.95],
+    "shoulder_visual_shape": "cylinder",
+    "shoulder_size_m": [0.0745, 0.26]
+  }
+}

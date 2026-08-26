@@ -1,0 +1,743 @@
+{
+  "method": "paper-inspired representative-keyframe base-pose search with fixed task targets, paired symmetric shared-body candidates, and dense full-path validation",
+  "source_config": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/config_shoulder_relative_human_orientation.json",
+  "tasks": [
+    {
+      "path": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/outputs/2026-08-22T0722.35_1_20260822T073040_shoulder_layout_v11_horizontal_gripper_52cm_dual_ur5e.npz",
+      "frames": 1221,
+      "keyframes": [
+        0,
+        140,
+        209,
+        347,
+        352,
+        359,
+        393,
+        409,
+        514,
+        516,
+        776,
+        874,
+        905,
+        908,
+        917,
+        948,
+        1038,
+        1076,
+        1152,
+        1220
+      ]
+    }
+  ],
+  "settings": {
+    "position_tolerance_m": 0.005,
+    "orientation_tolerance_deg": 5.0,
+    "max_jacobian_condition": 30.0,
+    "min_joint_margin_deg": 10.0,
+    "kinematic_reach_m": 0.95,
+    "minimum_base_distance_m": 0.08,
+    "maximum_reach_ratio": 0.9,
+    "target_reach_ratio": 0.65,
+    "reach_penalty_weight": 5.0,
+    "horizontal_deadband_deg": 5.0,
+    "horizontal_penalty_weight": 0.2,
+    "safety_violation_penalty": 2.0
+  },
+  "candidate_count": 3,
+  "screen_results": [
+    {
+      "candidate_index": 2,
+      "stage": "keyframe",
+      "spacing_m": 0.54,
+      "forward_offset_m": 0.0,
+      "height_offset_m": 0.0,
+      "mount_twist_deg": 0.0,
+      "score": 0.5936550822766847,
+      "metrics": {
+        "feasibility_rate": {
+          "left": 1.0,
+          "right": 1.0
+        },
+        "position_error_max_m": {
+          "left": 2.899625691432237e-05,
+          "right": 0.0003531804206517974
+        },
+        "orientation_error_max_deg": {
+          "left": 0.011910580761551175,
+          "right": 0.16842769608166447
+        },
+        "jacobian_condition_max": {
+          "left": 6.909189531608316,
+          "right": 20.958993526517805
+        },
+        "joint_margin_min_deg": {
+          "left": 80.89438035807693,
+          "right": 91.86678014852312
+        },
+        "initial_gripper_horizontal_angle_deg": {
+          "left": 0.003927656655176273,
+          "right": 0.01203509113267198
+        },
+        "mean_reach_ratio": {
+          "left": 0.7286343197364396,
+          "right": 0.7339036473528867
+        },
+        "safety_audit": {
+          "enabled": true,
+          "verdict": "PASS",
+          "violations": [],
+          "model_scope": "dual UR5e + AgiBot OmniPicker collision meshes, floor, and torso/shoulder structure; internal same-gripper finger contacts and intended base/shoulder mounting contacts excluded; no table, payload, or external obstacles",
+          "collision_sample_stride": 3,
+          "collision_sample_rate_hz_approx": 20.0,
+          "closest_clearance": {
+            "self": {
+              "distance_m": 0.02212664725325903,
+              "frame": 19,
+              "time_sec": 1900.0,
+              "bodies": [
+                "left_forearm_link",
+                "left_wrist_3_link"
+              ]
+            },
+            "mounting": {
+              "distance_m": -1.870397327974782e-10,
+              "frame": 6,
+              "time_sec": 600.0,
+              "bodies": [
+                "right_wrist_3_link",
+                "right_omnipicker_ur5e_adapter_link"
+              ]
+            },
+            "interarm": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            },
+            "structure": {
+              "distance_m": 0.10299999999999992,
+              "frame": 0,
+              "time_sec": 0.0,
+              "bodies": [
+                "torso_structure",
+                "left_upper_arm_link"
+              ]
+            },
+            "environment": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            }
+          },
+          "joint_limit_margin_min_deg": {
+            "left": 80.89438035807693,
+            "right": 91.86678014852312
+          },
+          "jacobian_condition_max": {
+            "left": 6.909189531608316,
+            "right": 20.958993526517805
+          },
+          "jacobian_sigma_min": {
+            "left": 0.12822267109474922,
+            "right": 0.03808118040767255
+          },
+          "endpoint_joint_speed_max_rad_s": {
+            "start": 0.0017366954958794923,
+            "end": 0.003217224524040676
+          },
+          "thresholds": {
+            "self_clearance_m": 0.02,
+            "mounting_clearance_m": -0.0005,
+            "interarm_clearance_m": 0.05,
+            "structure_clearance_m": 0.015,
+            "environment_clearance_m": 0.015,
+            "joint_limit_margin_deg": 10.0,
+            "jacobian_condition": 30.0,
+            "endpoint_joint_speed_rad_s": 0.02
+          }
+        }
+      }
+    },
+    {
+      "candidate_index": 1,
+      "stage": "keyframe",
+      "spacing_m": 0.52,
+      "forward_offset_m": 0.0,
+      "height_offset_m": 0.0,
+      "mount_twist_deg": 0.0,
+      "score": 0.5932571653129362,
+      "metrics": {
+        "feasibility_rate": {
+          "left": 1.0,
+          "right": 1.0
+        },
+        "position_error_max_m": {
+          "left": 3.0146461417006324e-05,
+          "right": 0.0003538208835772444
+        },
+        "orientation_error_max_deg": {
+          "left": 0.012653372454712437,
+          "right": 0.16803901917254568
+        },
+        "jacobian_condition_max": {
+          "left": 6.878014242044214,
+          "right": 20.829238868559372
+        },
+        "joint_margin_min_deg": {
+          "left": 79.94338664788957,
+          "right": 90.92024792106707
+        },
+        "initial_gripper_horizontal_angle_deg": {
+          "left": 0.003120219951693548,
+          "right": 0.010878547286543716
+        },
+        "mean_reach_ratio": {
+          "left": 0.728619131824946,
+          "right": 0.7340780020498796
+        },
+        "safety_audit": {
+          "enabled": true,
+          "verdict": "PASS",
+          "violations": [],
+          "model_scope": "dual UR5e + AgiBot OmniPicker collision meshes, floor, and torso/shoulder structure; internal same-gripper finger contacts and intended base/shoulder mounting contacts excluded; no table, payload, or external obstacles",
+          "collision_sample_stride": 3,
+          "collision_sample_rate_hz_approx": 20.0,
+          "closest_clearance": {
+            "self": {
+              "distance_m": 0.02252301727907266,
+              "frame": 19,
+              "time_sec": 1900.0,
+              "bodies": [
+                "left_forearm_link",
+                "left_wrist_3_link"
+              ]
+            },
+            "mounting": {
+              "distance_m": -1.9733954261081128e-10,
+              "frame": 12,
+              "time_sec": 1200.0,
+              "bodies": [
+                "left_wrist_3_link",
+                "left_omnipicker_ur5e_adapter_link"
+              ]
+            },
+            "interarm": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            },
+            "structure": {
+              "distance_m": 0.1029999999999999,
+              "frame": 15,
+              "time_sec": 1500.0,
+              "bodies": [
+                "torso_structure",
+                "right_upper_arm_link"
+              ]
+            },
+            "environment": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            }
+          },
+          "joint_limit_margin_min_deg": {
+            "left": 79.94338664788957,
+            "right": 90.92024792106707
+          },
+          "jacobian_condition_max": {
+            "left": 6.878014242044214,
+            "right": 20.829238868559372
+          },
+          "jacobian_sigma_min": {
+            "left": 0.12843888892575758,
+            "right": 0.038148189123178904
+          },
+          "endpoint_joint_speed_max_rad_s": {
+            "start": 0.0017368088971859352,
+            "end": 0.0031969651924694566
+          },
+          "thresholds": {
+            "self_clearance_m": 0.02,
+            "mounting_clearance_m": -0.0005,
+            "interarm_clearance_m": 0.05,
+            "structure_clearance_m": 0.015,
+            "environment_clearance_m": 0.015,
+            "joint_limit_margin_deg": 10.0,
+            "jacobian_condition": 30.0,
+            "endpoint_joint_speed_rad_s": 0.02
+          }
+        }
+      }
+    },
+    {
+      "candidate_index": 0,
+      "stage": "keyframe",
+      "spacing_m": 0.5,
+      "forward_offset_m": 0.0,
+      "height_offset_m": 0.0,
+      "mount_twist_deg": 0.0,
+      "score": 0.5921017941684117,
+      "metrics": {
+        "feasibility_rate": {
+          "left": 1.0,
+          "right": 1.0
+        },
+        "position_error_max_m": {
+          "left": 3.161814865313024e-05,
+          "right": 0.0003542525010318255
+        },
+        "orientation_error_max_deg": {
+          "left": 0.013322449588713462,
+          "right": 0.16759174398568102
+        },
+        "jacobian_condition_max": {
+          "left": 6.850308528280074,
+          "right": 20.70325995946784
+        },
+        "joint_margin_min_deg": {
+          "left": 79.0245777705111,
+          "right": 90.00829031956715
+        },
+        "initial_gripper_horizontal_angle_deg": {
+          "left": 0.0026738640484382484,
+          "right": 0.009996417933765805
+        },
+        "mean_reach_ratio": {
+          "left": 0.7287559676820019,
+          "right": 0.7344033146506335
+        },
+        "safety_audit": {
+          "enabled": true,
+          "verdict": "PASS",
+          "violations": [],
+          "model_scope": "dual UR5e + AgiBot OmniPicker collision meshes, floor, and torso/shoulder structure; internal same-gripper finger contacts and intended base/shoulder mounting contacts excluded; no table, payload, or external obstacles",
+          "collision_sample_stride": 3,
+          "collision_sample_rate_hz_approx": 20.0,
+          "closest_clearance": {
+            "self": {
+              "distance_m": 0.022952506858440518,
+              "frame": 19,
+              "time_sec": 1900.0,
+              "bodies": [
+                "left_forearm_link",
+                "left_wrist_3_link"
+              ]
+            },
+            "mounting": {
+              "distance_m": -1.9733937859804458e-10,
+              "frame": 3,
+              "time_sec": 300.0,
+              "bodies": [
+                "left_wrist_3_link",
+                "left_omnipicker_ur5e_adapter_link"
+              ]
+            },
+            "interarm": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            },
+            "structure": {
+              "distance_m": 0.1029999999999999,
+              "frame": 3,
+              "time_sec": 300.0,
+              "bodies": [
+                "torso_structure",
+                "left_upper_arm_link"
+              ]
+            },
+            "environment": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            }
+          },
+          "joint_limit_margin_min_deg": {
+            "left": 79.0245777705111,
+            "right": 90.00829031956715
+          },
+          "jacobian_condition_max": {
+            "left": 6.850308528280074,
+            "right": 20.70325995946784
+          },
+          "jacobian_sigma_min": {
+            "left": 0.128607471789011,
+            "right": 0.03821284725183835
+          },
+          "endpoint_joint_speed_max_rad_s": {
+            "start": 0.0017369098702701292,
+            "end": 0.0031782048924164585
+          },
+          "thresholds": {
+            "self_clearance_m": 0.02,
+            "mounting_clearance_m": -0.0005,
+            "interarm_clearance_m": 0.05,
+            "structure_clearance_m": 0.015,
+            "environment_clearance_m": 0.015,
+            "joint_limit_margin_deg": 10.0,
+            "jacobian_condition": 30.0,
+            "endpoint_joint_speed_rad_s": 0.02
+          }
+        }
+      }
+    }
+  ],
+  "full_path_results": [
+    {
+      "candidate_index": 2,
+      "stage": "full_path",
+      "spacing_m": 0.54,
+      "forward_offset_m": 0.0,
+      "height_offset_m": 0.0,
+      "mount_twist_deg": 0.0,
+      "score": 0.5810801122139483,
+      "metrics": {
+        "feasibility_rate": {
+          "left": 1.0,
+          "right": 1.0
+        },
+        "position_error_max_m": {
+          "left": 3.64241819250997e-05,
+          "right": 0.0003531804206517974
+        },
+        "orientation_error_max_deg": {
+          "left": 0.013474268306495306,
+          "right": 0.16842769608166447
+        },
+        "jacobian_condition_max": {
+          "left": 6.957099214469814,
+          "right": 21.015956399055234
+        },
+        "joint_margin_min_deg": {
+          "left": 79.9347398984385,
+          "right": 91.48303312030967
+        },
+        "initial_gripper_horizontal_angle_deg": {
+          "left": 0.003927656655176273,
+          "right": 0.01203509113267198
+        },
+        "mean_reach_ratio": {
+          "left": 0.7241574318408492,
+          "right": 0.7434105232735716
+        },
+        "safety_audit": {
+          "enabled": true,
+          "verdict": "PASS",
+          "violations": [],
+          "model_scope": "dual UR5e + AgiBot OmniPicker collision meshes, floor, and torso/shoulder structure; internal same-gripper finger contacts and intended base/shoulder mounting contacts excluded; no table, payload, or external obstacles",
+          "collision_sample_stride": 3,
+          "collision_sample_rate_hz_approx": 20.0,
+          "closest_clearance": {
+            "self": {
+              "distance_m": 0.02212664725325903,
+              "frame": 244,
+              "time_sec": 24400.0,
+              "bodies": [
+                "left_forearm_link",
+                "left_wrist_3_link"
+              ]
+            },
+            "mounting": {
+              "distance_m": -2.0981231337164613e-10,
+              "frame": 219,
+              "time_sec": 21900.0,
+              "bodies": [
+                "right_wrist_3_link",
+                "right_omnipicker_ur5e_adapter_link"
+              ]
+            },
+            "interarm": {
+              "distance_m": 0.13184622385912287,
+              "frame": 156,
+              "time_sec": 15600.0,
+              "bodies": [
+                "left_wrist_2_link",
+                "right_wrist_2_link"
+              ]
+            },
+            "structure": {
+              "distance_m": 0.1029999999999999,
+              "frame": 30,
+              "time_sec": 3000.0,
+              "bodies": [
+                "torso_structure",
+                "left_upper_arm_link"
+              ]
+            },
+            "environment": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            }
+          },
+          "joint_limit_margin_min_deg": {
+            "left": 79.9347398984385,
+            "right": 91.48303312030967
+          },
+          "jacobian_condition_max": {
+            "left": 6.957099214469814,
+            "right": 21.015956399055234
+          },
+          "jacobian_sigma_min": {
+            "left": 0.12822267109474922,
+            "right": 0.03798190901468828
+          },
+          "endpoint_joint_speed_max_rad_s": {
+            "start": 0.00017586302127212683,
+            "end": 0.0006453256827479748
+          },
+          "thresholds": {
+            "self_clearance_m": 0.02,
+            "mounting_clearance_m": -0.0005,
+            "interarm_clearance_m": 0.05,
+            "structure_clearance_m": 0.015,
+            "environment_clearance_m": 0.015,
+            "joint_limit_margin_deg": 10.0,
+            "jacobian_condition": 30.0,
+            "endpoint_joint_speed_rad_s": 0.02
+          }
+        }
+      }
+    },
+    {
+      "candidate_index": 1,
+      "stage": "full_path",
+      "spacing_m": 0.52,
+      "forward_offset_m": 0.0,
+      "height_offset_m": 0.0,
+      "mount_twist_deg": 0.0,
+      "score": 0.5803073956365081,
+      "metrics": {
+        "feasibility_rate": {
+          "left": 1.0,
+          "right": 1.0
+        },
+        "position_error_max_m": {
+          "left": 3.254875062918373e-05,
+          "right": 0.0003538208835772444
+        },
+        "orientation_error_max_deg": {
+          "left": 0.014397887947414015,
+          "right": 0.16803901917254568
+        },
+        "jacobian_condition_max": {
+          "left": 6.899104600283859,
+          "right": 20.888400730934176
+        },
+        "joint_margin_min_deg": {
+          "left": 79.00475333418532,
+          "right": 90.52174120300792
+        },
+        "initial_gripper_horizontal_angle_deg": {
+          "left": 0.003120219951693548,
+          "right": 0.010878547286543716
+        },
+        "mean_reach_ratio": {
+          "left": 0.7241885753320658,
+          "right": 0.743688466413331
+        },
+        "safety_audit": {
+          "enabled": true,
+          "verdict": "PASS",
+          "violations": [],
+          "model_scope": "dual UR5e + AgiBot OmniPicker collision meshes, floor, and torso/shoulder structure; internal same-gripper finger contacts and intended base/shoulder mounting contacts excluded; no table, payload, or external obstacles",
+          "collision_sample_stride": 3,
+          "collision_sample_rate_hz_approx": 20.0,
+          "closest_clearance": {
+            "self": {
+              "distance_m": 0.02252301727907266,
+              "frame": 244,
+              "time_sec": 24400.0,
+              "bodies": [
+                "left_forearm_link",
+                "left_wrist_3_link"
+              ]
+            },
+            "mounting": {
+              "distance_m": -1.9733958609855484e-10,
+              "frame": 147,
+              "time_sec": 14700.0,
+              "bodies": [
+                "right_wrist_3_link",
+                "right_omnipicker_ur5e_adapter_link"
+              ]
+            },
+            "interarm": {
+              "distance_m": 0.1318280283002629,
+              "frame": 156,
+              "time_sec": 15600.0,
+              "bodies": [
+                "left_wrist_2_link",
+                "right_wrist_2_link"
+              ]
+            },
+            "structure": {
+              "distance_m": 0.1029999999999999,
+              "frame": 81,
+              "time_sec": 8100.0,
+              "bodies": [
+                "torso_structure",
+                "left_upper_arm_link"
+              ]
+            },
+            "environment": {
+              "distance_m": 0.15,
+              "frame": 0,
+              "bodies": []
+            }
+          },
+          "joint_limit_margin_min_deg": {
+            "left": 79.00475333418532,
+            "right": 90.52174120300792
+          },
+          "jacobian_condition_max": {
+            "left": 6.899104600283859,
+            "right": 20.888400730934176
+          },
+          "jacobian_sigma_min": {
+            "left": 0.12843888892575758,
+            "right": 0.03804535354104775
+          },
+          "endpoint_joint_speed_max_rad_s": {
+            "start": 0.0001766983820315393,
+            "end": 0.0006416688459828945
+          },
+          "thresholds": {
+            "self_clearance_m": 0.02,
+            "mounting_clearance_m": -0.0005,
+            "interarm_clearance_m": 0.05,
+            "structure_clearance_m": 0.015,
+            "environment_clearance_m": 0.015,
+            "joint_limit_margin_deg": 10.0,
+            "jacobian_condition": 30.0,
+            "endpoint_joint_speed_rad_s": 0.02
+          }
+        }
+      }
+    }
+  ],
+  "recommended": {
+    "candidate_index": 2,
+    "stage": "full_path",
+    "spacing_m": 0.54,
+    "forward_offset_m": 0.0,
+    "height_offset_m": 0.0,
+    "mount_twist_deg": 0.0,
+    "score": 0.5810801122139483,
+    "metrics": {
+      "feasibility_rate": {
+        "left": 1.0,
+        "right": 1.0
+      },
+      "position_error_max_m": {
+        "left": 3.64241819250997e-05,
+        "right": 0.0003531804206517974
+      },
+      "orientation_error_max_deg": {
+        "left": 0.013474268306495306,
+        "right": 0.16842769608166447
+      },
+      "jacobian_condition_max": {
+        "left": 6.957099214469814,
+        "right": 21.015956399055234
+      },
+      "joint_margin_min_deg": {
+        "left": 79.9347398984385,
+        "right": 91.48303312030967
+      },
+      "initial_gripper_horizontal_angle_deg": {
+        "left": 0.003927656655176273,
+        "right": 0.01203509113267198
+      },
+      "mean_reach_ratio": {
+        "left": 0.7241574318408492,
+        "right": 0.7434105232735716
+      },
+      "safety_audit": {
+        "enabled": true,
+        "verdict": "PASS",
+        "violations": [],
+        "model_scope": "dual UR5e + AgiBot OmniPicker collision meshes, floor, and torso/shoulder structure; internal same-gripper finger contacts and intended base/shoulder mounting contacts excluded; no table, payload, or external obstacles",
+        "collision_sample_stride": 3,
+        "collision_sample_rate_hz_approx": 20.0,
+        "closest_clearance": {
+          "self": {
+            "distance_m": 0.02212664725325903,
+            "frame": 244,
+            "time_sec": 24400.0,
+            "bodies": [
+              "left_forearm_link",
+              "left_wrist_3_link"
+            ]
+          },
+          "mounting": {
+            "distance_m": -2.0981231337164613e-10,
+            "frame": 219,
+            "time_sec": 21900.0,
+            "bodies": [
+              "right_wrist_3_link",
+              "right_omnipicker_ur5e_adapter_link"
+            ]
+          },
+          "interarm": {
+            "distance_m": 0.13184622385912287,
+            "frame": 156,
+            "time_sec": 15600.0,
+            "bodies": [
+              "left_wrist_2_link",
+              "right_wrist_2_link"
+            ]
+          },
+          "structure": {
+            "distance_m": 0.1029999999999999,
+            "frame": 30,
+            "time_sec": 3000.0,
+            "bodies": [
+              "torso_structure",
+              "left_upper_arm_link"
+            ]
+          },
+          "environment": {
+            "distance_m": 0.15,
+            "frame": 0,
+            "bodies": []
+          }
+        },
+        "joint_limit_margin_min_deg": {
+          "left": 79.9347398984385,
+          "right": 91.48303312030967
+        },
+        "jacobian_condition_max": {
+          "left": 6.957099214469814,
+          "right": 21.015956399055234
+        },
+        "jacobian_sigma_min": {
+          "left": 0.12822267109474922,
+          "right": 0.03798190901468828
+        },
+        "endpoint_joint_speed_max_rad_s": {
+          "start": 0.00017586302127212683,
+          "end": 0.0006453256827479748
+        },
+        "thresholds": {
+          "self_clearance_m": 0.02,
+          "mounting_clearance_m": -0.0005,
+          "interarm_clearance_m": 0.05,
+          "structure_clearance_m": 0.015,
+          "environment_clearance_m": 0.015,
+          "joint_limit_margin_deg": 10.0,
+          "jacobian_condition": 30.0,
+          "endpoint_joint_speed_rad_s": 0.02
+        }
+      }
+    }
+  },
+  "recommended_config": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/base_pose_search_outputs/current_session_spacing_smoke_recommended_config.json",
+  "selection_status": "PASS",
+  "limitations": [
+    "Targets must share one robot task frame across episodes.",
+    "No table, payload, object contact or cable model is included yet.",
+    "The recommended pose still requires hardware TCP/extrinsic validation.",
+    "Normal replay must be run with the recommended config for dynamic retiming audit."
+  ]
+}

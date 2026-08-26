@@ -43,8 +43,33 @@ OMNIPICKER_MIMIC_FROM_OUTER = {
 }
 
 
+def merge_config(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    output = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(output.get(key), dict):
+            output[key] = merge_config(output[key], value)
+        else:
+            output[key] = value
+    return output
+
+
 def load_config(path: Path) -> dict[str, Any]:
-    config = json.loads(path.read_text(encoding="utf-8"))
+    path = path.resolve()
+
+    def load_payload(current: Path, seen: set[Path]) -> dict[str, Any]:
+        if current in seen:
+            raise ValueError(f"cyclic config inheritance at {current}")
+        seen.add(current)
+        payload = json.loads(current.read_text(encoding="utf-8"))
+        parent_name = payload.pop("extends", None)
+        if parent_name is None:
+            return payload
+        parent = Path(parent_name)
+        if not parent.is_absolute():
+            parent = current.parent / parent
+        return merge_config(load_payload(parent.resolve(), seen), payload)
+
+    config = load_payload(path, set())
     model_path = Path(config["model_path"])
     if not model_path.is_absolute():
         model_path = ROOT / model_path
@@ -86,6 +111,33 @@ def save_camera_state(path: Path, camera: mujoco.MjvCamera) -> dict[str, Any]:
     return state
 
 
+def quaternion_from_rpy_deg(rpy_deg: list[float] | np.ndarray) -> np.ndarray:
+    """Return a MuJoCo wxyz quaternion for fixed-frame XYZ roll/pitch/yaw."""
+    roll, pitch, yaw = np.deg2rad(np.asarray(rpy_deg, dtype=np.float64)) * 0.5
+    cr, sr = np.cos(roll), np.sin(roll)
+    cp, sp = np.cos(pitch), np.sin(pitch)
+    cy, sy = np.cos(yaw), np.sin(yaw)
+    quaternion = np.asarray(
+        [
+            cr * cp * cy + sr * sp * sy,
+            sr * cp * cy - cr * sp * sy,
+            cr * sp * cy + sr * cp * sy,
+            cr * cp * sy - sr * sp * cy,
+        ],
+        dtype=np.float64,
+    )
+    return quaternion / max(float(np.linalg.norm(quaternion)), 1e-12)
+
+
+def home_q_for_side(config: dict[str, Any], side: str) -> np.ndarray:
+    per_side = config.get("home_q_rad_by_side") or {}
+    values = per_side.get(side, config["home_q_rad"])
+    home = np.asarray(values, dtype=np.float64)
+    if home.shape != (6,):
+        raise ValueError(f"home joint vector for {side} must have 6 values")
+    return home
+
+
 def build_model(config: dict[str, Any]) -> tuple[mujoco.MjModel, mujoco.MjData]:
     scene = mujoco.MjSpec.from_string(
         """<mujoco model="dual_ur5e">
@@ -111,6 +163,81 @@ def build_model(config: dict[str, Any]) -> tuple[mujoco.MjModel, mujoco.MjData]:
   </worldbody>
 </mujoco>"""
     )
+    torso = config.get("torso_geometry") or {}
+    if bool(torso.get("enabled", False)):
+        body = scene.worldbody.add_body(name="torso_structure")
+        collision = int(bool(torso.get("collision_enabled", True)))
+        collision_rgba = torso.get("collision_rgba", [0.0, 0.0, 0.0, 0.0])
+        body.add_geom(
+            name="torso_column_collision",
+            type=mujoco.mjtGeom.mjGEOM_BOX,
+            pos=torso.get("column_position_m", [0.0, 0.0, 0.47]),
+            size=torso.get("column_half_size_m", [0.07, 0.07, 0.47]),
+            rgba=collision_rgba,
+            contype=collision,
+            conaffinity=collision,
+        )
+        beam_collision = {
+            "name": "torso_shoulder_collision",
+            "pos": torso.get("beam_position_m", [0.0, 0.0, 0.95]),
+            "rgba": collision_rgba,
+            "contype": collision,
+            "conaffinity": collision,
+        }
+        beam_collision_shape = str(torso.get("beam_collision_shape", "box"))
+        if beam_collision_shape == "capsule":
+            beam_collision.update(
+                type=mujoco.mjtGeom.mjGEOM_CAPSULE,
+                quat=[0.7071067812, 0.0, 0.7071067812, 0.0],
+                size=torso.get("beam_capsule_size_m", [0.0745, 0.1655]),
+            )
+        elif beam_collision_shape == "cylinder":
+            beam_collision.update(
+                type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+                quat=[0.7071067812, 0.0, 0.7071067812, 0.0],
+                size=torso.get("beam_cylinder_size_m", [0.0745, 0.24]),
+            )
+        else:
+            beam_collision.update(
+                type=mujoco.mjtGeom.mjGEOM_BOX,
+                size=torso.get("beam_half_size_m", [0.26, 0.07, 0.07]),
+            )
+        body.add_geom(**beam_collision)
+        if str(torso.get("visual_style", "rectangular_body")) == "rectangular_body":
+            shell_rgba = torso.get("shell_rgba", [0.74, 0.78, 0.82, 1.0])
+            visual = {"contype": 0, "conaffinity": 0}
+            body.add_geom(
+                name="body_pedestal_visual",
+                type=mujoco.mjtGeom.mjGEOM_BOX,
+                pos=torso.get("pedestal_position_m", [0.0, 0.0, 0.07]),
+                size=torso.get("pedestal_half_size_m", [0.15, 0.12, 0.07]),
+                rgba=shell_rgba,
+                **visual,
+            )
+            body.add_geom(
+                name="body_mast_visual",
+                type=mujoco.mjtGeom.mjGEOM_BOX,
+                pos=torso.get("mast_position_m", [0.0, 0.0, 0.51]),
+                size=torso.get("mast_half_size_m", [0.0745, 0.0745, 0.37]),
+                rgba=shell_rgba,
+                **visual,
+            )
+            shoulder_visual_shape = str(
+                torso.get("shoulder_visual_shape", "capsule")
+            )
+            body.add_geom(
+                name="body_shoulder_visual",
+                type=(
+                    mujoco.mjtGeom.mjGEOM_CYLINDER
+                    if shoulder_visual_shape == "cylinder"
+                    else mujoco.mjtGeom.mjGEOM_CAPSULE
+                ),
+                pos=torso.get("shoulder_position_m", [0.0, 0.0, 0.95]),
+                quat=[0.7071067812, 0.0, 0.7071067812, 0.0],
+                size=torso.get("shoulder_size_m", [0.0745, 0.24]),
+                rgba=shell_rgba,
+                **visual,
+            )
     gripper = config.get("robot_gripper") or {}
     use_gripper = bool(gripper.get("enabled", False))
     for side in SIDES:
@@ -130,18 +257,31 @@ def build_model(config: dict[str, Any]) -> tuple[mujoco.MjModel, mujoco.MjData]:
                 prefix="omnipicker_",
                 site=child.site("attachment_site"),
             )
+        base_quaternion = (config.get("base_quaternion_wxyz") or {}).get(side)
+        if base_quaternion is None:
+            base_rpy = (config.get("base_rpy_deg") or {}).get(
+                side, [0.0, 0.0, 0.0]
+            )
+            if len(base_rpy) != 3:
+                raise ValueError(f"base_rpy_deg.{side} must have 3 values")
+            base_quaternion = quaternion_from_rpy_deg(base_rpy)
+        else:
+            base_quaternion = np.asarray(base_quaternion, dtype=np.float64)
+            if base_quaternion.shape != (4,):
+                raise ValueError(f"base_quaternion_wxyz.{side} must have 4 values")
+            base_quaternion /= max(float(np.linalg.norm(base_quaternion)), 1e-12)
         mount = scene.worldbody.add_frame(
             name=f"{side}_mount",
             pos=config["base_positions_m"][side],
+            quat=base_quaternion,
         )
         scene.attach(child, prefix=f"{side}_", frame=mount)
     model = scene.compile()
     data = mujoco.MjData(model)
-    home = np.asarray(config["home_q_rad"], dtype=np.float64)
     data.qpos[:] = 0.0
     for side in SIDES:
         qpos_ids, _ = joint_addresses(model, side)
-        data.qpos[qpos_ids] = home
+        data.qpos[qpos_ids] = home_q_for_side(config, side)
         if use_gripper:
             set_omnipicker_qpos(model, data.qpos, side, 0.0, config)
     set_controls_from_qpos(model, data)
@@ -179,6 +319,70 @@ def frame_times(rows: list[dict[str, Any]], fallback_fps: float) -> np.ndarray:
         if np.all(np.diff(times) > 0):
             return times
     return np.arange(len(rows), dtype=np.float64) / max(fallback_fps, 1e-6)
+
+
+def resolve_input_mapping(
+    rows: list[dict[str, Any]],
+    trajectory_path: Path,
+    config: dict[str, Any],
+) -> tuple[str, np.ndarray, dict[str, Any]]:
+    requested = str(config.get("input_coordinate", "camera"))
+    legacy_rotation = np.asarray(config["camera_optical_to_robot"], dtype=np.float64)
+    if requested != "leveled_first_camera":
+        return requested, legacy_rotation, {
+            "mode": "fixed_axis_map",
+            "requested_coordinate": requested,
+            "source_coordinate": requested,
+            "input_to_robot_rotation": legacy_rotation.tolist(),
+        }
+
+    first = rows[0]
+    world_rebase = first.get("world_rebase") or {}
+    if world_rebase.get("world_frame") != "first_camera_optical":
+        raise ValueError(
+            "leveled_first_camera requires world coordinates rebased to first_camera_optical"
+        )
+    summary_path = trajectory_path.parent.parent / "summaries/world_rebase_first_camera_summary.json"
+    if not summary_path.is_file():
+        raise FileNotFoundError(
+            "leveled_first_camera requires the world-rebase summary: " f"{summary_path}"
+        )
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    first_camera_c2w = np.asarray(summary["original_first_camera_c2w"], dtype=np.float64)
+    if first_camera_c2w.shape != (4, 4) or not np.isfinite(first_camera_c2w).all():
+        raise ValueError(f"invalid original_first_camera_c2w in {summary_path}")
+
+    settings = config.get("leveled_first_camera") or {}
+    gravity_up = np.asarray(settings.get("gravity_up_world", [0.0, 0.0, 1.0]), dtype=np.float64)
+    gravity_up /= max(float(np.linalg.norm(gravity_up)), 1e-12)
+    camera_rotation = first_camera_c2w[:3, :3]
+    camera_forward = camera_rotation[:, 2]
+    horizontal_forward = camera_forward - gravity_up * float(np.dot(camera_forward, gravity_up))
+    forward_norm = float(np.linalg.norm(horizontal_forward))
+    if forward_norm < 1e-6:
+        raise ValueError("first camera optical axis is parallel to gravity; forward heading is undefined")
+    horizontal_forward /= forward_norm
+    horizontal_right = np.cross(horizontal_forward, gravity_up)
+    horizontal_right /= max(float(np.linalg.norm(horizontal_right)), 1e-12)
+    if float(np.dot(horizontal_right, camera_rotation[:, 0])) < 0.0:
+        horizontal_right *= -1.0
+        horizontal_forward *= -1.0
+    rotation = np.stack((horizontal_right, horizontal_forward, gravity_up)) @ camera_rotation
+    return "world", rotation, {
+        "mode": "gravity_aligned_first_camera",
+        "requested_coordinate": requested,
+        "source_coordinate": "world",
+        "source_world_frame": "first_camera_optical",
+        "origin": "first valid camera optical pose",
+        "forward": "horizontal projection of first camera optical +z",
+        "up": "configured gravity-up axis",
+        "gravity_up_world": gravity_up.tolist(),
+        "first_camera_forward_world": camera_forward.tolist(),
+        "leveled_forward_world": horizontal_forward.tolist(),
+        "leveled_right_world": horizontal_right.tolist(),
+        "input_to_robot_rotation": rotation.tolist(),
+        "world_rebase_summary": str(summary_path),
+    }
 
 
 def wrist_point(row: dict[str, Any], side: str, coordinate: str) -> np.ndarray | None:
@@ -231,8 +435,11 @@ def build_targets(
     initial_sites: dict[str, np.ndarray],
     config: dict[str, Any],
 ) -> tuple[dict[str, np.ndarray], dict[str, int]]:
-    coordinate = str(config.get("input_coordinate", "camera"))
-    rotation = np.asarray(config["camera_optical_to_robot"], dtype=np.float64)
+    coordinate = str(config.get("_input_coordinate", config.get("input_coordinate", "camera")))
+    rotation = np.asarray(
+        config.get("_input_to_robot_rotation", config["camera_optical_to_robot"]),
+        dtype=np.float64,
+    )
     scale = float(config.get("translation_scale", 1.0))
     lower = np.asarray(config["relative_workspace_min_m"], dtype=np.float64)
     upper = np.asarray(config["relative_workspace_max_m"], dtype=np.float64)
@@ -596,7 +803,9 @@ def apply_omnipicker_commands(
     if not bool(settings.get("enabled", False)):
         return
     for side in SIDES:
-        commands = np.asarray(gripper_artifacts[side]["command"], dtype=np.float64)
+        commands = np.asarray(
+            gripper_artifacts[side]["position_command"], dtype=np.float64
+        )
         if len(commands) != len(qpos):
             raise ValueError(
                 f"{side} OmniPicker command length {len(commands)} != qpos length {len(qpos)}"
@@ -885,7 +1094,11 @@ def build_relative_orientation_targets(
     dict[str, dict[str, float]],
 ]:
     settings = config.get("human_orientation") or {}
-    axis_map = np.asarray(config["camera_optical_to_robot"], dtype=np.float64)
+    coordinate = str(config.get("_input_coordinate", config.get("input_coordinate", "camera")))
+    axis_map = np.asarray(
+        config.get("_input_to_robot_rotation", config["camera_optical_to_robot"]),
+        dtype=np.float64,
+    )
     scale = float(settings.get("relative_rotation_scale", 0.5))
     raw_vectors: dict[str, np.ndarray] = {}
     repaired_vectors: dict[str, np.ndarray] = {}
@@ -896,7 +1109,7 @@ def build_relative_orientation_targets(
     for side in SIDES:
         rotations = np.asarray(
             [
-                row["hands"][side]["optimized_trajectory"]["palm_rotation_camera"]
+                row["hands"][side]["optimized_trajectory"][f"palm_rotation_{coordinate}"]
                 for row in rows
             ],
             dtype=np.float64,
@@ -1217,6 +1430,9 @@ def apply_shared_time_scaling(
     resample_iterations = 0
     resample_iteration_limit = int(settings.get("resample_constraint_iterations", 20))
     global_safety_scale = 1.0
+    global_fallback_iterations = 0
+    global_fallback_limit = int(settings.get("global_fallback_iterations", 5))
+    global_safety_margin = float(settings.get("global_safety_margin", 0.01))
     while True:
         path_times = np.concatenate([[0.0], np.cumsum(duration)])
         frame_count = max(2, int(round(path_times[-1] * render_fps)) + 1)
@@ -1250,17 +1466,21 @@ def apply_shared_time_scaling(
         if maximum_output_ratio <= 1.0 + tolerance:
             break
         if resample_iterations >= resample_iteration_limit:
-            # Guaranteed conservative fallback. It is only reached if local
-            # neighbourhood stretching cannot resolve a resampling corner.
-            global_safety_scale = float(np.sqrt(maximum_output_ratio) * 1.002)
-            duration *= global_safety_scale
-            path_times = np.concatenate([[0.0], np.cumsum(duration)])
-            frame_count = max(2, int(round(path_times[-1] * render_fps)) + 1)
-            output_times = np.linspace(0.0, float(path_times[-1]), frame_count)
-            output_qpos = resample_series(
-                qpos, path_times, output_times, zero_endpoint_velocity=True
+            # Conservative fallback. Recheck after every global stretch:
+            # rounding the new duration to an integer 60 Hz frame count can
+            # otherwise reintroduce a small acceleration overshoot.
+            if global_fallback_iterations >= global_fallback_limit:
+                raise RuntimeError(
+                    "time scaling failed to satisfy acceleration limits after "
+                    f"{global_fallback_iterations} global fallback iterations"
+                )
+            scale = float(
+                np.sqrt(maximum_output_ratio) * (1.0 + global_safety_margin)
             )
-            break
+            duration *= scale
+            global_safety_scale *= scale
+            global_fallback_iterations += 1
+            continue
         interval_scale = np.ones_like(duration)
         if start_ratio > 1.0 + tolerance:
             scale = min(1.5, float(np.sqrt(start_ratio) * 1.002))
@@ -1342,6 +1562,8 @@ def apply_shared_time_scaling(
         "acceleration_iterations": iterations,
         "resample_constraint_iterations": resample_iterations,
         "global_safety_scale": global_safety_scale,
+        "global_fallback_iterations": global_fallback_iterations,
+        "global_safety_margin": global_safety_margin,
         "endpoint_hold_sec_each": endpoint_hold_sec,
         "limits": {
             "tcp_translation_speed_mps": tcp_speed_limit,
@@ -1416,6 +1638,21 @@ def execution_safety_audit(
     self_pairs: list[tuple[int, int]] = []
     mounting_pairs: list[tuple[int, int]] = []
     interarm_pairs: list[tuple[int, int]] = []
+    structure_geoms = [
+        index
+        for index in range(model.ngeom)
+        if body_name(index) == "torso_structure"
+        and (int(model.geom_contype[index]) != 0 or int(model.geom_conaffinity[index]) != 0)
+    ]
+    structure_pairs = [
+        (structure, robot)
+        for structure in structure_geoms
+        for robot in collision_geoms
+        if not (
+            body_name(robot).endswith("base_link")
+            or body_name(robot).endswith("shoulder_link")
+        )
+    ]
     for offset, first in enumerate(collision_geoms):
         for second in collision_geoms[offset + 1 :]:
             if robot_side(first) != robot_side(second):
@@ -1458,7 +1695,7 @@ def execution_safety_audit(
         sample_frames.append(len(qpos) - 1)
     closest: dict[str, dict[str, Any]] = {
         key: {"distance_m": distance_query_max, "frame": 0, "bodies": []}
-        for key in ("self", "mounting", "interarm", "environment")
+        for key in ("self", "mounting", "interarm", "structure", "environment")
     }
     for frame in sample_frames:
         data.qpos[:] = qpos[frame]
@@ -1467,6 +1704,7 @@ def execution_safety_audit(
             ("self", self_pairs),
             ("mounting", mounting_pairs),
             ("interarm", interarm_pairs),
+            ("structure", structure_pairs),
         ):
             for first, second in pairs:
                 distance = float(
@@ -1553,6 +1791,12 @@ def execution_safety_audit(
             settings.get("min_mounting_clearance_m", -0.0005)
         ),
         "interarm_clearance_m": float(settings.get("min_interarm_clearance_m", 0.05)),
+        "structure_clearance_m": float(
+            settings.get(
+                "min_structure_clearance_m",
+                settings.get("min_environment_clearance_m", 0.015),
+            )
+        ),
         "environment_clearance_m": float(
             settings.get("min_environment_clearance_m", 0.015)
         ),
@@ -1567,6 +1811,7 @@ def execution_safety_audit(
         ("self", "self_clearance_m"),
         ("mounting", "mounting_clearance_m"),
         ("interarm", "interarm_clearance_m"),
+        ("structure", "structure_clearance_m"),
         ("environment", "environment_clearance_m"),
     ):
         if closest[kind]["distance_m"] < thresholds[threshold_key]:
@@ -1593,10 +1838,16 @@ def execution_safety_audit(
         "verdict": "PASS" if not violations else "FAIL",
         "violations": violations,
         "model_scope": (
-            "dual UR5e + AgiBot OmniPicker collision meshes and floor; "
-            "internal same-gripper finger contacts excluded; no table, payload, or external obstacles"
-            if any("_omnipicker_" in body_name(geom) for geom in collision_geoms)
-            else "dual UR5e collision capsules and floor; no gripper, table, payload, or external obstacles"
+            "dual UR5e"
+            + (
+                " + AgiBot OmniPicker collision meshes"
+                if any("_omnipicker_" in body_name(geom) for geom in collision_geoms)
+                else " collision capsules"
+            )
+            + ", floor"
+            + (", and torso/shoulder structure" if structure_geoms else "")
+            + "; internal same-gripper finger contacts and intended base/shoulder mounting "
+            "contacts excluded; no table, payload, or external obstacles"
         ),
         "collision_sample_stride": stride,
         "collision_sample_rate_hz_approx": float(config["render_fps"]) / stride,
@@ -1686,10 +1937,17 @@ def gripper_state_machine(
     open_threshold = float(settings.get("open_threshold", 0.30))
     confirmation = max(1, int(settings.get("state_confirmation_frames", 5)))
     contact_confirmation = max(1, int(settings.get("contact_confirmation_frames", 3)))
+    contact_threshold = float(settings.get("contact_active_threshold", 0.20))
+    contact_release_confirmation = max(
+        1, int(settings.get("contact_release_confirmation_frames", 3))
+    )
+    contact_release_delta = float(settings.get("contact_release_delta", 0.08))
     states = np.zeros(len(command), dtype=np.int8)
     state = 0
     close_count = open_count = contact_count = 0
     release_count = reclose_count = 0
+    contact_loss_count = 0
+    contact_seen_during_grasp = False
     grasp_peak = float(command[0]) if len(command) else 0.0
     opening_valley = grasp_peak
     relative_release = float(settings.get("relative_release_delta", 0.25))
@@ -1698,7 +1956,8 @@ def gripper_state_machine(
     for frame, value in enumerate(command):
         close_count = close_count + 1 if value >= close_threshold else 0
         open_count = open_count + 1 if value <= open_threshold else 0
-        contact_count = contact_count + 1 if contact[frame] >= 0.20 else 0
+        contact_active = contact[frame] >= contact_threshold
+        contact_count = contact_count + 1 if contact_active else 0
         previous = state
         if state == 0 and close_count >= confirmation:
             state = 1
@@ -1710,11 +1969,27 @@ def gripper_state_machine(
             ):
                 state = 2
                 grasp_peak = float(value)
+                contact_seen_during_grasp = contact_active
+                contact_loss_count = 0
         elif state == 2:
             grasp_peak = max(grasp_peak, float(value))
+            if contact_active:
+                contact_seen_during_grasp = True
+                contact_loss_count = 0
+            elif contact_seen_during_grasp:
+                contact_loss_count += 1
             relative_open = value <= grasp_peak - relative_release
+            contact_release = (
+                contact_seen_during_grasp
+                and contact_loss_count >= contact_release_confirmation
+                and value <= grasp_peak - contact_release_delta
+            )
             release_count = release_count + 1 if relative_open else 0
-            if open_count >= confirmation or release_count >= confirmation:
+            if (
+                open_count >= confirmation
+                or release_count >= confirmation
+                or contact_release
+            ):
                 state = 3
                 opening_valley = float(value)
         elif state == 3:
@@ -1735,8 +2010,45 @@ def gripper_state_machine(
             )
             close_count = open_count = contact_count = 0
             release_count = reclose_count = 0
+            if state != 2:
+                contact_loss_count = 0
+                contact_seen_during_grasp = False
         states[frame] = state
     return states, transitions
+
+
+def resample_discrete_states(
+    states: np.ndarray, source_times: np.ndarray, target_times: np.ndarray
+) -> np.ndarray:
+    """Resample discrete states with zero-order hold, never interpolation."""
+    if len(states) != len(source_times):
+        raise ValueError(f"state length {len(states)} != time length {len(source_times)}")
+    indexes = np.searchsorted(source_times, target_times, side="right") - 1
+    indexes = np.clip(indexes, 0, len(states) - 1)
+    return np.asarray(states)[indexes]
+
+
+def gripper_position_from_binary_intent(
+    intent: np.ndarray,
+    times: np.ndarray,
+    open_duration_sec: float,
+    close_duration_sec: float,
+) -> np.ndarray:
+    """Move between binary targets at finite speed, starting fully open."""
+    if len(intent) != len(times):
+        raise ValueError(f"intent length {len(intent)} != time length {len(times)}")
+    position = np.zeros(len(intent), dtype=np.float64)
+    if not len(intent):
+        return position
+    open_speed = 1.0 / max(float(open_duration_sec), 1e-9)
+    close_speed = 1.0 / max(float(close_duration_sec), 1e-9)
+    for frame in range(1, len(intent)):
+        target = float(intent[frame])
+        previous = position[frame - 1]
+        dt = max(0.0, float(times[frame] - times[frame - 1]))
+        speed = close_speed if target > previous else open_speed
+        position[frame] = previous + np.clip(target - previous, -speed * dt, speed * dt)
+    return np.clip(position, 0.0, 1.0)
 
 
 def build_gripper_commands(
@@ -1806,11 +2118,22 @@ def build_gripper_commands(
             }
             if valid:
                 pinch_scores.append(np.clip((opened - array) / span, 0.0, 1.0))
-        pinch_score = (
-            np.median(np.stack(pinch_scores), axis=0)
-            if pinch_scores
-            else np.zeros(len(rows), dtype=np.float64)
-        )
+        pinch_aggregation = str(settings.get("pinch_aggregation", "max"))
+        if pinch_scores:
+            stacked_pinch_scores = np.stack(pinch_scores)
+            if pinch_aggregation == "max":
+                # A precision grasp may use only thumb-index (or one other
+                # finger). Treat any stable per-finger pinch as a valid close
+                # cue; temporal filtering and hysteresis reject brief noise.
+                pinch_score = np.max(stacked_pinch_scores, axis=0)
+            elif pinch_aggregation == "median":
+                pinch_score = np.median(stacked_pinch_scores, axis=0)
+            else:
+                raise ValueError(
+                    f"Unsupported gripper pinch_aggregation: {pinch_aggregation}"
+                )
+        else:
+            pinch_score = np.zeros(len(rows), dtype=np.float64)
         contact_score, tactile_metrics = tactile_contact_confidence(rows, side, settings)
         raw_score = (
             flex_weight * flex_score
@@ -1831,54 +2154,62 @@ def build_gripper_commands(
         alpha = float(settings.get("ema_alpha", 0.25))
         for frame in range(1, len(filtered)):
             filtered[frame] = alpha * filtered[frame] + (1.0 - alpha) * filtered[frame - 1]
-        command_source = np.zeros_like(filtered)
-        command_source[0] = filtered[0]
+        continuous_command_source = np.zeros_like(filtered)
+        continuous_command_source[0] = filtered[0]
         deadband = float(settings.get("command_deadband", 0.01))
         for frame in range(1, len(filtered)):
-            delta = filtered[frame] - command_source[frame - 1]
+            delta = filtered[frame] - continuous_command_source[frame - 1]
             if abs(delta) <= deadband:
-                command_source[frame] = command_source[frame - 1]
+                continuous_command_source[frame] = continuous_command_source[frame - 1]
             else:
-                command_source[frame] = command_source[frame - 1] + np.clip(
-                    delta, -maximum_step, maximum_step
+                continuous_command_source[frame] = (
+                    continuous_command_source[frame - 1]
+                    + np.clip(delta, -maximum_step, maximum_step)
                 )
         state_source, transitions = gripper_state_machine(
-            command_source, contact_score, settings
+            continuous_command_source, contact_score, settings
         )
-        command_pre_retime = np.interp(pre_retime_times, source_times, command_source)
-        contact_pre_retime = np.interp(pre_retime_times, source_times, contact_score)
-        state_pre_retime = np.rint(
-            np.interp(pre_retime_times, source_times, state_source)
+        state_pre_retime = resample_discrete_states(
+            state_source, source_times, pre_retime_times
         ).astype(np.int8)
-        command_output = np.interp(
-            output_times, retimed_path_times, command_pre_retime
-        )
+        command_source = np.isin(state_source, (1, 2)).astype(np.float64)
+        command_pre_retime = np.isin(state_pre_retime, (1, 2)).astype(np.float64)
+        contact_pre_retime = np.interp(pre_retime_times, source_times, contact_score)
         contact_output = np.interp(
             output_times, retimed_path_times, contact_pre_retime
         )
-        nearest_path = np.clip(
-            np.searchsorted(retimed_path_times, output_times, side="left"),
-            0,
-            len(retimed_path_times) - 1,
+        state_output = resample_discrete_states(
+            state_pre_retime, retimed_path_times, output_times
+        ).astype(np.int8)
+        command_output = np.isin(state_output, (1, 2)).astype(np.float64)
+        open_duration = float(settings.get("open_duration_sec", 0.30))
+        close_duration = float(settings.get("close_duration_sec", 0.30))
+        position_output = gripper_position_from_binary_intent(
+            command_output, output_times, open_duration, close_duration
         )
-        state_output = state_pre_retime[nearest_path]
         artifacts[side] = {
             "flex_source": flex_score,
             "pinch_source": pinch_score,
             "contact_source": contact_score,
             "raw_source": raw_score,
             "filtered_source": filtered,
+            "continuous_command_source": continuous_command_source,
             "command_source": command_source,
             "state_source": state_source,
             "command_pre_retime": command_pre_retime,
             "contact_pre_retime": contact_pre_retime,
             "state_pre_retime": state_pre_retime,
             "command": command_output,
+            "intent": command_output,
+            "position_command": position_output,
             "contact": contact_output,
             "state": state_output,
         }
         final_speed = (
             np.abs(np.diff(command_output)) / np.maximum(np.diff(output_times), 1e-9)
+        )
+        position_speed = (
+            np.abs(np.diff(position_output)) / np.maximum(np.diff(output_times), 1e-9)
         )
         metrics[side] = {
             "active": active,
@@ -1890,10 +2221,14 @@ def build_gripper_commands(
                 "closed_p90": float(flex_high),
             },
             "pinch_calibration": pinch_calibration,
+            "pinch_aggregation": pinch_aggregation,
             "tactile": tactile_metrics,
             "command_min": float(np.min(command_output)),
             "command_max": float(np.max(command_output)),
             "command_speed_max_per_sec": float(np.max(final_speed, initial=0.0)),
+            "position_command_min": float(np.min(position_output)),
+            "position_command_max": float(np.max(position_output)),
+            "position_speed_max_per_sec": float(np.max(position_speed, initial=0.0)),
             "state_frame_counts_source": {
                 name: int(np.count_nonzero(state_source == index))
                 for index, name in enumerate(GRIPPER_STATES)
@@ -1908,6 +2243,15 @@ def build_gripper_commands(
         }
     metrics["parameters"] = {
         "canonical_convention": "0=open, 1=closed",
+        "command_mode": "binary_from_hysteresis_state",
+        "closed_states": ["CLOSING", "GRASPED"],
+        "discrete_resampling": "zero_order_hold",
+        "physical_motion": {
+            "mode": "finite_speed_from_binary_intent",
+            "initial_position": 0.0,
+            "open_duration_sec": float(settings.get("open_duration_sec", 0.30)),
+            "close_duration_sec": float(settings.get("close_duration_sec", 0.30)),
+        },
         "weights": {
             "multi_finger_flex": flex_weight,
             "multi_finger_pinch": pinch_weight,
@@ -2047,22 +2391,43 @@ def play_viewer(
     import mujoco.viewer
 
     data = mujoco.MjData(model)
-    with mujoco.viewer.launch_passive(model, data) as viewer:
+    paused = False
+
+    def on_key(keycode: int) -> None:
+        nonlocal paused
+        if keycode == ord(" "):
+            paused = not paused
+            print("Viewer paused (Space to resume)" if paused else "Viewer resumed")
+
+    print("Viewer controls: Space pauses/resumes playback")
+    with mujoco.viewer.launch_passive(model, data, key_callback=on_key) as viewer:
         if camera_state is not None:
             apply_camera_state(viewer.cam, camera_state)
         try:
             wall_start = time.monotonic()
             for frame in range(len(qpos)):
                 deadline = wall_start + float(times[frame])
-                while time.monotonic() < deadline:
-                    time.sleep(0.001)
+                while viewer.is_running():
+                    if paused:
+                        pause_start = time.monotonic()
+                        while paused and viewer.is_running():
+                            viewer.sync()
+                            time.sleep(0.01)
+                        paused_duration = time.monotonic() - pause_start
+                        wall_start += paused_duration
+                        deadline += paused_duration
+                        continue
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0.0:
+                        break
+                    time.sleep(min(0.001, remaining))
+                if not viewer.is_running():
+                    break
                 data.qpos[:] = qpos[frame]
                 set_controls_from_qpos(model, data)
                 set_target_markers(model, data, targets, frame)
                 mujoco.mj_forward(model, data)
                 viewer.sync()
-                if not viewer.is_running():
-                    break
         finally:
             if save_camera:
                 saved = save_camera_state(camera_path, viewer.cam)
@@ -2101,9 +2466,14 @@ def main() -> None:
         rows = rows[: args.max_frames]
     if not rows:
         raise ValueError("empty trajectory")
+    input_coordinate, input_rotation, coordinate_mapping = resolve_input_mapping(
+        rows, trajectory_path, config
+    )
+    config["_input_coordinate"] = input_coordinate
+    config["_input_to_robot_rotation"] = input_rotation
     source_times = frame_times(rows, float(config["render_fps"]))
     model, data = build_model(config)
-    home = np.asarray(config["home_q_rad"], dtype=np.float64)
+    homes = {side: home_q_for_side(config, side) for side in SIDES}
     initial_sites = {
         side: data.site_xpos[end_effector_site_id(model, side)].copy()
         for side in SIDES
@@ -2114,7 +2484,32 @@ def main() -> None:
         .copy()
         for side in SIDES
     }
-    raw_targets, speed_clips = build_targets(rows, source_times, initial_sites, config)
+    configured_anchor_positions = config.get("task_anchor_positions_m") or {}
+    task_anchor_sites = {
+        side: np.asarray(
+            configured_anchor_positions.get(side, initial_sites[side]),
+            dtype=np.float64,
+        )
+        for side in SIDES
+    }
+    configured_anchor_rotations = config.get("task_anchor_rotation_matrix") or {}
+    task_anchor_rotations = {
+        side: np.asarray(
+            configured_anchor_rotations.get(side, initial_site_rotations[side]),
+            dtype=np.float64,
+        )
+        for side in SIDES
+    }
+    for side in SIDES:
+        if task_anchor_sites[side].shape != (3,):
+            raise ValueError(f"task_anchor_positions_m.{side} must have 3 values")
+        if task_anchor_rotations[side].shape != (3, 3):
+            raise ValueError(
+                f"task_anchor_rotation_matrix.{side} must be a 3x3 matrix"
+            )
+    raw_targets, speed_clips = build_targets(
+        rows, source_times, task_anchor_sites, config
+    )
     conditioned_targets, conditioning_metrics = condition_targets(raw_targets, config)
     command_source_targets, static_candidates, static_locked, static_lock_metrics = lock_static_targets(
         conditioned_targets, source_times, config
@@ -2138,12 +2533,12 @@ def main() -> None:
             orientation_metrics,
         ) = (
             build_relative_orientation_targets(
-                rows, source_times, times, initial_site_rotations, config
+                rows, source_times, times, task_anchor_rotations, config
             )
         )
     else:
         target_rotations = {
-            side: np.repeat(initial_site_rotations[side][None, :, :], len(times), axis=0)
+            side: np.repeat(task_anchor_rotations[side][None, :, :], len(times), axis=0)
             for side in SIDES
         }
         human_rotation_raw = {side: np.zeros((len(source_times), 3)) for side in SIDES}
@@ -2175,7 +2570,7 @@ def main() -> None:
                 side,
                 targets[side][frame],
                 target_rotation,
-                home,
+                homes[side],
                 config,
             )
         dt = 1.0 / float(config["render_fps"]) if frame == 0 else max(1e-3, float(times[frame] - times[frame - 1]))
@@ -2276,7 +2671,7 @@ def main() -> None:
                 robot_gripper.get("type", "agibot_omnipicker")
             )
             gripper_metrics["physical_mapping"] = (
-                "outer_joint1_rad = open_joint_rad * (1 - canonical_command)"
+                "outer_joint1_rad = open_joint_rad * (1 - position_command)"
             )
             gripper_metrics["open_joint_rad"] = float(
                 robot_gripper.get("open_joint_rad", np.pi / 4.0)
@@ -2361,12 +2756,22 @@ def main() -> None:
         right_gripper_contact_source=gripper_artifacts["right"]["contact_source"],
         left_gripper_raw_source=gripper_artifacts["left"]["raw_source"],
         right_gripper_raw_source=gripper_artifacts["right"]["raw_source"],
+        left_gripper_continuous_command_source=gripper_artifacts["left"][
+            "continuous_command_source"
+        ],
+        right_gripper_continuous_command_source=gripper_artifacts["right"][
+            "continuous_command_source"
+        ],
         left_gripper_command_source=gripper_artifacts["left"]["command_source"],
         right_gripper_command_source=gripper_artifacts["right"]["command_source"],
         left_gripper_state_source=gripper_artifacts["left"]["state_source"],
         right_gripper_state_source=gripper_artifacts["right"]["state_source"],
         left_gripper_command=gripper_artifacts["left"]["command"],
         right_gripper_command=gripper_artifacts["right"]["command"],
+        left_gripper_intent=gripper_artifacts["left"]["intent"],
+        right_gripper_intent=gripper_artifacts["right"]["intent"],
+        left_gripper_position_command=gripper_artifacts["left"]["position_command"],
+        right_gripper_position_command=gripper_artifacts["right"]["position_command"],
         left_gripper_contact=gripper_artifacts["left"]["contact"],
         right_gripper_contact=gripper_artifacts["right"]["contact"],
         left_gripper_state=gripper_artifacts["left"]["state"],
@@ -2379,6 +2784,31 @@ def main() -> None:
         "source_frames": len(rows),
         "frames": len(times),
         "duration_sec": float(times[-1]) if len(times) else 0.0,
+        "mount_layout": {
+            "name": config.get("layout_name", "independent_floor_mount"),
+            "status": config.get("layout_status"),
+            "base_positions_m": config["base_positions_m"],
+            "base_rpy_deg": config.get("base_rpy_deg"),
+            "base_quaternion_wxyz": config.get("base_quaternion_wxyz"),
+            "home_q_rad_by_side": {
+                side: home_q_for_side(config, side).tolist() for side in SIDES
+            },
+            "initial_tcp_positions_m": {
+                side: initial_sites[side].tolist() for side in SIDES
+            },
+            "task_anchor_mode": (
+                "configured_fixed_task_frame"
+                if configured_anchor_positions or configured_anchor_rotations
+                else "home_tcp_frame"
+            ),
+            "task_anchor_positions_m": {
+                side: task_anchor_sites[side].tolist() for side in SIDES
+            },
+            "task_anchor_rotation_matrix": {
+                side: task_anchor_rotations[side].tolist() for side in SIDES
+            },
+            "torso_geometry": config.get("torso_geometry") or {"enabled": False},
+        },
         "mapping": (
             "frame0-anchored conditioned wrist translation with scaled relative human wrist orientation"
             if orientation_mode == "relative_human"
@@ -2387,6 +2817,8 @@ def main() -> None:
             else "frame0-anchored conditioned wrist translation with position-only IK"
         ),
         "input_coordinate": config["input_coordinate"],
+        "input_coordinate_source": input_coordinate,
+        "coordinate_mapping": coordinate_mapping,
         "translation_scale": config["translation_scale"],
         "command_fps": command_fps,
         "ik_orientation_mode": orientation_mode,

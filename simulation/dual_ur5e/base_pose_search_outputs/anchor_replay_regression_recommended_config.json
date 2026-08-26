@@ -1,0 +1,137 @@
+{
+  "extends": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/config_shoulder_relative_human_orientation.json",
+  "layout_name": "base_pose_search_recommended_symmetric_layout",
+  "layout_status": "kinematically searched prototype; requires table, payload and hardware validation",
+  "base_positions_m": {
+    "left": [
+      -0.26,
+      0.0,
+      0.95
+    ],
+    "right": [
+      0.26,
+      0.0,
+      0.95
+    ]
+  },
+  "base_quaternion_wxyz": {
+    "left": [
+      0.7071067811865476,
+      0.0,
+      -0.7071067811865475,
+      0.0
+    ],
+    "right": [
+      0.7071067811865476,
+      0.0,
+      0.7071067811865475,
+      0.0
+    ]
+  },
+  "task_anchor_positions_m": {
+    "left": [
+      -0.2900291449376594,
+      0.6061098273512086,
+      0.6061012073833293
+    ],
+    "right": [
+      0.29001251251747007,
+      0.606137664203073,
+      0.606096276119741
+    ]
+  },
+  "task_anchor_rotation_matrix": {
+    "left": [
+      [
+        -0.0002932410854423195,
+        -0.9848044187472444,
+        -0.1736668385891974
+      ],
+      [
+        -0.00010701044247934943,
+        -0.17366681415865678,
+        0.984804460900105
+      ],
+      [
+        -0.9999999512792136,
+        0.0003073692943042494,
+        -5.445811151655322e-05
+      ]
+    ],
+    "right": [
+      [
+        0.0001408112792717353,
+        -0.9848706508196368,
+        0.17329103071506013
+      ],
+      [
+        -0.00021755932497558028,
+        0.17329099816061783,
+        0.9848706425843122
+      ],
+      [
+        -0.999999966420061,
+        -0.00017638197476621542,
+        -0.00018986646684332475
+      ]
+    ]
+  },
+  "torso_geometry": {
+    "column_position_m": [
+      0.0,
+      0.0,
+      0.475
+    ],
+    "column_half_size_m": [
+      0.0745,
+      0.0745,
+      0.475
+    ],
+    "beam_position_m": [
+      0.0,
+      0.0,
+      0.95
+    ],
+    "beam_half_size_m": [
+      0.26,
+      0.0745,
+      0.0745
+    ],
+    "beam_collision_shape": "cylinder",
+    "beam_cylinder_size_m": [
+      0.0745,
+      0.26
+    ],
+    "pedestal_position_m": [
+      0.0,
+      0.0,
+      0.07
+    ],
+    "mast_position_m": [
+      0.0,
+      0.0,
+      0.5077499999999999
+    ],
+    "mast_half_size_m": [
+      0.0745,
+      0.0745,
+      0.36774999999999997
+    ],
+    "shoulder_position_m": [
+      0.0,
+      0.0,
+      0.95
+    ],
+    "shoulder_visual_shape": "cylinder",
+    "shoulder_size_m": [
+      0.0745,
+      0.26
+    ]
+  },
+  "base_pose_search_selection": {
+    "spacing_m": 0.52,
+    "forward_offset_m": 0.0,
+    "height_offset_m": 0.0,
+    "mount_twist_deg": 0.0
+  }
+}
