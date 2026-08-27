@@ -1,0 +1,22 @@
+{
+  "extends": "config_table_2cm_52cm_1m_outward.json",
+  "layout_name": "table_visual_envelope_safe_52cm_108cm_outward_elbow",
+  "layout_status": "visual-envelope table clearance candidate; dynamic replay validation required",
+  "base_positions_m": {
+    "left": [-0.26, 0.0, 1.08],
+    "right": [0.26, 0.0, 1.08]
+  },
+  "home_q_rad_by_side": {
+    "left": [-1.24935096, -0.77399315, 2.01604928, -1.42587190, 1.88694925, -1.62825454],
+    "right": [1.24942481, -2.36744041, -2.01599129, -1.71635111, -1.88676338, 1.62824417]
+  },
+  "torso_geometry": {
+    "column_position_m": [0.0, -0.05, 0.54],
+    "column_half_size_m": [0.0745, 0.0745, 0.54],
+    "beam_position_m": [0.0, 0.0, 1.08],
+    "pedestal_position_m": [0.0, -0.05, 0.07],
+    "mast_position_m": [0.0, -0.05, 0.57275],
+    "mast_half_size_m": [0.0745, 0.0745, 0.43275],
+    "shoulder_position_m": [0.0, 0.0, 1.08]
+  }
+}

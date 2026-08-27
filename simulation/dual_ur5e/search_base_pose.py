@@ -110,23 +110,25 @@ def candidate_config(
     # symmetric candidate rather than leaving the bases floating in space.
     torso = config.get("torso_geometry") or {}
     if bool(torso.get("enabled", False)):
+        column_setback = float(torso.get("column_setback_m", 0.0))
+        column_y = y - column_setback
         torso["beam_position_m"] = [0.0, y, z]
         torso["beam_half_size_m"] = [half_spacing, 0.0745, 0.0745]
         torso["beam_cylinder_size_m"] = [0.0745, half_spacing]
         torso["shoulder_position_m"] = [0.0, y, z]
         torso["shoulder_size_m"] = [0.0745, half_spacing]
-        torso["column_position_m"] = [0.0, y, 0.5 * z]
+        torso["column_position_m"] = [0.0, column_y, 0.5 * z]
         torso["column_half_size_m"] = [0.0745, 0.0745, 0.5 * z]
         pedestal_top = 0.14
         mast_top = max(pedestal_top + 0.02, z - 0.0745)
-        torso["mast_position_m"] = [0.0, y, 0.5 * (pedestal_top + mast_top)]
+        torso["mast_position_m"] = [0.0, column_y, 0.5 * (pedestal_top + mast_top)]
         torso["mast_half_size_m"] = [
             0.0745,
             0.0745,
             0.5 * (mast_top - pedestal_top),
         ]
         pedestal_position = list(torso.get("pedestal_position_m", [0.0, 0.0, 0.07]))
-        pedestal_position[1] = y
+        pedestal_position[1] = column_y
         torso["pedestal_position_m"] = pedestal_position
         config["torso_geometry"] = torso
     return config
@@ -473,6 +475,7 @@ def recommended_override(
             for key in (
                 "column_position_m",
                 "column_half_size_m",
+                "column_setback_m",
                 "beam_position_m",
                 "beam_half_size_m",
                 "beam_collision_shape",

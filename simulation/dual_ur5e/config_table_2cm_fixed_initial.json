@@ -1,0 +1,5 @@
+{
+  "extends": "config_shoulder_relative_human_orientation.json",
+  "layout_status": "table-calibrated 2 cm clearance candidate; simulation validation required",
+  "ik_orientation_mode": "fixed_initial"
+}

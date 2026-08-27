@@ -14,6 +14,24 @@
     "left": [-1.102925, -0.255012, 1.553442, 1.648100, -2.030950, 1.483578],
     "right": [-2.565000, -0.254243, 1.522790, 1.560938, -0.599641, -1.310621]
   },
+  "table_geometry": {
+    "enabled": true,
+    "safety_plane_enabled": true,
+    "legs_enabled": true,
+    "leg_size_m": [0.05, 0.05],
+    "leg_inset_m": [0.08, 0.08],
+    "leg_rgba": [0.78, 0.80, 0.83, 1.0],
+    "top_height_m": 0.75,
+    "thickness_m": 0.03,
+    "length_m": 1.20,
+    "width_m": 0.60,
+    "center_xy_m": [0.0, 0.55],
+    "minimum_tcp_height_m": 0.811,
+    "rgba": [0.58, 0.61, 0.65, 1.0]
+  },
+  "safety_audit": {
+    "min_environment_clearance_m": 0.02
+  },
   "base_pose_search": {
     "position_tolerance_m": 0.005,
     "orientation_tolerance_deg": 5.0,

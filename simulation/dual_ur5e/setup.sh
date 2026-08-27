@@ -8,7 +8,7 @@ MENAGERIE="${ROOT}/third_party/mujoco_menagerie"
 if [[ ! -x "${VENV}/bin/python" ]]; then
   /usr/bin/python3 -m venv "${VENV}"
 fi
-"${VENV}/bin/pip" install mujoco imageio imageio-ffmpeg
+"${VENV}/bin/pip" install mujoco imageio imageio-ffmpeg mink==1.3.0
 
 if [[ ! -d "${MENAGERIE}/.git" ]]; then
   git clone --depth 1 --filter=blob:none --sparse \

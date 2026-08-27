@@ -163,6 +163,71 @@ def build_model(config: dict[str, Any]) -> tuple[mujoco.MjModel, mujoco.MjData]:
   </worldbody>
 </mujoco>"""
     )
+    table = config.get("table_geometry") or {}
+    if bool(table.get("enabled", False)):
+        length = float(table.get("length_m", 1.20))
+        width = float(table.get("width_m", 0.60))
+        thickness = float(table.get("thickness_m", 0.03))
+        top_height = float(table.get("top_height_m", 0.75))
+        center_xy = np.asarray(table.get("center_xy_m", [0.0, 0.55]), dtype=np.float64)
+        if center_xy.shape != (2,):
+            raise ValueError("table_geometry.center_xy_m must have 2 values")
+        if min(length, width, thickness) <= 0.0:
+            raise ValueError("table dimensions must be positive")
+        table_body = scene.worldbody.add_body(name="table_structure")
+        table_body.add_geom(
+            name="table_top",
+            type=mujoco.mjtGeom.mjGEOM_BOX,
+            pos=[float(center_xy[0]), float(center_xy[1]), top_height - thickness / 2.0],
+            size=[length / 2.0, width / 2.0, thickness / 2.0],
+            rgba=table.get("rgba", [0.58, 0.61, 0.65, 1.0]),
+            contype=1,
+            conaffinity=1,
+        )
+        if bool(table.get("legs_enabled", True)):
+            leg_size = np.asarray(
+                table.get("leg_size_m", [0.05, 0.05]), dtype=np.float64
+            )
+            leg_inset = np.asarray(
+                table.get("leg_inset_m", [0.08, 0.08]), dtype=np.float64
+            )
+            if leg_size.shape != (2,) or np.any(leg_size <= 0.0):
+                raise ValueError("table_geometry.leg_size_m must have 2 positive values")
+            if leg_inset.shape != (2,) or np.any(leg_inset < 0.0):
+                raise ValueError("table_geometry.leg_inset_m must have 2 non-negative values")
+            underside = top_height - thickness
+            leg_half_height = underside / 2.0
+            leg_rgba = table.get("leg_rgba", [0.78, 0.80, 0.83, 1.0])
+            leg_x = length / 2.0 - leg_inset[0] - leg_size[0] / 2.0
+            leg_y = width / 2.0 - leg_inset[1] - leg_size[1] / 2.0
+            if min(leg_x, leg_y, leg_half_height) <= 0.0:
+                raise ValueError("table leg dimensions/insets do not fit below the tabletop")
+            for index, (sign_x, sign_y) in enumerate(
+                ((-1.0, -1.0), (-1.0, 1.0), (1.0, -1.0), (1.0, 1.0))
+            ):
+                table_body.add_geom(
+                    name=f"table_leg_{index}",
+                    type=mujoco.mjtGeom.mjGEOM_BOX,
+                    pos=[
+                        float(center_xy[0] + sign_x * leg_x),
+                        float(center_xy[1] + sign_y * leg_y),
+                        leg_half_height,
+                    ],
+                    size=[leg_size[0] / 2.0, leg_size[1] / 2.0, leg_half_height],
+                    rgba=leg_rgba,
+                    contype=1,
+                    conaffinity=1,
+                )
+        if bool(table.get("safety_plane_enabled", False)):
+            table_body.add_geom(
+                name="table_safety_plane",
+                type=mujoco.mjtGeom.mjGEOM_PLANE,
+                pos=[0.0, 0.0, top_height],
+                size=[2.0, 2.0, 0.01],
+                rgba=[0.0, 0.0, 0.0, 0.0],
+                contype=0,
+                conaffinity=0,
+            )
     torso = config.get("torso_geometry") or {}
     if bool(torso.get("enabled", False)):
         body = scene.worldbody.add_body(name="torso_structure")
@@ -443,6 +508,12 @@ def build_targets(
     scale = float(config.get("translation_scale", 1.0))
     lower = np.asarray(config["relative_workspace_min_m"], dtype=np.float64)
     upper = np.asarray(config["relative_workspace_max_m"], dtype=np.float64)
+    table = config.get("table_geometry") or {}
+    minimum_tcp_height = (
+        float(table["minimum_tcp_height_m"])
+        if bool(table.get("enabled", False)) and "minimum_tcp_height_m" in table
+        else None
+    )
     targets: dict[str, np.ndarray] = {}
     speed_clips: dict[str, int] = {}
     for side in SIDES:
@@ -450,6 +521,8 @@ def build_targets(
         relative = (rotation @ (human - human[0]).T).T * scale
         relative = np.clip(relative, lower, upper)
         target = initial_sites[side][None, :] + relative
+        if minimum_tcp_height is not None:
+            target[:, 2] = np.maximum(target[:, 2], minimum_tcp_height)
         target, speed_clips[side] = limit_target_speed(
             target, times, float(config["max_target_speed_mps"])
         )
@@ -483,6 +556,12 @@ def condition_targets(
     config: dict[str, Any],
 ) -> tuple[dict[str, np.ndarray], dict[str, dict[str, float]]]:
     settings = config.get("action_conditioning") or {}
+    table = config.get("table_geometry") or {}
+    minimum_tcp_height = (
+        float(table["minimum_tcp_height_m"])
+        if bool(table.get("enabled", False)) and "minimum_tcp_height_m" in table
+        else None
+    )
     if not bool(settings.get("enabled", False)):
         copied = {side: values.copy() for side, values in targets.items()}
         return copied, {side: trajectory_metrics(values, values) for side, values in targets.items()}
@@ -507,6 +586,8 @@ def condition_targets(
         values = np.linalg.solve(system, rhs)
         values[0] = original[0]
         values[-1] = original[-1]
+        if minimum_tcp_height is not None:
+            values[:, 2] = np.maximum(values[:, 2], minimum_tcp_height)
         conditioned[side] = values
         metrics[side] = trajectory_metrics(original, values)
     return conditioned, metrics
@@ -1685,8 +1766,23 @@ def execution_safety_audit(
                 self_pairs.append((first, second))
     # Shoulder collision capsules are fixed mount geometry with an intentional
     # 23 mm floor clearance; moving links remain part of the environment audit.
+    # Environment clearance uses both the simplified collision shapes (group 3)
+    # and the rendered robot envelope (group 2).  The UR5e visual meshes extend
+    # beyond some collision capsules near the elbow/upper arm; checking only
+    # group 3 can therefore report a safe table gap while the rendered/physical
+    # shell is almost touching the table edge.
     environment_geoms = [
-        geom for geom in collision_geoms if not body_name(geom).endswith("shoulder_link")
+        geom
+        for geom in range(model.ngeom)
+        if int(model.geom_group[geom]) in {2, 3}
+        and (body_name(geom).startswith("left_") or body_name(geom).startswith("right_"))
+        and not body_name(geom).endswith("shoulder_link")
+    ]
+    obstacle_geoms = [
+        geom
+        for geom in range(model.ngeom)
+        if model.geom(geom).name in {"floor", "table_top", "table_safety_plane"}
+        or model.geom(geom).name.startswith("table_leg_")
     ]
     distance_query_max = float(settings.get("distance_query_max_m", 0.15))
     stride = max(1, int(settings.get("collision_sample_stride", 3)))
@@ -1719,19 +1815,21 @@ def execution_safety_audit(
                         "time_sec": float(times[frame]),
                         "bodies": [body_name(first), body_name(second)],
                     }
-        for geom in environment_geoms:
-            distance = float(
-                mujoco.mj_geomDistance(
-                    model, data, 0, geom, distance_query_max, None
+        for obstacle in obstacle_geoms:
+            obstacle_name = model.geom(obstacle).name
+            for geom in environment_geoms:
+                distance = float(
+                    mujoco.mj_geomDistance(
+                        model, data, obstacle, geom, distance_query_max, None
+                    )
                 )
-            )
-            if distance < closest["environment"]["distance_m"]:
-                closest["environment"] = {
-                    "distance_m": distance,
-                    "frame": frame,
-                    "time_sec": float(times[frame]),
-                    "bodies": ["floor", body_name(geom)],
-                }
+                if distance < closest["environment"]["distance_m"]:
+                    closest["environment"] = {
+                        "distance_m": distance,
+                        "frame": frame,
+                        "time_sec": float(times[frame]),
+                        "bodies": [obstacle_name, body_name(geom)],
+                    }
 
     jacobian_condition_max: dict[str, float] = {}
     jacobian_sigma_min: dict[str, float] = {}
@@ -1845,9 +1943,16 @@ def execution_safety_audit(
                 else " collision capsules"
             )
             + ", floor"
+            + (", table" if any(model.geom(geom).name == "table_top" for geom in obstacle_geoms) else "")
+            + (
+                ", table safety plane"
+                if any(model.geom(geom).name == "table_safety_plane" for geom in obstacle_geoms)
+                else ""
+            )
             + (", and torso/shoulder structure" if structure_geoms else "")
             + "; internal same-gripper finger contacts and intended base/shoulder mounting "
-            "contacts excluded; no table, payload, or external obstacles"
+            "contacts excluded; environment clearance includes collision and visual envelopes; "
+            "no payload or other external obstacles"
         ),
         "collision_sample_stride": stride,
         "collision_sample_rate_hz_approx": float(config["render_fps"]) / stride,
