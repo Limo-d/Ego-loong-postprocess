@@ -1,5 +1,5 @@
 {
-  "extends": "/home/lenovo/Ego-loong-postprocess/simulation/dual_ur5e/config_table_2cm_52cm_108cm_outward.json",
+  "extends": "../config_table_2cm_52cm_108cm_outward.json",
   "layout_name": "base_pose_search_recommended_symmetric_layout",
   "layout_status": "kinematically searched prototype; requires table, payload and hardware validation",
   "base_positions_m": {

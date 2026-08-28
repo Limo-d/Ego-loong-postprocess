@@ -5,7 +5,7 @@ set -euo pipefail
 # ROS2 bag -> RGBD/hand_frame extract -> RTAB-Map camera pose -> LocateAnything bbox
 # -> stable bbox -> HaMeR wrist visual prior -> depth-root correction
 # -> visual+glove fusion -> glove FK/calibration/root tracking/trajectory videos
-# -> review web.
+# -> dual-UR5e replay/Mink safety simulation -> review web.
 
 ROOT="${ROOT:-/home/lenovo/Ego-loong-postprocess}"
 BAG_SESSION="${BAG_SESSION:-${ROOT}/datatsets/sampler_ros2_bags/rotation/data_20260628_123410}"
@@ -191,6 +191,15 @@ WRIST_TRACK_SNAP_ROOT="${WRIST_TRACK_SNAP_ROOT:-0}"
 WRIST_TRACK_DEPTH_ONLY="${WRIST_TRACK_DEPTH_ONLY:-1}"
 REVIEW_HAND_DISPLAY_ROTATE_DEG="${REVIEW_HAND_DISPLAY_ROTATE_DEG:-45}"
 REVIEW_RGB_WORKERS="${REVIEW_RGB_WORKERS:-8}"
+REVIEW_SIMULATION_VIDEO="${REVIEW_SIMULATION_VIDEO:-}"
+REVIEW_SIMULATION_SUMMARY="${REVIEW_SIMULATION_SUMMARY:-}"
+REVIEW_SIMULATION_NPZ="${REVIEW_SIMULATION_NPZ:-}"
+RUN_ROBOT_SIMULATION="${RUN_ROBOT_SIMULATION:-1}"
+SIMULATION_PYTHON="${SIMULATION_PYTHON:-${ROOT}/.venv-mujoco/bin/python}"
+SIMULATION_CONFIG="${SIMULATION_CONFIG:-${ROOT}/simulation/dual_ur5e/base_pose_search_outputs/safety_plane_height_smoke_recommended_config.json}"
+SIMULATION_CAMERA_CONFIG="${SIMULATION_CAMERA_CONFIG:-${ROOT}/simulation/dual_ur5e/viewer_camera.json}"
+SIMULATION_GL="${SIMULATION_GL:-egl}"
+SIMULATION_MAX_FRAMES="${SIMULATION_MAX_FRAMES:-0}"
 RUN_QUALITY_CHECK="${RUN_QUALITY_CHECK:-1}"
 COMPACT_OUTPUTS="${COMPACT_OUTPUTS:-0}"
 CONFIG_ONLY="${CONFIG_ONLY:-0}"
@@ -258,6 +267,13 @@ fi
 HAMER_FRAME_DIR="${HAMER_DIR}/per_frame"
 DEPTH_FRAME_DIR="${DEPTH_DIR}/per_frame"
 REVIEW_WEB_HTML="${OUTPUT_DIR}/web/index.html"
+SIMULATION_OUTPUT_DIR="${OUTPUT_DIR}/simulation"
+SIMULATION_SOURCE_NAME="${SESSION_NAME}_source"
+SIMULATION_SOURCE_NPZ="${SIMULATION_OUTPUT_DIR}/${SIMULATION_SOURCE_NAME}_dual_ur5e.npz"
+SIMULATION_SOURCE_SUMMARY="${SIMULATION_OUTPUT_DIR}/${SIMULATION_SOURCE_NAME}_dual_ur5e_summary.json"
+SIMULATION_NPZ="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_dual_ur5e.npz"
+SIMULATION_SUMMARY="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_dual_ur5e_summary.json"
+SIMULATION_VIDEO="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_dual_ur5e.mp4"
 COMPACT_SUMMARY="${OUTPUT_DIR}/compact_summary.json"
 CALIB_LOCATE_JSON="${CALIB_LOCATE_DIR}/bboxes.json"
 CALIB_LOCATE_MP4="${CALIB_LOCATE_DIR}/bboxes.mp4"
@@ -277,6 +293,7 @@ CACHE_DIR="${CACHE_DIR:-${SESSION}/.pipeline_cache}"
 CACHE_TOOL="${CACHE_TOOL:-${ROOT}/scripts/pipeline_stage_cache.py}"
 CACHE_PYTHON="${CACHE_PYTHON:-${ROS_PYTHON}}"
 QUALITY_REPORT="${OUTPUT_DIR}/quality_report.json"
+SESSION_SUMMARY="${OUTPUT_DIR}/summary.json"
 
 stage_manifest() {
   printf '%s/%s.json' "${CACHE_DIR}" "$1"
@@ -351,7 +368,7 @@ if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   quality_rtabmap_args=(--require_rtabmap)
 fi
 
-printf '\n[0/11] Config\n'
+printf '\n[0/12] Config\n'
 printf '  BAG_SESSION: %s\n' "${BAG_SESSION}"
 printf '  BATCH_ROOT:  %s\n' "${BATCH_ROOT}"
 printf '  BAG_DATA_DIR: %s\n' "${BAG_DATA_DIR}"
@@ -378,11 +395,32 @@ if [[ "${CONFIG_ONLY}" == "1" ]]; then
   exit 0
 fi
 
+write_session_summary_on_exit() {
+  local pipeline_exit_code=$?
+  trap - EXIT
+  local summary_request_args=()
+  if [[ "${RUN_ROBOT_SIMULATION}" == "1" ]]; then
+    summary_request_args+=(--simulation_requested)
+  fi
+  if [[ "${RUN_QUALITY_CHECK}" == "1" ]]; then
+    summary_request_args+=(--quality_requested)
+  fi
+  if ! "${CACHE_PYTHON}" "${ROOT}/scripts/generate_session_summary.py" \
+    --session "${SESSION}" \
+    --output "${SESSION_SUMMARY}" \
+    --pipeline_exit_code "${pipeline_exit_code}" \
+    "${summary_request_args[@]}"; then
+    printf 'WARNING: failed to write session summary: %s\n' "${SESSION_SUMMARY}" >&2
+  fi
+  exit "${pipeline_exit_code}"
+}
+trap write_session_summary_on_exit EXIT
+
 mkdir -p "${SESSION}" "${LOCATE_DIR}" "${STABLE_BBOX_DIR}" "${HAMER_DIR}" "${DEPTH_DIR}" \
   "${FUSION_LEFT_DIR}" "${FUSION_RIGHT_DIR}" "${VISUAL_SMOOTH_LEFT_DIR}" "${VISUAL_SMOOTH_RIGHT_DIR}" \
   "${OUTPUT_DIR}" "${RTABMAP_POSE_DIR}" "${CACHE_DIR}" "${CALIB_CACHE_DIR}"
 
-printf '\n[1/11] Extract ROS2 bag RGBD/hand_frame\n'
+printf '\n[1/12] Extract ROS2 bag RGBD/hand_frame\n'
 extract_cache_args=(
   --input "${BAG_DIR}"
   --input "${HAND_CALIBRATION_FILE}"
@@ -432,7 +470,7 @@ if [[ -n "${REQUESTED_FPS}" ]]; then
   printf '  note: ignoring requested FPS=%s; real RGB timebase is authoritative\n' "${REQUESTED_FPS}"
 fi
 
-printf '\n[2/11] Build/apply RTAB-Map camera pose\n'
+printf '\n[2/12] Build/apply RTAB-Map camera pose\n'
 if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   if [[ ! -s "${RTABMAP_DB}" ]]; then
     printf '  ERROR: RTABMAP_DB not found or empty: %s\n' "${RTABMAP_DB}" >&2
@@ -480,7 +518,7 @@ else
   printf '  skip: USE_RTABMAP_POSE=%s\n' "${USE_RTABMAP_POSE}"
 fi
 
-printf '\n[3/11] LocateAnything bbox detector\n'
+printf '\n[3/12] LocateAnything bbox detector\n'
 locate_cache_args=(
   --input "$(stage_manifest extract)"
   --input "${LOCATE_MODEL}/config.json"
@@ -529,7 +567,7 @@ else
   stage_cache_write locate "${locate_cache_args[@]}"
 fi
 
-printf '\n[4/11] Track/stabilize left and right hand bboxes\n'
+printf '\n[4/12] Track/stabilize left and right hand bboxes\n'
 track_bbox_cache_args=(
   --input "$(stage_manifest locate)"
   --code "${ROOT}/preprocess/TrackDualHandBboxes.py"
@@ -564,7 +602,7 @@ else
   stage_cache_write track_bbox "${track_bbox_cache_args[@]}"
 fi
 
-printf '\n[5/11] HaMeR from stable bbox, handedness=%s\n' "${HAMER_HANDEDNESS}"
+printf '\n[5/12] HaMeR from stable bbox, handedness=%s\n' "${HAMER_HANDEDNESS}"
 POSE_STAGE_MANIFEST="$(stage_manifest extract)"
 if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   POSE_STAGE_MANIFEST="$(stage_manifest rtabmap_pose)"
@@ -618,7 +656,7 @@ else
   stage_cache_write hamer "${hamer_cache_args[@]}"
 fi
 
-printf '\n[6/11] Correct HaMeR wrist root with aligned depth\n'
+printf '\n[6/12] Correct HaMeR wrist root with aligned depth\n'
 depth_cache_args=(
   --input "$(stage_manifest hamer)"
   --input "$(stage_manifest extract)"
@@ -655,7 +693,7 @@ else
   stage_cache_write depth_root "${depth_cache_args[@]}"
 fi
 
-printf '\n[7/11] Build left/right visual + /hand_frame fusion inputs\n'
+printf '\n[7/12] Build left/right visual + /hand_frame fusion inputs\n'
 fusion_cache_args=(
   --input "$(stage_manifest depth_root)"
   --input "${POSE_STAGE_MANIFEST}"
@@ -846,7 +884,7 @@ else
   printf '\n[calib] skip dedicated calibration video: USE_CALIB_VIDEO=%s\n' "${USE_CALIB_VIDEO}"
 fi
 
-printf '\n[8/11] Smooth left/right visual 21 keypoints\n'
+printf '\n[8/12] Smooth left/right visual 21 keypoints\n'
 visual_smooth_cache_args=(
   --input "$(stage_manifest fusion)"
   --code "${ROOT}/preprocess/VisualizeVisual2DSmooth.py"
@@ -912,7 +950,7 @@ else
   stage_cache_write visual_smooth "${visual_smooth_cache_args[@]}"
 fi
 
-printf '\n[9/11] Glove FK + visual-bone calibration + wristroot tracking\n'
+printf '\n[9/12] Glove FK + visual-bone calibration + wristroot tracking\n'
 ACTIVE_GLOVE_SIDES=()
 if fusion_has_calibration_data "${FUSION_LEFT_SUMMARY}" left; then
   ACTIVE_GLOVE_SIDES+=(left)
@@ -1209,7 +1247,7 @@ else
   stage_cache_write glove_fk_trajectory "${glove_cache_args[@]}"
 fi
 
-printf '\n[10/11] Collect user-facing outputs\n'
+printf '\n[10/12] Collect user-facing outputs\n'
 collect_cache_args=(
   --input "$(stage_manifest locate)"
   --input "$(stage_manifest track_bbox)"
@@ -1278,7 +1316,89 @@ else
 fi
 
 
-printf '\n[11/11] Generate review web visualization\n'
+printf '\n[11/12] Dual-UR5e MuJoCo replay + Mink safety simulation\n'
+if [[ "${RUN_ROBOT_SIMULATION}" == "1" ]]; then
+  if [[ ! -x "${SIMULATION_PYTHON}" ]]; then
+    printf 'Error: MuJoCo Python is unavailable: %s\n' "${SIMULATION_PYTHON}" >&2
+    printf 'Run simulation/dual_ur5e/setup.sh or set RUN_ROBOT_SIMULATION=0.\n' >&2
+    exit 2
+  fi
+  simulation_cache_args=(
+    --input "$(stage_manifest collect_outputs)"
+    --input "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
+    --input "${OUTPUT_DIR}/summaries/world_rebase_first_camera_summary.json"
+    --input "${SIMULATION_CONFIG}"
+    --input "${SIMULATION_CAMERA_CONFIG}"
+    --input "${ROOT}/simulation/dual_ur5e/config_table_2cm_52cm_108cm_outward.json"
+    --input "${ROOT}/simulation/dual_ur5e/config_table_2cm_52cm_1m_outward.json"
+    --input "${ROOT}/simulation/dual_ur5e/config_table_2cm_fixed_initial.json"
+    --input "${ROOT}/simulation/dual_ur5e/config_shoulder_relative_human_orientation.json"
+    --input "${ROOT}/simulation/dual_ur5e/config_relative_human_orientation.json"
+    --input "${ROOT}/simulation/dual_ur5e/config.json"
+    --input "${ROOT}/simulation/dual_ur5e/omnipicker.xml"
+    --input "${ROOT}/simulation/dual_ur5e/assets"
+    --input "${ROOT}/third_party/mujoco_menagerie/universal_robots_ur5e"
+    --code "${ROOT}/simulation/dual_ur5e/replay_trajectory.py"
+    --code "${ROOT}/simulation/dual_ur5e/solve_mink_trajectory.py"
+    --code "${ROOT}/simulation/dual_ur5e/validate_mink_single_frame.py"
+    --code "${ROOT}/simulation/dual_ur5e/validate_mink_multistart.py"
+    --param "simulation_gl=${SIMULATION_GL}"
+    --param "max_frames=${SIMULATION_MAX_FRAMES}"
+    --output "${SIMULATION_SOURCE_NPZ}"
+    --output "${SIMULATION_SOURCE_SUMMARY}"
+    --output "${SIMULATION_NPZ}"
+    --output "${SIMULATION_SUMMARY}"
+    --output "${SIMULATION_VIDEO}"
+  )
+  if stage_cache_hit robot_simulation "${simulation_cache_args[@]}"; then
+    printf '  skip valid cache: %s\n' "$(stage_manifest robot_simulation)"
+  else
+    mkdir -p "${SIMULATION_OUTPUT_DIR}"
+    simulation_frame_args=()
+    if [[ "${SIMULATION_MAX_FRAMES}" -gt 0 ]]; then
+      simulation_frame_args+=(--max_frames "${SIMULATION_MAX_FRAMES}")
+    fi
+    MUJOCO_GL="${SIMULATION_GL}" "${SIMULATION_PYTHON}" \
+      "${ROOT}/simulation/dual_ur5e/replay_trajectory.py" \
+      --session "${SESSION}" \
+      --config "${SIMULATION_CONFIG}" \
+      --camera_config "${SIMULATION_CAMERA_CONFIG}" \
+      --output_dir "${SIMULATION_OUTPUT_DIR}" \
+      --name "${SIMULATION_SOURCE_NAME}" \
+      "${simulation_frame_args[@]}"
+    MUJOCO_GL="${SIMULATION_GL}" "${SIMULATION_PYTHON}" \
+      "${ROOT}/simulation/dual_ur5e/solve_mink_trajectory.py" \
+      --config "${SIMULATION_CONFIG}" \
+      --npz "${SIMULATION_SOURCE_NPZ}" \
+      --output_npz "${SIMULATION_NPZ}" \
+      --output_summary "${SIMULATION_SUMMARY}" \
+      --output_video "${SIMULATION_VIDEO}" \
+      --camera_config "${SIMULATION_CAMERA_CONFIG}" \
+      "${simulation_frame_args[@]}"
+    stage_cache_write robot_simulation "${simulation_cache_args[@]}"
+  fi
+  [[ -n "${REVIEW_SIMULATION_VIDEO}" ]] || REVIEW_SIMULATION_VIDEO="${SIMULATION_VIDEO}"
+  [[ -n "${REVIEW_SIMULATION_SUMMARY}" ]] || REVIEW_SIMULATION_SUMMARY="${SIMULATION_SUMMARY}"
+  [[ -n "${REVIEW_SIMULATION_NPZ}" ]] || REVIEW_SIMULATION_NPZ="${SIMULATION_NPZ}"
+else
+  printf '  skip: RUN_ROBOT_SIMULATION=%s\n' "${RUN_ROBOT_SIMULATION}"
+fi
+
+printf '\n[12/12] Generate review web visualization\n'
+review_simulation_args=()
+if [[ -n "${REVIEW_SIMULATION_VIDEO}" ]]; then
+  review_simulation_args+=(--simulation_video "${REVIEW_SIMULATION_VIDEO}")
+else
+  # Keep stage-cache inputs deterministic. Automatic discovery remains
+  # available when generate_review_web.py is invoked directly.
+  review_simulation_args+=(--no_simulation_video)
+fi
+if [[ -n "${REVIEW_SIMULATION_SUMMARY}" ]]; then
+  review_simulation_args+=(--simulation_summary "${REVIEW_SIMULATION_SUMMARY}")
+fi
+if [[ -n "${REVIEW_SIMULATION_NPZ}" ]]; then
+  review_simulation_args+=(--simulation_npz "${REVIEW_SIMULATION_NPZ}")
+fi
 web_cache_args=(
   --input "$(stage_manifest collect_outputs)"
   --input "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
@@ -1288,10 +1408,22 @@ web_cache_args=(
   --param "fps=${FPS}"
   --param "hand_display_rotate_deg=${REVIEW_HAND_DISPLAY_ROTATE_DEG}"
   --param "rgb_workers=${REVIEW_RGB_WORKERS}"
+  --param "simulation_video=${REVIEW_SIMULATION_VIDEO}"
+  --param "simulation_summary=${REVIEW_SIMULATION_SUMMARY}"
+  --param "simulation_npz=${REVIEW_SIMULATION_NPZ}"
   --output "${REVIEW_WEB_HTML}"
   --output "${OUTPUT_DIR}/web/rgb_frames"
   --output "${OUTPUT_DIR}/web/tactile_hand.png"
 )
+if [[ -n "${REVIEW_SIMULATION_VIDEO}" ]]; then
+  web_cache_args+=(--input "${REVIEW_SIMULATION_VIDEO}" --output "${OUTPUT_DIR}/web/robot_simulation.mp4")
+fi
+if [[ -n "${REVIEW_SIMULATION_SUMMARY}" ]]; then
+  web_cache_args+=(--input "${REVIEW_SIMULATION_SUMMARY}")
+fi
+if [[ -n "${REVIEW_SIMULATION_NPZ}" ]]; then
+  web_cache_args+=(--input "${REVIEW_SIMULATION_NPZ}")
+fi
 if stage_cache_hit review_web "${web_cache_args[@]}"; then
   printf '  skip valid cache: %s\n' "$(stage_manifest review_web)"
 else
@@ -1299,7 +1431,8 @@ else
     --session "${SESSION}" \
     --fps "${FPS}" \
     --rgb_workers "${REVIEW_RGB_WORKERS}" \
-    --hand_display_rotate_deg "${REVIEW_HAND_DISPLAY_ROTATE_DEG}"
+    --hand_display_rotate_deg "${REVIEW_HAND_DISPLAY_ROTATE_DEG}" \
+    "${review_simulation_args[@]}"
   stage_cache_write review_web "${web_cache_args[@]}"
 fi
 
@@ -1341,7 +1474,12 @@ if [[ "${RENDER_FINAL_VIDEO}" == "1" ]]; then
   printf '  dual 3D video:  %s\n' "${OUTPUT_DIR}/videos/07_dual_trajectory_3d_world.mp4"
 fi
 printf '  trajectory:     %s\n' "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
+if [[ "${RUN_ROBOT_SIMULATION}" == "1" ]]; then
+  printf '  simulation:     %s\n' "${SIMULATION_SUMMARY}"
+  printf '  robot video:    %s\n' "${SIMULATION_VIDEO}"
+fi
 printf '  review web:     %s\n' "${REVIEW_WEB_HTML}"
+printf '  summary:        %s\n' "${SESSION_SUMMARY}"
 printf '  compact summary: %s\n' "${COMPACT_SUMMARY}"
 if [[ -n "${CALIB_INPUT_FUSION_LEFT_FOR_FK:-}" ]]; then
   printf '  left calib fusion:  %s\n' "${CALIB_INPUT_FUSION_LEFT_FOR_FK}"

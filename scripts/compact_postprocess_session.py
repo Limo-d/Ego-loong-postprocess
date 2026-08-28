@@ -130,7 +130,9 @@ def write_summary(session: Path, rows: List[Dict[str, Any]], dry_run: bool) -> P
         "candidate_files": total_files,
         "targets": rows,
         "kept": {
-            "web": "outputs/web/index.html plus web/rgb_frames and web/tactile_hand.png (trajectory/tactile use Canvas)",
+            "summary": "outputs/summary.json unified session result (written by the pipeline exit hook)",
+            "web": "outputs/web/index.html plus web/rgb_frames, web/tactile_hand.png, and optional web/robot_simulation.mp4 (trajectory/tactile use Canvas)",
+            "simulation": "outputs/simulation with source replay, final Mink trajectory, safety summary, and rendered MP4",
             "videos": sorted(KEEP_OUTPUT_VIDEOS),
             "data": ["trajectory_wristroot_track_cameraoptical.jsonl", "locate_bboxes.json", "stable_bboxes.json"],
         },

@@ -183,15 +183,113 @@ ${BAG_DATA_DIR}/map/rtabmap.db
 
 当前默认 `USE_RTABMAP_POSE=1`，也就是后续相机位姿来自 `rtabmap.db` 导出的 Poses，并插值到 RGB 帧。
 
-## 一行运行命令
+## 根据一个数据包批量运行后处理
 
-处理整个共享标定批次：
+假设收到的数据包路径是：
 
-```bash
-BATCH_ROOT=/path/to/batch OVERWRITE=1 scripts/run_sampler_batch_to_glove_trajectory.sh
+```text
+/data/test_data/2026-08-21T1225.50_20/
 ```
 
-批次脚本按名称顺序处理所有包含 `data/bag` 的一级子目录。共享 `calibration_video` 默认只处理一次，产物和缓存保存在 `postprocess_data/_batch_calibration/<batch-name>/`，后续 session 直接复用。默认遇到失败即停止；设置 `CONTINUE_ON_ERROR=1` 可以继续处理其余 session，并在最后汇总失败项。
+运行前确认它包含公共标定和至少一个一级 session：
+
+```text
+/data/test_data/2026-08-21T1225.50_20/
+├── calibrations/
+├── 2026-08-21T1226.05/data/bag/
+├── 2026-08-21T1226.36/data/bag/
+└── 2026-08-21T1227.01/data/bag/
+```
+
+进入仓库后，推荐使用下面的命令批量运行完整后处理、质量检查和机器人仿真。某个 session 失败后会继续处理剩余数据：
+
+```bash
+cd /home/lenovo/Ego-loong-postprocess
+
+BATCH_ROOT=/data/test_data/2026-08-21T1225.50_20 \
+CONTINUE_ON_ERROR=1 \
+RUN_QUALITY_CHECK=1 \
+RUN_ROBOT_SIMULATION=1 \
+COMPACT_OUTPUTS=0 \
+scripts/run_sampler_batch_to_glove_trajectory.sh
+```
+
+`OVERWRITE` 默认是 `0`。首次运行时所有阶段都没有缓存，因此仍会完整处理；同一条命令再次执行时会自动复用有效缓存，只重算输入、参数、配置或代码发生变化的阶段。这也是中断后继续运行的推荐方式：
+
+```bash
+BATCH_ROOT=/data/test_data/2026-08-21T1225.50_20 \
+CONTINUE_ON_ERROR=1 \
+scripts/run_sampler_batch_to_glove_trajectory.sh
+```
+
+只有确认需要忽略所有阶段缓存、从头强制重算整个数据包时才设置：
+
+```bash
+BATCH_ROOT=/data/test_data/2026-08-21T1225.50_20 \
+CONTINUE_ON_ERROR=1 \
+OVERWRITE=1 \
+scripts/run_sampler_batch_to_glove_trajectory.sh
+```
+
+若当前机器没有 MuJoCo 环境，或者本轮只测试普通后处理，可关闭机器人仿真：
+
+```bash
+BATCH_ROOT=/data/test_data/2026-08-21T1225.50_20 \
+CONTINUE_ON_ERROR=1 \
+RUN_ROBOT_SIMULATION=0 \
+scripts/run_sampler_batch_to_glove_trajectory.sh
+```
+
+正式大规模运行前，可以限制普通后处理和仿真帧数做快速冒烟测试：
+
+```bash
+BATCH_ROOT=/data/test_data/2026-08-21T1225.50_20 \
+CONTINUE_ON_ERROR=1 \
+MAX_FRAMES=60 \
+SIMULATION_MAX_FRAMES=60 \
+scripts/run_sampler_batch_to_glove_trajectory.sh
+```
+
+批次脚本按名称顺序处理所有包含 `data/bag` 的一级子目录，不递归处理更深层目录。共享 `calibration_video` 默认只处理一次，产物和缓存保存在 `postprocess_data/_batch_calibration/<batch-name>/`，后续 session 直接复用。默认遇到失败即停止；大规模评测应设置 `CONTINUE_ON_ERROR=1`。
+
+以上示例数据包的 session 输出目录形如：
+
+```text
+postprocess_data/2026-08-21T1225.50_20_20260821T122605/
+postprocess_data/2026-08-21T1225.50_20_20260821T122636/
+```
+
+每个已启动的 session 即使中途失败，也会尽量生成：
+
+```text
+postprocess_data/<session-name>/outputs/summary.json
+```
+
+无论批次是否存在失败，批处理结束或停止前都会聚合已经处理的 session，并写入：
+
+```text
+postprocess_data/batch_summaries/<batch-name>_summary.json
+```
+
+上面示例对应：
+
+```text
+postprocess_data/batch_summaries/2026-08-21T1225.50_20_summary.json
+```
+
+可通过 `BATCH_SUMMARY=/path/report.json` 修改位置。报告包含总体通过率、质量门禁与仿真判定分布、失败类别、各阶段完成数、总帧数/总时长，以及感知、标定、腕部残差、RTAB-Map 和仿真安全指标的 min/mean/P50/P95/max。
+
+只处理数据包中的一个 session 时，不使用批次脚本，直接运行主管道；`BATCH_ROOT` 指向公共标定所在的数据包根目录：
+
+```bash
+BATCH_ROOT=/data/test_data/2026-08-21T1225.50_20 \
+BAG_SESSION=/data/test_data/2026-08-21T1225.50_20/2026-08-21T1226.05 \
+RUN_QUALITY_CHECK=1 \
+RUN_ROBOT_SIMULATION=1 \
+scripts/run_sampler_bag_to_glove_trajectory.sh
+```
+
+### 旧格式单 session 命令
 
 典型左手数据处理命令：
 
@@ -286,6 +384,15 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `WRIST_TRACK_MAX_STEP_M` | `0.007` | wrist 3D/root 单帧最大步长，由子流程读取 |
 | `REVIEW_HAND_DISPLAY_ROTATE_DEG` | `45` | 网页 3D 手部显示旋转参数；当前默认开启 `wrist -> middle_mcp` 竖直对齐时主要用于兼容旧命令 |
 | `REVIEW_RGB_WORKERS` | `8` | review web 并行导出 RGB JPEG 的线程数；轨迹和触觉由浏览器 Canvas 实时绘制，不再生成逐帧 JPEG |
+| `RUN_ROBOT_SIMULATION` | `1` | 自动运行双 UR5e replay、Mink 全轨迹安全求解和 MuJoCo 视频渲染；设为 `0` 可跳过 |
+| `SIMULATION_PYTHON` | `.venv-mujoco/bin/python` | 安装了 MuJoCo/Mink 的 Python；缺失时先运行 `simulation/dual_ur5e/setup.sh` |
+| `SIMULATION_CONFIG` | 批量验证推荐配置 | 机器人布局、桌面、碰撞距离、速度和加速度等仿真配置 |
+| `SIMULATION_CAMERA_CONFIG` | `viewer_camera.json` | 自动渲染视频使用的 MuJoCo 相机配置 |
+| `SIMULATION_GL` | `egl` | 无界面渲染后端；无 EGL 的机器可按环境改为 `osmesa` |
+| `SIMULATION_MAX_FRAMES` | `0` | 仿真帧数上限；`0` 表示完整轨迹，仅建议在冒烟测试时设置非零值 |
+| `REVIEW_SIMULATION_VIDEO` | 空 | 可选外部 MuJoCo MP4；非空时覆盖网页所用的自动仿真视频 |
+| `REVIEW_SIMULATION_SUMMARY` | 空 | 可选外部 summary JSON；非空时覆盖网页所用的自动安全摘要 |
+| `REVIEW_SIMULATION_NPZ` | 空 | 可选外部 NPZ；非空时覆盖网页所用的自动同步轨迹 |
 
 ## 输出目录
 
@@ -321,6 +428,33 @@ outputs/data/stable_bboxes.json
 
 outputs/summaries/*.json
 outputs/web/index.html
+outputs/summary.json
+outputs/simulation/*_source_dual_ur5e.npz
+outputs/simulation/*_mink_dual_ur5e.npz
+outputs/simulation/*_mink_dual_ur5e_summary.json
+outputs/simulation/*_mink_dual_ur5e.mp4
+```
+
+`outputs/summary.json` 是单个 session 的统一机器可读报告。主管道通过退出钩子生成它，因此正常完成、质量门禁失败或中途异常都会尽量留下当前状态。内容包括：
+
+- 总体判定和固定失败分类；
+- 轨迹帧数、时长、有效率、静止候选和尾段裁剪；
+- 左右手匹配率、视觉覆盖率、深度应用率、标定误差和腕部残差；
+- RTAB-Map 覆盖率、插值间隔和缺失位姿；
+- Mink/安全审计、最小间距、误差、恢复帧和失败帧；
+- 网页与关键产物状态，以及各缓存阶段完成情况；
+- 完整 `quality_report` 指标，便于未来增加统计项而不修改历史格式。
+
+也可以对已有 session 手动重建并聚合：
+
+```bash
+scripts/generate_session_summary.py \
+  --session postprocess_data/SESSION \
+  --quality_requested
+
+scripts/aggregate_postprocess_summaries.py \
+  --root postprocess_data \
+  --output postprocess_data/batch_summaries/all_sessions_summary.json
 ```
 
 默认仍保留左右手各自的 fusion、平滑、FK、标定和腕部追踪数据及 summary，只生成 stable bbox 和双手 HaMeR 2D 平滑视频，不生成双手 3D MP4；3D 轨迹通过 `outputs/web/index.html` 查看。需要恢复旧版单手/中间调试视频时设置 `RENDER_DEBUG_VIDEOS=1`，需要额外生成双手 3D MP4 时设置 `RENDER_FINAL_VIDEO=1`。
@@ -360,7 +494,7 @@ outputs/web/index.html
 网页包含：
 
 ```text
-左上：RGB 帧播放
+左上：RGB 帧播放；提供仿真视频时与 Robot/MuJoCo 画面左右并排
 左下：Head + hand 3D 轨迹播放
 右侧：数据基本信息、wrist x/y/z 曲线和当前 wrist 坐标
 底部：播放/暂停、重置、时间轴
@@ -372,6 +506,56 @@ outputs/web/index.html
 outputs/web/rgb_frames/*.jpg
 outputs/web/tactile_hand.png
 ```
+
+### 自动机器人仿真与 RGB 对比
+
+主管道默认在收集最终轨迹后自动执行以下步骤：
+
+1. 将人体双腕轨迹映射为双 UR5e 初始机器人轨迹。
+2. 使用 Mink 对完整重定时轨迹做碰撞约束求解和恢复尝试。
+3. 检查机器人自碰撞、双臂互碰、机架、桌面和安全平面的最小间距。
+4. 从最终 Mink 轨迹渲染 MP4，并自动接入 review web。
+
+仿真结果为 `FAIL` 时仍保留 NPZ、summary、视频和网页，便于大规模测试时
+统计失败率、定位失败帧和回看动作；`PASS` 也不代表允许直接下发真实机器人，
+因为负载、抓取物、线缆和未建模环境仍不在当前检查范围内。每个 session 的
+仿真阶段有独立内容缓存，输入轨迹、配置、模型资产或仿真代码未变化时会跳过。
+
+仅运行普通后处理、不需要仿真时：
+
+```bash
+RUN_ROBOT_SIMULATION=0 scripts/run_sampler_bag_to_glove_trajectory.sh
+```
+
+下面的显式参数方式仍可用于将已有或外部仿真结果接入网页。
+
+生成网页时提供已有的 MuJoCo 视频、summary 和 NPZ，顶部 RGB 区域会自动
+左右二分显示 RGB 与 Robot；轨迹、触觉、右侧信息和底部控制布局保持不变：
+
+```bash
+/home/lenovo/miniconda3/envs/hamer/bin/python scripts/generate_review_web.py \
+  --session /path/to/postprocess_session \
+  --simulation_video simulation/dual_ur5e/outputs/SESSION_dual_ur5e.mp4 \
+  --simulation_summary simulation/dual_ur5e/outputs/SESSION_dual_ur5e_summary.json \
+  --simulation_npz simulation/dual_ur5e/outputs/SESSION_dual_ur5e.npz
+```
+
+网页会把视频复制为：
+
+```text
+outputs/web/robot_simulation.mp4
+```
+
+播放、暂停、拖动和重置使用同一条底部时间轴。普通 replay NPZ 使用
+`pre_retime_times_sec -> retimed_path_times_sec` 做分段线性精确同步；旧版或
+二次 Mink 产物缺少成对时间节点时按总时长同步，并在生成结果的
+`simulation.sync_mode` 中标记为 `duration_scaled`。Robot 画面底部同时显示
+仿真 `PASS/FAIL`、最小环境间距和重定时后时长。
+
+若 `simulation/dual_ur5e/outputs/` 中存在以 session 名开头的标准
+`*_dual_ur5e.mp4`，脚本会自动发现；非标准文件名使用上面的显式参数。
+没有视频时页面保持原来的单 RGB 布局。需要关闭自动发现时添加
+`--no_simulation_video`。
 
 ### 采集风格网页
 
@@ -565,12 +749,19 @@ COMPACT_OUTPUTS=1
 
 ### 网页打不开或视频不播放
 
-网页不是直接播放 MP4；RGB 来自 `outputs/web/rgb_frames`，轨迹和触觉由 Canvas 绘制。确认这些文件存在：
+RGB 仍由 `outputs/web/rgb_frames` 播放，轨迹和触觉由 Canvas 绘制；只有可选
+Robot 对比画面使用 MP4。确认基础文件存在：
 
 ```text
 outputs/web/index.html
 outputs/web/rgb_frames/00000.jpg
 outputs/web/tactile_hand.png
+```
+
+启用 Robot 对比时还应存在：
+
+```text
+outputs/web/robot_simulation.mp4
 ```
 
 如果缺失，重新生成网页：

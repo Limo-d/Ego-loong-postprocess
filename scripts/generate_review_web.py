@@ -6,6 +6,7 @@ Outputs:
   outputs/web/index.html
   outputs/web/rgb_frames/*.jpg
   outputs/web/tactile_hand.png
+  outputs/web/robot_simulation.mp4  (when a simulation video is available)
 
 RGB uses frame-based playback rather than browser video decoding. Trajectory
 and tactile panels are rendered directly from embedded data with Canvas.
@@ -819,6 +820,125 @@ def remove_legacy_web_frame_dirs(web_dir: Path) -> None:
             shutil.rmtree(path)
 
 
+def resolve_simulation_asset(
+    session: Path,
+    explicit: Optional[str],
+    suffix: str,
+) -> Optional[Path]:
+    """Resolve an explicit asset or the newest session-named simulation output."""
+    if explicit:
+        path = Path(explicit).expanduser().resolve()
+        if not path.is_file():
+            raise FileNotFoundError(f"Missing simulation asset: {path}")
+        return path
+    output_dir = ROOT / "simulation" / "dual_ur5e" / "outputs"
+    candidates = list(output_dir.glob(f"{session.name}*{suffix}"))
+    return max(candidates, key=lambda path: path.stat().st_mtime) if candidates else None
+
+
+def simulation_sync_points(
+    npz_path: Optional[Path], review_duration: float, video_duration: float
+) -> tuple[List[List[float]], str]:
+    """Map source/RGB time to rendered robot time.
+
+    Normal replay NPZs retain equally sized pre-retime and retimed path knots,
+    which provide an exact piecewise-linear map. Older and second-pass Mink
+    artifacts can lack that pairing, so they use an explicit duration-scaled
+    fallback instead of pretending frame indices are synchronized.
+    """
+    if npz_path and npz_path.is_file():
+        with np.load(npz_path) as payload:
+            if "pre_retime_times_sec" in payload and "retimed_path_times_sec" in payload:
+                source = np.asarray(payload["pre_retime_times_sec"], dtype=np.float64)
+                robot = np.asarray(payload["retimed_path_times_sec"], dtype=np.float64)
+                if (
+                    source.ndim == 1
+                    and robot.ndim == 1
+                    and len(source) == len(robot)
+                    and len(source) >= 2
+                    and np.all(np.diff(source) >= 0.0)
+                    and np.all(np.diff(robot) >= 0.0)
+                ):
+                    # About 300 knots are visually indistinguishable from the full
+                    # 60 Hz map and keep the self-contained HTML compact.
+                    stride = max(1, int(np.ceil(len(source) / 300)))
+                    indices = list(range(0, len(source), stride))
+                    if indices[-1] != len(source) - 1:
+                        indices.append(len(source) - 1)
+                    points = [[float(source[i]), float(robot[i])] for i in indices]
+                    return points, "retimed_path"
+    return [[0.0, 0.0], [max(review_duration, 1e-6), max(video_duration, 0.0)]], "duration_scaled"
+
+
+def prepare_simulation_web_data(
+    session: Path,
+    web_dir: Path,
+    review_duration: float,
+    video_arg: Optional[str],
+    summary_arg: Optional[str],
+    npz_arg: Optional[str],
+) -> Optional[Dict[str, Any]]:
+    video_path = resolve_simulation_asset(session, video_arg, "_dual_ur5e.mp4")
+    if video_path is None:
+        return None
+
+    matching_summary = video_path.with_name(f"{video_path.stem}_summary.json")
+    matching_npz = video_path.with_suffix(".npz")
+    summary_path = (
+        resolve_simulation_asset(session, summary_arg, "_dual_ur5e_summary.json")
+        if summary_arg
+        else matching_summary
+        if matching_summary.is_file()
+        else resolve_simulation_asset(session, None, "_dual_ur5e_summary.json")
+    )
+    npz_path = (
+        resolve_simulation_asset(session, npz_arg, "_dual_ur5e.npz")
+        if npz_arg
+        else matching_npz
+        if matching_npz.is_file()
+        else resolve_simulation_asset(session, None, "_dual_ur5e.npz")
+    )
+    summary = read_json(summary_path, {}) if summary_path else {}
+    target = web_dir / "robot_simulation.mp4"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if video_path.resolve() != target.resolve():
+        shutil.copy2(video_path, target)
+
+    capture = cv2.VideoCapture(str(video_path))
+    fps = float(capture.get(cv2.CAP_PROP_FPS)) if capture.isOpened() else 0.0
+    frame_count = int(round(capture.get(cv2.CAP_PROP_FRAME_COUNT))) if capture.isOpened() else 0
+    width = int(round(capture.get(cv2.CAP_PROP_FRAME_WIDTH))) if capture.isOpened() else 0
+    height = int(round(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))) if capture.isOpened() else 0
+    capture.release()
+    video_duration = frame_count / fps if fps > 0.0 and frame_count > 0 else float(summary.get("duration_sec", 0.0) or 0.0)
+
+    safety = summary.get("safety_audit") or {}
+    verdict = str(summary.get("verdict") or safety.get("verdict") or "UNKNOWN").upper()
+    clearance = summary.get("minimum_clearance_m")
+    if clearance is None:
+        closest = (safety.get("closest_clearance") or {}).get("environment") or {}
+        clearance = closest.get("distance_m")
+    layout = summary.get("mount_layout") or {}
+    layout_name = layout.get("name") or Path(str(summary.get("config") or "")).stem or "MuJoCo"
+    points, sync_mode = simulation_sync_points(npz_path, review_duration, video_duration)
+    return {
+        "src": target.name,
+        "source_video": str(video_path),
+        "summary": str(summary_path) if summary_path else None,
+        "npz": str(npz_path) if npz_path else None,
+        "verdict": verdict,
+        "minimum_clearance_m": float(clearance) if clearance is not None else None,
+        "layout": str(layout_name),
+        "duration_sec": float(video_duration),
+        "fps": fps,
+        "frame_count": frame_count,
+        "width": width,
+        "height": height,
+        "sync_mode": sync_mode,
+        "sync_points": points,
+    }
+
+
 def load_frame_times(traj_path: Path, fallback_fps: float = 30.0) -> tuple[List[float], float]:
     rows = [json.loads(line) for line in traj_path.read_text(encoding="utf-8").splitlines() if line.strip()]
     fps = nominal_fps(rows, fallback=fallback_fps)
@@ -981,6 +1101,7 @@ def write_html(
     frame_times: List[float],
     fps: float = 30.0,
     output_subdir: str = "web",
+    simulation_data: Optional[Dict[str, Any]] = None,
 ) -> Path:
     outputs = session / "outputs"
     summary = read_json(outputs / "summaries" / "trajectory_3d_camera_frame.json", {})
@@ -998,6 +1119,12 @@ def write_html(
     traj_json = json.dumps(trajectory_data, separators=(",", ":"))
     tactile_json = json.dumps(tactile_data, separators=(",", ":"))
     frame_times_json = json.dumps(frame_times, separators=(",", ":"))
+    simulation_json = json.dumps(simulation_data, separators=(",", ":")) if simulation_data else "null"
+    hero_class = "heroPanel" if simulation_data else "heroPanel singleView"
+    simulation_markup = ""
+    if simulation_data:
+        simulation_markup = '''<div class="heroPane robotPane"><div class="badge">Robot · MuJoCo</div><video id="simulationVideo" muted playsinline preload="metadata"></video>
+<div class="simInfo" id="simInfo"><span class="simVerdict" id="simVerdict">--</span><span id="simClearance">Clearance --</span><span id="simDuration">Retimed --</span></div></div>'''
     html = f'''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>第一视角采集</title>
@@ -1006,7 +1133,8 @@ def write_html(
 *{{box-sizing:border-box}} body{{margin:0;width:100vw;height:100vh;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}}
 .shell{{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform:translate(-50%,-50%) scale(var(--scale));transform-origin:center center;display:grid;grid-template-rows:42px 554px 44px;gap:10px;padding:18px 48px 16px;background:var(--bg)}}
 .topbar{{display:grid;grid-template-columns:160px 1fr 160px;align-items:center;height:42px}}.topbar:before{{content:"退出采集";justify-self:start;width:88px;height:28px;line-height:26px;text-align:center;border:1px solid #ef4444;border-radius:4px;color:#ef4444;background:#fff;font-size:13px;font-weight:700}}.topbar>div:first-child{{grid-column:2;text-align:center}}.topbar h1{{margin:0;font-size:22px;line-height:1.1;color:#1d5ecb;font-weight:800;letter-spacing:0}}.sub{{display:none}}.status{{grid-column:3;justify-self:end;display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:6px;color:var(--muted);font-size:12px}}.dot{{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,.12)}}
-.main{{display:grid;grid-template-columns:676px 474px;gap:28px;height:554px;min-height:0;align-items:start}}.stage{{display:grid;grid-template-rows:380px 164px;gap:10px;width:676px;height:554px;min-height:0}}.lowerStage{{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0}}.panel{{background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);overflow:hidden}}.videoPanel{{position:relative;background:#06101d;height:100%;min-height:0}}.videoPanel canvas{{width:100%;height:100%;display:block;background:#06101d}}.lowerStage .videoPanel,.lowerStage .videoPanel canvas{{background:#e4eef6}}.lowerStage .tactilePanel,.lowerStage .tactilePanel canvas{{background:#e4eef6}}.trajPanel canvas{{cursor:grab}}.trajPanel.dragging canvas{{cursor:grabbing}}.badge{{position:absolute;left:5px;top:5px;z-index:2;padding:3px 7px;border-radius:4px;background:rgba(44,64,86,.78);border:1px solid rgba(255,255,255,.30);color:#f5f9fc;font-size:10px;line-height:1.1;font-weight:620;letter-spacing:0;backdrop-filter:blur(8px)}}
+.main{{display:grid;grid-template-columns:676px 474px;gap:28px;height:554px;min-height:0;align-items:start}}.stage{{display:grid;grid-template-rows:380px 164px;gap:10px;width:676px;height:554px;min-height:0}}.lowerStage{{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0}}.panel{{background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);overflow:hidden}}.videoPanel{{position:relative;background:#06101d;height:100%;min-height:0}}.videoPanel canvas{{width:100%;height:100%;display:block;background:#06101d}}.heroPanel{{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#d9e4ef}}.heroPanel.singleView{{grid-template-columns:1fr}}.heroPane{{position:relative;min-width:0;min-height:0;overflow:hidden;background:#06101d}}.heroPane canvas,.heroPane video{{width:100%;height:100%;display:block;object-fit:contain;background:#06101d}}.lowerStage .videoPanel,.lowerStage .videoPanel canvas{{background:#e4eef6}}.lowerStage .tactilePanel,.lowerStage .tactilePanel canvas{{background:#e4eef6}}.trajPanel canvas{{cursor:grab}}.trajPanel.dragging canvas{{cursor:grabbing}}.badge{{position:absolute;left:5px;top:5px;z-index:3;padding:3px 7px;border-radius:4px;background:rgba(44,64,86,.78);border:1px solid rgba(255,255,255,.30);color:#f5f9fc;font-size:10px;line-height:1.1;font-weight:620;letter-spacing:0;backdrop-filter:blur(8px)}}
+.simInfo{{position:absolute;left:7px;right:7px;bottom:7px;z-index:4;display:flex;justify-content:center;align-items:center;gap:6px;padding:5px 7px;border:1px solid rgba(255,255,255,.24);border-radius:6px;background:rgba(15,28,43,.76);color:#dce7f1;font-size:9px;line-height:1;backdrop-filter:blur(10px)}}.simInfo span{{padding-right:6px;border-right:1px solid rgba(255,255,255,.20);white-space:nowrap}}.simInfo span:last-child{{padding-right:0;border-right:0}}.simVerdict{{font-weight:850;letter-spacing:.04em;color:#fbbf24}}.simVerdict.pass{{color:#4ade80}}.simVerdict.fail{{color:#fb7185}}
 .side{{width:474px;height:554px;padding:12px;display:grid;grid-template-rows:92px 1fr 100px;gap:8px;min-height:0}}.section-title{{display:flex;align-items:center;justify-content:center;position:relative;font-weight:800;font-size:15px;margin-bottom:9px;color:#334155}}.section-title:before,.section-title:after{{content:"";height:1px;background:#e2e8f0;flex:1;margin:0 18px}}.frameTag{{position:absolute;right:0;color:var(--muted);font-size:11px;font-weight:600}}.grid3{{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}}.metric{{height:58px;padding:9px;border:1px solid #e7eef6;border-radius:6px;background:#f8fbfe;text-align:center}}.label{{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}.value{{margin-top:5px;color:var(--blue);font-size:17px;font-weight:800}}.unit{{color:var(--muted);font-size:11px;margin-left:2px}}.chartBox{{height:100%;min-height:0;display:grid;grid-template-rows:42px 1fr;padding:8px;border:1px solid #e4edf6;border-radius:6px;background:#fbfdff}}.legend{{display:grid;grid-template-columns:repeat(3,1fr);row-gap:5px;color:var(--muted);font-size:11px;padding:1px 4px 5px}}.legend span:before{{content:"";display:inline-block;width:16px;height:3px;border-radius:9px;margin-right:5px;vertical-align:middle}}.llx:before{{background:#2563eb}}.lly:before{{background:#ea580c}}.llz:before{{background:#16a34a}}.rrx:before{{background:#7c3aed}}.rry:before{{background:#db2777}}.rrz:before{{background:#0891b2}}#chartCanvas{{width:100%;height:100%;min-height:0}}.current{{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 8px}}.readout{{border:1px solid #e7eef6;border-radius:5px;padding:6px 9px;background:#fff;height:47px}}.readout b{{display:block;color:var(--muted);font-size:10px;margin-bottom:3px}}.readout span{{font-size:13px;font-weight:760}}.timeline{{display:grid;grid-template-columns:122px 1fr 116px;align-items:center;gap:10px;height:44px;padding:7px 10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow)}}.controls{{display:flex;gap:7px}}button{{height:30px;min-width:56px;border:0;border-radius:6px;background:var(--blue);color:white;padding:0 12px;font-size:12px;font-weight:750;cursor:pointer}}button.secondary{{min-width:50px;background:#e2e8f0;color:#1e293b}}input[type=range]{{width:100%;accent-color:var(--blue)}}.time{{min-width:108px;text-align:right;color:var(--muted);font-size:12px}}
 .side{{grid-template-rows:92px 1fr 153px}}
 .chartBox{{grid-template-rows:59px 1fr}}
@@ -1014,16 +1142,20 @@ def write_html(
 .timeline{{grid-template-columns:220px 1fr 116px}}button.coord{{min-width:92px;background:#0f766e}}
 </style></head>
 <body><div class="shell"><header class="topbar"><div><h1>第一人称数据采集</h1><div class="sub">review</div></div><div class="status"><span class="dot"></span><span>审核进度 · 69/100</span></div></header>
-<main class="main"><section class="stage"><div class="panel videoPanel"><div class="badge">RGB</div><canvas id="rgbCanvas"></canvas></div><div class="lowerStage"><div class="panel videoPanel trajPanel"><div class="badge" id="trajBadge">Trajectory · World</div><canvas id="trajCanvas"></canvas></div><div class="panel videoPanel tactilePanel"><div class="badge">Tactile</div><canvas id="tactileCanvas"></canvas></div></div></section>
+<main class="main"><section class="stage"><div class="panel videoPanel {hero_class}" id="heroPanel"><div class="heroPane rgbPane"><div class="badge">RGB</div><canvas id="rgbCanvas"></canvas></div>{simulation_markup}</div><div class="lowerStage"><div class="panel videoPanel trajPanel"><div class="badge" id="trajBadge">Trajectory · World</div><canvas id="trajCanvas"></canvas></div><div class="panel videoPanel tactilePanel"><div class="badge">Tactile</div><canvas id="tactileCanvas"></canvas></div></div></section>
 <aside class="panel side"><section><div class="section-title"><span>采集信息</span><span class="frameTag" id="frameTag">0 / {frames}</span></div><div class="grid3"><div class="metric"><div class="label">采集时长</div><div class="value">{duration:.2f}<span class="unit">s</span></div></div><div class="metric"><div class="label">实时帧率</div><div class="value">{fps:.1f}<span class="unit">fps</span></div></div><div class="metric"><div class="label">有效帧（左/右）</div><div class="value">{left_valid}/{right_valid}</div></div></div></section><section class="chartBox"><div class="legend"><span class="llx">左手 x</span><span class="lly">左手 y</span><span class="llz">左手 z</span><span class="rrx">右手 x</span><span class="rry">右手 y</span><span class="rrz">右手 z</span></div><canvas id="chartCanvas"></canvas></section><section class="current"><div class="readout"><b>左手 wrist x · world</b><span id="lxNow">--</span></div><div class="readout"><b>左手 wrist y · world</b><span id="lyNow">--</span></div><div class="readout"><b>左手 wrist z · world</b><span id="lzNow">--</span></div><div class="readout"><b>右手 wrist x · world</b><span id="rxNow">--</span></div><div class="readout"><b>右手 wrist y · world</b><span id="ryNow">--</span></div><div class="readout"><b>右手 wrist z · world</b><span id="rzNow">--</span></div></section></aside></main>
 <footer class="timeline"><div class="controls"><button id="playBtn">播放</button><button class="secondary" id="resetBtn">重置</button><button class="coord" id="coordBtn">坐标：World</button></div><input id="scrub" type="range" min="0" max="{duration:.6f}" step="0.01" value="0"><div class="time"><span id="timeNow">0.00</span>s / {duration:.2f}s</div></footer></div>
 <script>
 function fitShell(){{const scale=Math.min(window.innerWidth/1280,window.innerHeight/720);document.documentElement.style.setProperty('--scale',String(scale));}}
 window.addEventListener('resize',fitShell);fitShell();
-const DATA={chart_json}; const TRAJ={traj_json}; const TACTILE={tactile_json}; const FRAME_TIMES={frame_times_json}; const DURATION={duration:.6f}; const FPS={fps:.6f}; const FRAME_COUNT={frames}; const TACTILE_CANVAS_BG="{TACTILE_CANVAS_BG}"; const TRAJECTORY_CANVAS_BG="{TRAJECTORY_CANVAS_BG}";
+const DATA={chart_json}; const TRAJ={traj_json}; const TACTILE={tactile_json}; const SIMULATION={simulation_json}; const FRAME_TIMES={frame_times_json}; const DURATION={duration:.6f}; const FPS={fps:.6f}; const FRAME_COUNT={frames}; const TACTILE_CANVAS_BG="{TACTILE_CANVAS_BG}"; const TRAJECTORY_CANVAS_BG="{TRAJECTORY_CANVAS_BG}";
 const COORD_KEYS=['lx','ly','lz','rx','ry','rz','hx','hy','hz']; DATA.forEach(p=>COORD_KEYS.forEach(k=>p['w'+k]=p[k])); const WORLD_TRAJ={{frames:TRAJ.frames,center:TRAJ.center,radius:TRAJ.radius,default_yaw:TRAJ.default_yaw,screen_x_sign:TRAJ.screen_x_sign}};
 const rgbFrames=Array.from({{length:FRAME_COUNT}},(_,i)=>`rgb_frames/${{String(i).padStart(5,'0')}}.jpg`);
-const rgbCanvas=document.getElementById('rgbCanvas'),trajCanvas=document.getElementById('trajCanvas'),tactileCanvas=document.getElementById('tactileCanvas'),rgbCtx=rgbCanvas.getContext('2d'),trajCtx=trajCanvas.getContext('2d'),tactileCtx=tactileCanvas.getContext('2d'),playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn'),coordBtn=document.getElementById('coordBtn'),trajBadge=document.getElementById('trajBadge'),scrub=document.getElementById('scrub'),timeNow=document.getElementById('timeNow'),frameTag=document.getElementById('frameTag'),lxNow=document.getElementById('lxNow'),lyNow=document.getElementById('lyNow'),lzNow=document.getElementById('lzNow'),rxNow=document.getElementById('rxNow'),ryNow=document.getElementById('ryNow'),rzNow=document.getElementById('rzNow'),canvas=document.getElementById('chartCanvas'),ctx=canvas.getContext('2d'); let frame=0,playing=false,lastTs=0,playTime=0,coordMode='world'; const imgCache=new Map();
+const rgbCanvas=document.getElementById('rgbCanvas'),trajCanvas=document.getElementById('trajCanvas'),tactileCanvas=document.getElementById('tactileCanvas'),rgbCtx=rgbCanvas.getContext('2d'),trajCtx=trajCanvas.getContext('2d'),tactileCtx=tactileCanvas.getContext('2d'),simulationVideo=document.getElementById('simulationVideo'),simVerdict=document.getElementById('simVerdict'),simClearance=document.getElementById('simClearance'),simDuration=document.getElementById('simDuration'),playBtn=document.getElementById('playBtn'),resetBtn=document.getElementById('resetBtn'),coordBtn=document.getElementById('coordBtn'),trajBadge=document.getElementById('trajBadge'),scrub=document.getElementById('scrub'),timeNow=document.getElementById('timeNow'),frameTag=document.getElementById('frameTag'),lxNow=document.getElementById('lxNow'),lyNow=document.getElementById('lyNow'),lzNow=document.getElementById('lzNow'),rxNow=document.getElementById('rxNow'),ryNow=document.getElementById('ryNow'),rzNow=document.getElementById('rzNow'),canvas=document.getElementById('chartCanvas'),ctx=canvas.getContext('2d'); let frame=0,playing=false,lastTs=0,playTime=0,coordMode='world'; const imgCache=new Map();
+if(SIMULATION&&simulationVideo){{simulationVideo.src=SIMULATION.src;const verdict=String(SIMULATION.verdict||'UNKNOWN').toUpperCase();simVerdict.textContent=verdict;simVerdict.classList.toggle('pass',verdict==='PASS');simVerdict.classList.toggle('fail',verdict==='FAIL');simClearance.textContent=Number.isFinite(SIMULATION.minimum_clearance_m)?`Clearance ${{(SIMULATION.minimum_clearance_m*1000).toFixed(1)}} mm`:'Clearance --';simDuration.textContent=Number.isFinite(SIMULATION.duration_sec)?`Retimed ${{SIMULATION.duration_sec.toFixed(1)}} s`:'Retimed --';simulationVideo.addEventListener('loadedmetadata',()=>syncSimulation(playTime,true));}}
+function simulationTime(t){{if(!SIMULATION)return 0;const pts=SIMULATION.sync_points||[];if(pts.length<2)return DURATION>0?t*(SIMULATION.duration_sec||DURATION)/DURATION:t;let lo=0,hi=pts.length-1;if(t<=pts[0][0])return pts[0][1];if(t>=pts[hi][0])return pts[hi][1];while(lo+1<hi){{const mid=(lo+hi)>>1;if(pts[mid][0]<=t)lo=mid;else hi=mid}}const a=pts[lo],b=pts[hi],u=(t-a[0])/Math.max(1e-9,b[0]-a[0]);return a[1]+u*(b[1]-a[1])}}
+function simulationRate(t){{if(!SIMULATION)return 1;const e=Math.min(DURATION,Math.max(0,t+.05)),s=Math.max(0,t-.05);return clamp((simulationTime(e)-simulationTime(s))/Math.max(1e-6,e-s),.25,4)}}
+function syncSimulation(t,hard=false){{if(!simulationVideo||!SIMULATION)return;const target=simulationTime(t);simulationVideo.playbackRate=simulationRate(t);if(hard||!Number.isFinite(simulationVideo.currentTime)||Math.abs(simulationVideo.currentTime-target)>.14){{try{{simulationVideo.currentTime=target}}catch(_error){{}}}}}}
 function nearest(t){{let b=null,bd=1e9;for(const p of DATA){{const d=Math.abs(p.t-t);if(d<bd){{bd=d;b=p}}}}return b}} function activeTraj(){{return coordMode==='camera'?(TRAJ.camera||WORLD_TRAJ):WORLD_TRAJ}} function fmt(v){{return Number.isFinite(v)?v.toFixed(3)+' m':'--'}} function loadImage(src){{if(imgCache.has(src))return imgCache.get(src);const im=new Image();im.src=src;imgCache.set(src,im);return im}} function preload(i){{for(let k=-2;k<=8;k++){{const j=Math.max(0,Math.min(FRAME_COUNT-1,i+k));loadImage(rgbFrames[j]);}}loadImage('tactile_hand.png');}}
 
 function defaultTrajView(){{const a=activeTraj();return {{yaw:Number.isFinite(a.default_yaw)?a.default_yaw:-2.3517,pitch:0.0,roll:3.1415926536,zoom:1}}}}
@@ -1052,8 +1184,8 @@ trajCanvas.addEventListener('pointerup',e=>{{trajView.drag=false;trajCanvas.pare
 trajCanvas.addEventListener('pointercancel',e=>{{trajView.drag=false;trajCanvas.parentElement.classList.remove('dragging');}});
 trajCanvas.addEventListener('wheel',e=>{{e.preventDefault();trajView.zoom=clamp(trajView.zoom*(e.deltaY<0?1.08:0.92),0.45,3.0);drawAll();}},{{passive:false}});
 
-function resizeOne(c){{const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(160,Math.floor(r.width*d));c.height=Math.max(120,Math.floor(r.height*d));}} function drawImageFit(ctx,c,im,bg='#06101d'){{const w=c.width,h=c.height;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);if(!im.complete||!im.naturalWidth){{im.onload=()=>drawAll();return}}const s=Math.min(w/im.naturalWidth,h/im.naturalHeight),iw=im.naturalWidth*s,ih=im.naturalHeight*s;ctx.drawImage(im,(w-iw)/2,(h-ih)/2,iw,ih)}} function drawFrames(){{preload(frame);drawImageFit(rgbCtx,rgbCanvas,loadImage(rgbFrames[frame]));drawTrajectory();drawTactile();}}
-function frameForTime(t){{let lo=0,hi=FRAME_COUNT-1;while(lo<hi){{const mid=Math.ceil((lo+hi)/2);if(FRAME_TIMES[mid]<=t)lo=mid;else hi=mid-1}}return lo}} function updateReadout(t){{t=Math.max(0,Math.min(DURATION,t||0));scrub.value=String(t);timeNow.textContent=t.toFixed(2);frameTag.textContent=frame+' / '+(FRAME_COUNT-1);const p=nearest(t);if(p){{lxNow.textContent=fmt(p.lx);lyNow.textContent=fmt(p.ly);lzNow.textContent=fmt(p.lz);rxNow.textContent=fmt(p.rx);ryNow.textContent=fmt(p.ry);rzNow.textContent=fmt(p.rz)}}drawChart(t)}} function seekTime(t){{playTime=Math.max(0,Math.min(DURATION,t||0));frame=frameForTime(playTime);drawFrames();updateReadout(playTime)}} function setFrame(i){{frame=Math.max(0,Math.min(FRAME_COUNT-1,Math.round(i)));playTime=FRAME_TIMES[frame]||0;drawFrames();updateReadout(playTime)}} function drawAll(){{drawFrames();updateReadout(playTime)}} function tick(ts){{if(!lastTs)lastTs=ts;const dt=(ts-lastTs)/1000;lastTs=ts;if(playing){{playTime+=dt;if(playTime>DURATION)playTime=0;frame=frameForTime(playTime);drawAll()}}requestAnimationFrame(tick)}} function play(){{playing=true;playBtn.textContent='暂停';lastTs=0}} function pause(){{playing=false;playBtn.textContent='播放'}} playBtn.onclick=()=>playing?pause():play(); resetBtn.onclick=()=>{{pause();resetTrajView();setFrame(0)}}; scrub.oninput=()=>{{pause();seekTime(Number(scrub.value))}};
+function resizeOne(c){{const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(160,Math.floor(r.width*d));c.height=Math.max(120,Math.floor(r.height*d));}} function drawImageFit(ctx,c,im,bg='#06101d'){{const w=c.width,h=c.height;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);if(!im.complete||!im.naturalWidth){{im.onload=()=>drawAll();return}}const s=Math.min(w/im.naturalWidth,h/im.naturalHeight),iw=im.naturalWidth*s,ih=im.naturalHeight*s;ctx.drawImage(im,(w-iw)/2,(h-ih)/2,iw,ih)}} function drawFrames(){{preload(frame);drawImageFit(rgbCtx,rgbCanvas,loadImage(rgbFrames[frame]));drawTrajectory();drawTactile();syncSimulation(playTime,!playing)}}
+function frameForTime(t){{let lo=0,hi=FRAME_COUNT-1;while(lo<hi){{const mid=Math.ceil((lo+hi)/2);if(FRAME_TIMES[mid]<=t)lo=mid;else hi=mid-1}}return lo}} function updateReadout(t){{t=Math.max(0,Math.min(DURATION,t||0));scrub.value=String(t);timeNow.textContent=t.toFixed(2);frameTag.textContent=frame+' / '+(FRAME_COUNT-1);const p=nearest(t);if(p){{lxNow.textContent=fmt(p.lx);lyNow.textContent=fmt(p.ly);lzNow.textContent=fmt(p.lz);rxNow.textContent=fmt(p.rx);ryNow.textContent=fmt(p.ry);rzNow.textContent=fmt(p.rz)}}drawChart(t)}} function seekTime(t){{playTime=Math.max(0,Math.min(DURATION,t||0));frame=frameForTime(playTime);drawFrames();updateReadout(playTime)}} function setFrame(i){{frame=Math.max(0,Math.min(FRAME_COUNT-1,Math.round(i)));playTime=FRAME_TIMES[frame]||0;drawFrames();updateReadout(playTime)}} function drawAll(){{drawFrames();updateReadout(playTime)}} function tick(ts){{if(!lastTs)lastTs=ts;const dt=(ts-lastTs)/1000;lastTs=ts;if(playing){{playTime+=dt;if(playTime>DURATION){{playTime=0;syncSimulation(0,true)}}frame=frameForTime(playTime);drawAll()}}requestAnimationFrame(tick)}} function play(){{playing=true;playBtn.textContent='暂停';lastTs=0;if(simulationVideo){{syncSimulation(playTime,true);simulationVideo.play().catch(()=>{{}})}}}} function pause(){{playing=false;playBtn.textContent='播放';if(simulationVideo)simulationVideo.pause()}} playBtn.onclick=()=>playing?pause():play(); resetBtn.onclick=()=>{{pause();resetTrajView();setFrame(0)}}; scrub.oninput=()=>{{pause();seekTime(Number(scrub.value))}};
 function resize(){{fitShell();resizeOne(rgbCanvas);resizeOne(trajCanvas);resizeOne(tactileCanvas);const r=canvas.getBoundingClientRect(),d=window.devicePixelRatio||1;canvas.width=Math.max(320,Math.floor(r.width*d));canvas.height=Math.max(180,Math.floor(r.height*d));drawAll()}} function drawChart(t){{const dpr=window.devicePixelRatio||1,w=canvas.width,h=canvas.height,p={{l:54*dpr,r:18*dpr,t:16*dpr,b:34*dpr}};ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,w,h);const keys=['lx','ly','lz','rx','ry','rz'],vals=[];DATA.forEach(d=>keys.forEach(k=>{{if(Number.isFinite(d[k]))vals.push(d[k])}}));let mn=vals.length?Math.min(...vals):-1,mx=vals.length?Math.max(...vals):1,sp=Math.max(.001,mx-mn);mn-=sp*.08;mx+=sp*.08;const sx=v=>p.l+(w-p.l-p.r)*v/DURATION,sy=v=>p.t+(h-p.t-p.b)*(1-(v-mn)/(mx-mn));ctx.strokeStyle='#e2e8f0';ctx.lineWidth=1*dpr;ctx.fillStyle='#64748b';ctx.font=`${{12*dpr}}px system-ui`;for(let i=0;i<=5;i++){{const y=p.t+(h-p.t-p.b)*i/5;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();ctx.fillText((mx-(mx-mn)*i/5).toFixed(2),8*dpr,y+4*dpr)}}for(let i=0;i<=4;i++){{const x=p.l+(w-p.l-p.r)*i/4;ctx.beginPath();ctx.moveTo(x,p.t);ctx.lineTo(x,h-p.b);ctx.stroke();ctx.fillText((DURATION*i/4).toFixed(1)+'s',x-12*dpr,h-10*dpr)}}function line(k,c){{ctx.beginPath();let drawing=false;DATA.forEach(pt=>{{if(!Number.isFinite(pt[k])){{drawing=false;return}}const x=sx(pt.t),y=sy(pt[k]);if(!drawing){{ctx.moveTo(x,y);drawing=true}}else ctx.lineTo(x,y)}});ctx.strokeStyle=c;ctx.lineWidth=2.1*dpr;ctx.stroke()}}line('lx','#2563eb');line('ly','#ea580c');line('lz','#16a34a');line('rx','#7c3aed');line('ry','#db2777');line('rz','#0891b2');const x=sx(t);ctx.strokeStyle='#0f172a';ctx.lineWidth=1.6*dpr;ctx.beginPath();ctx.moveTo(x,p.t);ctx.lineTo(x,h-p.b);ctx.stroke()}}
 document.querySelector('.legend').insertAdjacentHTML('beforeend','<span class="hhx">头部 x</span><span class="hhy">头部 y</span><span class="hhz">头部 z</span>');
 document.querySelector('.current').insertAdjacentHTML('beforeend','<div class="readout"><b>头部 camera x · world</b><span id="hxNow">--</span></div><div class="readout"><b>头部 camera y · world</b><span id="hyNow">--</span></div><div class="readout"><b>头部 camera z · world</b><span id="hzNow">--</span></div>');
@@ -1085,6 +1217,10 @@ def main() -> None:
     parser.add_argument("--rgb_workers", type=int, default=8, help="Parallel RGB PNG-to-JPEG workers.")
     parser.add_argument("--fps", type=float, default=30.0, help="Fallback/nominal FPS only; playback timing comes from trajectory rgb_stamp_ns.")
     parser.add_argument("--output_subdir", default="web", help="Subdirectory under outputs for the generated web page, e.g. web_collect to avoid overwriting outputs/web.")
+    parser.add_argument("--simulation_video", help="Optional MuJoCo MP4; defaults to a session-named file in simulation/dual_ur5e/outputs.")
+    parser.add_argument("--simulation_summary", help="Optional replay/Mink summary JSON shown in the robot panel.")
+    parser.add_argument("--simulation_npz", help="Optional replay/Mink NPZ used to map RGB time to the retimed robot video.")
+    parser.add_argument("--no_simulation_video", action="store_true", help="Disable automatic simulation-video discovery.")
     args = parser.parse_args()
     session = Path(args.session).expanduser().resolve()
     outputs = session / "outputs"
@@ -1106,8 +1242,21 @@ def main() -> None:
     chart_rows = build_chart_data(traj_path, frame_times)
     web_hand_display_scale = float(args.hand_display_scale)
     trajectory_data = build_trajectory_web_data(rows, all_points, hand_display_scale=web_hand_display_scale)
-    html_path = write_html(session, chart_rows, trajectory_data, tactile_data, frame_times, fps=actual_fps, output_subdir=args.output_subdir)
-    print(json.dumps({"html": str(html_path), "frames": len(rows), "rgb_frames": rgb_written, "trajectory_renderer": "canvas", "tactile_renderer": "canvas", "tactile_asset": str(tactile_asset), "hand_display_rotate_deg": args.hand_display_rotate_deg, "hand_display_scale": args.hand_display_scale, "web_hand_display_scale": web_hand_display_scale, "scene_display_scale": args.scene_display_scale, "fps": actual_fps, "duration_sec": frame_times[-1] if frame_times else 0.0, "timebase": "rgb_stamp_ns", "output_subdir": args.output_subdir, "align_middle_vertical": args.align_middle_vertical}, ensure_ascii=False))
+    review_duration = frame_times[-1] if frame_times else 0.0
+    simulation_data = None
+    if not args.no_simulation_video:
+        simulation_data = prepare_simulation_web_data(
+            session,
+            web_dir,
+            review_duration,
+            args.simulation_video,
+            args.simulation_summary,
+            args.simulation_npz,
+        )
+    if simulation_data is None:
+        (web_dir / "robot_simulation.mp4").unlink(missing_ok=True)
+    html_path = write_html(session, chart_rows, trajectory_data, tactile_data, frame_times, fps=actual_fps, output_subdir=args.output_subdir, simulation_data=simulation_data)
+    print(json.dumps({"html": str(html_path), "frames": len(rows), "rgb_frames": rgb_written, "trajectory_renderer": "canvas", "tactile_renderer": "canvas", "tactile_asset": str(tactile_asset), "hand_display_rotate_deg": args.hand_display_rotate_deg, "hand_display_scale": args.hand_display_scale, "web_hand_display_scale": web_hand_display_scale, "scene_display_scale": args.scene_display_scale, "fps": actual_fps, "duration_sec": review_duration, "timebase": "rgb_stamp_ns", "output_subdir": args.output_subdir, "align_middle_vertical": args.align_middle_vertical, "simulation": simulation_data}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

@@ -113,6 +113,12 @@ def main() -> None:
     parser.add_argument("--npz", required=True)
     parser.add_argument("--output_npz", required=True)
     parser.add_argument("--output_summary", required=True)
+    parser.add_argument("--output_video", help="Optional MP4 rendered from the final Mink trajectory")
+    parser.add_argument(
+        "--camera_config",
+        default=str(Path(__file__).with_name("viewer_camera.json")),
+        help="Free-camera JSON used when --output_video is set",
+    )
     parser.add_argument("--max_frames", type=int, default=0)
     parser.add_argument("--iterations_per_frame", type=int, default=30)
     parser.add_argument("--dt", type=float, default=0.02)
@@ -457,12 +463,22 @@ def main() -> None:
     output_npz.parent.mkdir(parents=True, exist_ok=True)
     output_summary.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(output_npz, **output_arrays)
+    output_video = None
+    if args.output_video:
+        output_video = Path(args.output_video).expanduser().resolve()
+        output_video.parent.mkdir(parents=True, exist_ok=True)
+        camera_path = Path(args.camera_config).expanduser().resolve()
+        camera_state = replay.load_camera_state(camera_path)
+        replay.render_video(model, qpos, targets, output_video, config, camera_state)
+    summary["npz"] = str(output_npz)
+    summary["video"] = str(output_video) if output_video is not None else None
     output_summary.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(
         json.dumps(
             {
                 "npz": str(output_npz),
                 "summary": str(output_summary),
+                "video": str(output_video) if output_video is not None else None,
                 **{
                     key: summary[key]
                     for key in (
