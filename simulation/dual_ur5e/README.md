@@ -45,6 +45,9 @@ The setup creates `.venv-mujoco` and sparsely downloads Google DeepMind's
 BSD-3-Clause UR5e model from:
 https://github.com/google-deepmind/mujoco_menagerie/tree/main/universal_robots_ur5e
 
+The environment also installs and pins `mink==1.3.0`; the collision-aware IK
+validation and trajectory tools below use this version.
+
 The OmniPicker link geometry and kinematics come from AgiBot's official Genie
 Sim repository. `omnipicker.xml` transcribes its link transforms, limits,
 masses and mimic ratios. The included `assets/omnipicker/ur5e_adapter.stl` is
@@ -133,9 +136,105 @@ MUJOCO_GL=egl .venv-mujoco/bin/python simulation/dual_ur5e/replay_trajectory.py 
   --video
 ```
 
-The search is not hardware authorization. Table, payload, object contacts,
-cables and measured camera-to-body/TCP extrinsics still need to be added before
-real-robot playback.
+The search is not hardware authorization. The table-aware layouts model the
+stand and table, but payload, object contacts, cables, other surroundings, and
+measured camera-to-body/TCP extrinsics still need to be added before real-robot
+playback.
+
+## Table-aware collision validation and Mink IK
+
+The shoulder-layout config now includes a collision-enabled 1.20 x 0.60 m
+table with a 0.75 m top surface, legs, and an invisible safety plane. When
+`table_geometry.minimum_tcp_height_m` is set, both raw target construction and
+Cartesian conditioning clamp the TCP target above that height. The final
+safety audit measures the robot's collision shapes and rendered link envelope
+against the floor, tabletop, safety plane, and table legs; it also retains the
+inter-arm and torso/shoulder checks. The default environment clearance for the
+table layouts is 2 cm.
+
+Three configs capture the current table-clearance candidates:
+
+- `config_table_2cm_fixed_initial.json` adds fixed initial TCP orientation to
+  the table-calibrated shoulder layout.
+- `config_table_2cm_52cm_1m_outward.json` uses 52 cm base spacing, 1.00 m base
+  height, outward-elbow home joints, and a 5 cm rearward mast/column offset. Its
+  dense kinematic path passed, but it still requires dynamic replay validation.
+- `config_table_2cm_52cm_108cm_outward.json` raises the bases to 1.08 m to
+  provide table clearance for the rendered/physical link envelope. It remains
+  a candidate until the complete dynamic replay passes.
+
+Use the same config to generate the source replay NPZ and for every subsequent
+validation step. The NPZ must contain the retimed targets, target rotation
+matrices, and a `qpos_rad` array matching that model:
+
+```bash
+CONFIG=simulation/dual_ur5e/config_table_2cm_52cm_108cm_outward.json
+SESSION=postprocess_data/SESSION_DIRECTORY
+NAME=table_2cm_108cm
+
+MUJOCO_GL=egl .venv-mujoco/bin/python simulation/dual_ur5e/replay_trajectory.py \
+  --session "$SESSION" \
+  --config "$CONFIG" \
+  --name "$NAME" \
+  --video
+
+SOURCE_NPZ=simulation/dual_ur5e/outputs/${NAME}_dual_ur5e.npz
+```
+
+For a quick diagnosis of one difficult retimed frame, run the single-frame
+solver. It reports pre/post-solve clearances, TCP position/orientation errors,
+and `PASS` only when the solver succeeds, every checked pair retains 2 cm, and
+both TCPs remain within 5 mm and 5 degrees of their targets:
+
+```bash
+.venv-mujoco/bin/python simulation/dual_ur5e/validate_mink_single_frame.py \
+  --config "$CONFIG" \
+  --npz "$SOURCE_NPZ" \
+  --frame RETIMED_FRAME_INDEX
+```
+
+A single initial joint seed can miss a feasible collision-free branch. Use the
+deterministic multi-start validator on difficult or representative keyframes
+before solving the entire sequence:
+
+```bash
+.venv-mujoco/bin/python simulation/dual_ur5e/validate_mink_multistart.py \
+  --config "$CONFIG" \
+  --npz "$SOURCE_NPZ" \
+  --frames 0,120,240,360 \
+  --starts 12 \
+  --output simulation/dual_ur5e/base_pose_search_outputs/${NAME}_mink_multistart.json
+```
+
+`all_frames_feasible=true` means at least one seed passed for every requested
+frame; it is a keyframe feasibility result, not a continuous-path verdict.
+
+Run collision-aware Mink IK over the full retimed trajectory only after the
+keyframe check succeeds:
+
+```bash
+.venv-mujoco/bin/python simulation/dual_ur5e/solve_mink_trajectory.py \
+  --config "$CONFIG" \
+  --npz "$SOURCE_NPZ" \
+  --output_npz simulation/dual_ur5e/outputs/${NAME}_mink_dual_ur5e.npz \
+  --output_summary simulation/dual_ur5e/outputs/${NAME}_mink_dual_ur5e_summary.json
+```
+
+The continuous solver warm-starts each frame from the preceding solution and
+uses deterministic recovery starts when a frame fails. It then applies the
+normal endpoint-preserving joint conditioning, shared bimanual time scaling,
+and final execution safety audit. Treat the result as usable only when the
+summary `verdict` is `PASS`, `mink_failed_frames` and `final_failed_frames` are
+empty, and the safety audit also passes. `recovery_frames` is retained for
+review. `--max_frames` is available for smoke tests; a truncated run is not a
+full-trajectory validation.
+
+Mink constrains the left arm against the table and torso, the right arm against
+the same obstacles, and both arms against each other. It freezes all non-arm
+DoFs, preserves the supplied gripper state, and enforces joint configuration
+limits. These checks still exclude the payload, grasped object, cables, real
+controller behavior, and unmodeled surroundings, so a simulation `PASS` is not
+permission for hardware execution.
 
 Gripper output is strictly binary: `0` opens and `1` closes. Continuous glove,
 pinch, and tactile evidence feeds a hysteresis state machine for debouncing;
@@ -155,8 +254,9 @@ only while moving and always settles at exactly open or closed.
 `config_relative_human_orientation.json` additionally commands filtered
 relative human wrist rotation and enables the complete OmniPicker replay.
 Neither path talks to a real robot yet. Object contact dynamics, grasp-force
-control, table/payload geometry and the real controller protocol remain future
-hardware-enablement work.
+control, payload geometry, other surrounding obstacles, and the real controller
+protocol remain future hardware-enablement work. Table geometry is enabled only
+by the shoulder/table layout configs described above.
 
 `config_relative_human_orientation.json` maps the glove-FK palm rotation
 relative to frame 0 into robot axes, applies a
@@ -196,9 +296,10 @@ sampled signed clearances for non-adjacent self links, the other arm, and the
 floor. When enabled by a layout config, it also audits the torso column and
 shoulder beam. The scope includes the dual-UR5e capsules, official OmniPicker collision
 meshes, and the supplied STEP adapter. Tight wrist/flange mounting pairs are
-reported separately with a 0.5 mm numerical penetration tolerance. A real
-deployment must still add the table, payload and surrounding obstacles before
-treating a `PASS` as hardware authorization.
+reported separately with a 0.5 mm numerical penetration tolerance. Table-aware
+configs include the table and its legs, but a real deployment must still add the
+payload and all other surrounding obstacles before treating a `PASS` as
+hardware authorization.
 
 The relative-orientation profile also derives a robot-independent canonical
 gripper command (`0=open`, `1=closed`) from calibrated multi-finger flexion,
