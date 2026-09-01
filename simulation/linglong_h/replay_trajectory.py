@@ -37,6 +37,58 @@ WAIST_JOINT_NAMES = (
     "waist_yaw_joint",
 )
 
+# Controller-safe ranges from LingLong SDK joint_limits.py on the robot SDK
+# host (2026-09-01).  Every LingLong model uses the intersection of these
+# ranges and its local URDF ranges before IK or collision optimization.
+SDK_JOINT_LIMITS_RAD = {
+    "waist_1_joint": (-1.003564319, -0.087266463),
+    "waist_2_joint": (0.087266463, 3.010692959),
+    "waist_3_joint": (-2.574360646, 1.003564319),
+    "waist_yaw_joint": (-2.312561258, 2.312561258),
+    "left_shoulder_pitch_joint": (-2.879793265, 2.879793265),
+    "left_shoulder_roll_joint": (0.0, 3.141592653),
+    "left_shoulder_yaw_joint": (-2.879793265, 2.879793265),
+    "left_elbow_joint": (-0.698131700, 1.483529864),
+    "left_wrist_roll_joint": (-2.879793265, 2.879793265),
+    "left_wrist_pitch_joint": (-1.308996939, 1.308996939),
+    "left_wrist_yaw_joint": (-1.308996939, 1.308996939),
+    "right_shoulder_pitch_joint": (-2.879793265, 2.879793265),
+    "right_shoulder_roll_joint": (-3.141592653, 0.0),
+    "right_shoulder_yaw_joint": (-2.879793265, 2.879793265),
+    "right_elbow_joint": (-0.698131700, 1.483529864),
+    "right_wrist_roll_joint": (-2.879793265, 2.879793265),
+    "right_wrist_pitch_joint": (-1.308996939, 1.308996939),
+    "right_wrist_yaw_joint": (-1.308996939, 1.308996939),
+}
+
+
+def apply_hardware_joint_limits(model: Any, config: dict[str, Any]) -> None:
+    """Narrow MuJoCo ranges to controller/SDK limits before any IK solve."""
+    settings = config.get("hardware_joint_limits") or {}
+    if not bool(settings.get("enabled", True)):
+        return
+    limits = settings.get("joint_ranges_rad") or SDK_JOINT_LIMITS_RAD
+    solver_margin = np.deg2rad(float(settings.get("solver_margin_deg", 0.0)))
+    for joint_name, values in limits.items():
+        bounds = np.asarray(values, dtype=np.float64)
+        if bounds.shape != (2,) or not bounds[0] < bounds[1]:
+            raise ValueError(f"invalid hardware joint range for {joint_name}: {values}")
+        joint = model.joint(joint_name)
+        if not int(joint.limited[0]):
+            raise ValueError(f"hardware-limited joint is not limited in model: {joint_name}")
+        urdf_bounds = np.asarray(joint.range, dtype=np.float64).copy()
+        intersection = np.asarray(
+            [max(bounds[0], urdf_bounds[0]), min(bounds[1], urdf_bounds[1])],
+            dtype=np.float64,
+        )
+        intersection += np.asarray([solver_margin, -solver_margin])
+        if not intersection[0] < intersection[1]:
+            raise ValueError(
+                f"hardware range for {joint_name} {bounds.tolist()} does not "
+                f"overlap URDF range {urdf_bounds.tolist()}"
+            )
+        joint.range[:] = intersection
+
 
 def home_q_for_side(config: dict[str, Any], side: str) -> np.ndarray:
     values = (config.get("home_q_rad_by_side") or {}).get(side)
@@ -201,6 +253,7 @@ def build_model(config: dict[str, Any]) -> tuple[Any, Any]:
     )
     scene.attach(robot, prefix="", frame=mount)
     model = scene.compile()
+    apply_hardware_joint_limits(model, config)
     data = mujoco.MjData(model)
     data.qpos[:] = 0.0
     waist_home = np.asarray(config.get("waist_home_q_rad", [0.0, 0.0, 0.0, 0.0]))

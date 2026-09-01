@@ -87,6 +87,12 @@
   "ik_orientation_mode": "position_only",
   "ik_orientation_weight_m_per_rad": 0.20,
   "ik_orientation_tolerance_rad": 0.002,
+  "hardware_joint_limits": {
+    "enabled": true,
+    "source": "user@192.168.3.27:/home/user/sdk/linglong_h_sdk/joint_limits.py",
+    "policy": "intersection_with_local_urdf_before_ik_and_mink",
+    "solver_margin_deg": 0.5
+  },
   "joint_conditioning": {"enabled": true, "binomial_passes": 1, "preserve_endpoints": true},
   "time_scaling": {"enabled": true, "max_tcp_translation_speed_mps": 0.25, "max_tcp_angular_speed_rad_s": 0.8, "max_joint_speed_rad_s": 1.0, "max_joint_acceleration_rad_s2": 2.5, "acceleration_iterations": 100, "resample_constraint_iterations": 20, "endpoint_hold_sec": 1.0, "constraint_tolerance": 0.001},
   "table_geometry": {"enabled": true, "legs_enabled": true, "top_height_m": 0.75, "minimum_tcp_height_m": 0.83, "thickness_m": 0.03, "length_m": 1.20, "width_m": 0.60, "center_xy_m": [0.0, 0.55], "rgba": [0.58, 0.61, 0.65, 1.0]},

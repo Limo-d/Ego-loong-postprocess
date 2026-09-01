@@ -1,0 +1,31 @@
+{
+  "extends": "config.json",
+  "layout_name": "linglong_h_sdk_joint_limits_search",
+  "layout_status": "search-only override using the SDK joint_limits.py ranges inspected on user@192.168.3.27; full replay and Mink validation required",
+  "hardware_joint_limits": {
+    "enabled": true,
+    "source": "user@192.168.3.27:/home/user/sdk/linglong_h_sdk/joint_limits.py",
+    "urdf_margin_deg": 5.0,
+    "solver_margin_deg": 2.0,
+    "joint_ranges_rad": {
+      "waist_1_joint": [-1.003564319, -0.087266463],
+      "waist_2_joint": [0.087266463, 3.010692959],
+      "waist_3_joint": [-2.574360646, 1.003564319],
+      "waist_yaw_joint": [-2.312561258, 2.312561258],
+      "left_shoulder_pitch_joint": [-2.879793265, 2.879793265],
+      "left_shoulder_roll_joint": [0.0, 3.141592653],
+      "left_shoulder_yaw_joint": [-2.879793265, 2.879793265],
+      "left_elbow_joint": [-0.698131700, 1.483529864],
+      "left_wrist_roll_joint": [-2.879793265, 2.879793265],
+      "left_wrist_pitch_joint": [-1.308996939, 1.308996939],
+      "left_wrist_yaw_joint": [-1.308996939, 1.308996939],
+      "right_shoulder_pitch_joint": [-2.879793265, 2.879793265],
+      "right_shoulder_roll_joint": [-3.141592653, 0.0],
+      "right_shoulder_yaw_joint": [-2.879793265, 2.879793265],
+      "right_elbow_joint": [-0.698131700, 1.483529864],
+      "right_wrist_roll_joint": [-2.879793265, 2.879793265],
+      "right_wrist_pitch_joint": [-1.308996939, 1.308996939],
+      "right_wrist_yaw_joint": [-1.308996939, 1.308996939]
+    }
+  }
+}

@@ -354,3 +354,51 @@ first source grasp itself is upward-oriented.  LingLong remains in
 The official source and final Mink NPZ files above were regenerated.  The
 18 mm audit still passes all `2685/2685` frames with no recovery or failures;
 minimum clearance remains `19.342814 mm` at frame 2392.
+
+## SDK-limit re-solve and real-robot CSV export
+
+The controller ranges were inspected directly from
+`user@192.168.3.27:/home/user/sdk/linglong_h_sdk/joint_limits.py`.  They are
+now built into `replay_trajectory.py` and intersected with the local URDF
+ranges before IK, base/waist search, and Mink optimization.  The selected
+configuration uses a `0.5 deg` solver margin and is recorded in
+`config_sdk_limits_candidate70.json`.
+
+The new full 606-source-frame solution keeps the initial TCP separation at
+`45 cm`, TCP height at `13 cm` above the table, and common forward yaw near
+`70 deg`.  Maximum source TCP error is `3.202 mm`.  The retimed 2518-frame
+18 mm Mink audit passes without failures or recovery frames:
+
+```text
+minimum Mink clearance:       28.473374 mm
+maximum joint speed:           0.413864 rad/s
+maximum joint acceleration:    2.502116 rad/s^2
+verdict:                       PASS
+```
+
+Validated trajectory:
+
+```text
+outputs/linglong_sdk_safe_tcp45cm_13cm_yaw70_mink18mm_linglong_h.npz
+```
+
+`scripts/export_linglong_h_sdk_trajectories.py` resamples that trajectory at
+the SDK's 50 Hz rate and refuses to export any SDK joint-limit violation.  It
+also converts the gripper convention from simulation `0=open, 1=closed` to
+SDK `1=open, 0=closed`.  The 2099-row joint and EEF tasks are under:
+
+```text
+sdk_exports/linglong_sdk_safe_yaw70/joint/
+sdk_exports/linglong_sdk_safe_yaw70/eef/
+sdk_exports/linglong_sdk_safe_yaw70/preflight_report.json
+```
+
+The smallest raw SDK-limit margin is `0.496904 deg` at the left elbow.  The
+joint task preserves the collision-validated branch and is the preferred
+hardware path.  The EEF task uses controller wrist frames in base coordinates
+and SDK RPY convention `Rz(yaw) Ry(pitch) Rx(roll)`; its RPY branches are
+unwrapped, but controller-side IK can select another joint branch, so the EEF
+task remains a comparison/commissioning export rather than collision-certified
+hardware output.  The first 5 s move from live robot state to trajectory frame
+zero is also not yet collision-validated and must be checked from the actual
+measured startup state.
