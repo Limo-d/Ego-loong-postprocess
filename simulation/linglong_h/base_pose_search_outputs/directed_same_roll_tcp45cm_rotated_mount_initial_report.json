@@ -1,0 +1,291 @@
+{
+  "source_config": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/config.json",
+  "source_replay_npz": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/outputs/linglong_search_source_linglong_h.npz",
+  "grounding": {
+    "original_base_z_m": 0.33999992141285856,
+    "original_base_ground_clearance_m": 0.0,
+    "grounded_base_z_m": 0.33999992141285856
+  },
+  "keyframes": [
+    0,
+    222,
+    245,
+    678,
+    758,
+    1188,
+    1196,
+    1985,
+    2423,
+    3071,
+    3266,
+    3326
+  ],
+  "constraints": {
+    "position_tolerance_m": 0.005,
+    "max_initial_tcp_angle_deg": 10.0,
+    "max_initial_parallel_angle_deg": 10.0,
+    "initial_tcp_above_table_m": 0.13,
+    "initial_tcp_center_y_m": 0.5,
+    "initial_tcp_half_separation_m": 0.225,
+    "minimum_initial_tcp_above_table_m": 0.12,
+    "minimum_initial_arm_table_clearance_m": 0.0,
+    "horizontal_deadband_deg": 5.0,
+    "horizontal_penalty_weight": 2.0
+  },
+  "target_z_shifts_m": {
+    "left": -0.12559631539365113,
+    "right": -0.12559631539365113
+  },
+  "target_xy_shifts_m": {
+    "left": [
+      0.20334017886346453,
+      0.24891697524385104
+    ],
+    "right": [
+      -0.20334017886346464,
+      0.24896697524385114
+    ]
+  },
+  "tcp_height_clamp_counts": {
+    "left": 0,
+    "right": 496
+  },
+  "candidate_count": 1,
+  "feasible_candidate_count": 0,
+  "best": {
+    "index": 0,
+    "base_forward_m": 0.0,
+    "grounded_base_z_m": 0.33999992141285856,
+    "waist_extension_rad": 0.55,
+    "waist_lean_deg": 20.0,
+    "initial_gripper_forward_yaw_deg": 80.0,
+    "waist_home_q_rad": [
+      -0.55,
+      1.1,
+      -0.20093414960113415,
+      0.0
+    ],
+    "feasible": false,
+    "feasible_target_ratio": 1.0,
+    "position_error_mean_m": 0.000316497805512316,
+    "position_error_max_m": 0.001721807963589723,
+    "environment_clearance_min_m": 0.032136962407643965,
+    "closest_environment_pair": [
+      "table_top",
+      "right_wrist_yaw_link"
+    ],
+    "cross_arm_clearance_min_m": 0.20007889859101516,
+    "closest_cross_arm_pair": [
+      "left_omnipicker_outer_link4",
+      "right_omnipicker_inner_link4"
+    ],
+    "joint_margin_min_deg": 0.0,
+    "jacobian_condition_max": 5.620563939509422,
+    "initial_posture": {
+      "arm_horizontal_angle_deg": {
+        "left": 53.50568510708403,
+        "right": 53.499583027680444
+      },
+      "upper_arm_horizontal_angle_deg": {
+        "left": 78.00779741073296,
+        "right": 68.47647344679949
+      },
+      "forearm_horizontal_angle_deg": {
+        "left": 63.45806490838901,
+        "right": 57.20036780275159
+      },
+      "tcp_forward_axis_horizontal_angle_deg": {
+        "left": 5.838108854058591,
+        "right": 7.043211119913699e-10
+      },
+      "jaw_axis_horizontal_angle_deg": {
+        "left": 5.008912957676201,
+        "right": 8.468226839396613e-10
+      },
+      "tcp_height_above_table_m": {
+        "left": 0.13007231958033194,
+        "right": 0.1299999999999526
+      },
+      "arm_table_clearance_m": {
+        "left": 0.06304225525971019,
+        "right": 0.03865545895316513
+      },
+      "tcp_positions_m": {
+        "left": [
+          -0.2250975266416103,
+          0.49987133930229527,
+          0.8800723195803319
+        ],
+        "right": [
+          0.2250000000000131,
+          0.500000000000022,
+          0.8799999999999526
+        ]
+      },
+      "gripper_axis_parallel_angle_deg": {
+        "tcp_forward": 7.3314207929586255,
+        "jaw_axis": 7.041792633857324
+      }
+    },
+    "initial_tcp_horizontal": true,
+    "initial_grippers_parallel": true,
+    "initial_table_safe": true,
+    "score": 995.6902948609008,
+    "first_frame_home_q_rad_by_side": {
+      "left": [
+        2.5858340996731686,
+        3.109183828882201,
+        2.405571436825424,
+        1.5707963269999998,
+        -1.570768417608634,
+        -1.3778117841008577,
+        -1.0819593317474943
+      ],
+      "right": [
+        2.5600388627849857,
+        -2.843800708955277,
+        -1.494473012155187,
+        1.031777657898598,
+        -2.380001600362438,
+        1.264681547815811,
+        1.0820688607294306
+      ]
+    },
+    "initial_tcp_positions_m": {
+      "left": [
+        -0.2250975266416103,
+        0.49987133930229527,
+        0.8800723195803319
+      ],
+      "right": [
+        0.2250000000000131,
+        0.500000000000022,
+        0.8799999999999526
+      ]
+    },
+    "waist_yaw_position_m": [
+      -1.1851630787873547e-17,
+      0.07900665310822957,
+      1.028803914648069
+    ]
+  },
+  "candidates": [
+    {
+      "index": 0,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.55,
+      "waist_lean_deg": 20.0,
+      "initial_gripper_forward_yaw_deg": 80.0,
+      "waist_home_q_rad": [
+        -0.55,
+        1.1,
+        -0.20093414960113415,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 0.000316497805512316,
+      "position_error_max_m": 0.001721807963589723,
+      "environment_clearance_min_m": 0.032136962407643965,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.20007889859101516,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.620563939509422,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 53.50568510708403,
+          "right": 53.499583027680444
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 78.00779741073296,
+          "right": 68.47647344679949
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 63.45806490838901,
+          "right": 57.20036780275159
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 5.838108854058591,
+          "right": 7.043211119913699e-10
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 5.008912957676201,
+          "right": 8.468226839396613e-10
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.13007231958033194,
+          "right": 0.1299999999999526
+        },
+        "arm_table_clearance_m": {
+          "left": 0.06304225525971019,
+          "right": 0.03865545895316513
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.2250975266416103,
+            0.49987133930229527,
+            0.8800723195803319
+          ],
+          "right": [
+            0.2250000000000131,
+            0.500000000000022,
+            0.8799999999999526
+          ]
+        },
+        "gripper_axis_parallel_angle_deg": {
+          "tcp_forward": 7.3314207929586255,
+          "jaw_axis": 7.041792633857324
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_grippers_parallel": true,
+      "initial_table_safe": true,
+      "score": 995.6902948609008,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          2.5858340996731686,
+          3.109183828882201,
+          2.405571436825424,
+          1.5707963269999998,
+          -1.570768417608634,
+          -1.3778117841008577,
+          -1.0819593317474943
+        ],
+        "right": [
+          2.5600388627849857,
+          -2.843800708955277,
+          -1.494473012155187,
+          1.031777657898598,
+          -2.380001600362438,
+          1.264681547815811,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.2250975266416103,
+          0.49987133930229527,
+          0.8800723195803319
+        ],
+        "right": [
+          0.2250000000000131,
+          0.500000000000022,
+          0.8799999999999526
+        ]
+      },
+      "waist_yaw_position_m": [
+        -1.1851630787873547e-17,
+        0.07900665310822957,
+        1.028803914648069
+      ]
+    }
+  ]
+}

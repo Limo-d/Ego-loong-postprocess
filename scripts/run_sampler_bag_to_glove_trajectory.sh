@@ -195,6 +195,11 @@ REVIEW_SIMULATION_VIDEO="${REVIEW_SIMULATION_VIDEO:-}"
 REVIEW_SIMULATION_SUMMARY="${REVIEW_SIMULATION_SUMMARY:-}"
 REVIEW_SIMULATION_NPZ="${REVIEW_SIMULATION_NPZ:-}"
 RUN_ROBOT_SIMULATION="${RUN_ROBOT_SIMULATION:-1}"
+EXPORT_TRAINING_ACTIONS="${EXPORT_TRAINING_ACTIONS:-1}"
+EXPORT_HARDWARE_TRAJECTORY="${EXPORT_HARDWARE_TRAJECTORY:-1}"
+ACTION_HORIZON_FRAMES="${ACTION_HORIZON_FRAMES:-1}"
+ACTION_ORIGIN="${ACTION_ORIGIN:-wrist}"
+ACTION_REQUIRED_SIDES="${ACTION_REQUIRED_SIDES:-auto}"
 SIMULATION_PYTHON="${SIMULATION_PYTHON:-${ROOT}/.venv-mujoco/bin/python}"
 SIMULATION_CONFIG="${SIMULATION_CONFIG:-${ROOT}/simulation/dual_ur5e/base_pose_search_outputs/safety_plane_height_smoke_recommended_config.json}"
 SIMULATION_CAMERA_CONFIG="${SIMULATION_CAMERA_CONFIG:-${ROOT}/simulation/dual_ur5e/viewer_camera.json}"
@@ -274,6 +279,15 @@ SIMULATION_SOURCE_SUMMARY="${SIMULATION_OUTPUT_DIR}/${SIMULATION_SOURCE_NAME}_du
 SIMULATION_NPZ="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_dual_ur5e.npz"
 SIMULATION_SUMMARY="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_dual_ur5e_summary.json"
 SIMULATION_VIDEO="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_dual_ur5e.mp4"
+MINK_TRAINING_QUALITY="${SIMULATION_OUTPUT_DIR}/${SESSION_NAME}_mink_training_quality.json"
+CAMERA_RELATIVE_ACTIONS="${OUTPUT_DIR}/data/camera_relative_actions.jsonl"
+CAMERA_RELATIVE_ACTIONS_SUMMARY="${OUTPUT_DIR}/summaries/camera_relative_actions_summary.json"
+HARDWARE_OUTPUT_DIR="${OUTPUT_DIR}/hardware"
+HARDWARE_TRAJECTORY_NPZ="${HARDWARE_OUTPUT_DIR}/dual_ur5e_hardware_trajectory.npz"
+HARDWARE_TRAJECTORY_JSON="${HARDWARE_OUTPUT_DIR}/dual_ur5e_hardware_trajectory.json"
+END_EFFECTOR_TRAJECTORY_NPZ="${HARDWARE_OUTPUT_DIR}/dual_ur5e_end_effector_trajectory.npz"
+END_EFFECTOR_TRAJECTORY_JSON="${HARDWARE_OUTPUT_DIR}/dual_ur5e_end_effector_trajectory.json"
+HARDWARE_PREFLIGHT="${HARDWARE_OUTPUT_DIR}/preflight_report.json"
 COMPACT_SUMMARY="${OUTPUT_DIR}/compact_summary.json"
 CALIB_LOCATE_JSON="${CALIB_LOCATE_DIR}/bboxes.json"
 CALIB_LOCATE_MP4="${CALIB_LOCATE_DIR}/bboxes.mp4"
@@ -368,7 +382,7 @@ if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   quality_rtabmap_args=(--require_rtabmap)
 fi
 
-printf '\n[0/12] Config\n'
+printf '\n[0/14] Config\n'
 printf '  BAG_SESSION: %s\n' "${BAG_SESSION}"
 printf '  BATCH_ROOT:  %s\n' "${BATCH_ROOT}"
 printf '  BAG_DATA_DIR: %s\n' "${BAG_DATA_DIR}"
@@ -420,7 +434,7 @@ mkdir -p "${SESSION}" "${LOCATE_DIR}" "${STABLE_BBOX_DIR}" "${HAMER_DIR}" "${DEP
   "${FUSION_LEFT_DIR}" "${FUSION_RIGHT_DIR}" "${VISUAL_SMOOTH_LEFT_DIR}" "${VISUAL_SMOOTH_RIGHT_DIR}" \
   "${OUTPUT_DIR}" "${RTABMAP_POSE_DIR}" "${CACHE_DIR}" "${CALIB_CACHE_DIR}"
 
-printf '\n[1/12] Extract ROS2 bag RGBD/hand_frame\n'
+printf '\n[1/14] Extract ROS2 bag RGBD/hand_frame\n'
 extract_cache_args=(
   --input "${BAG_DIR}"
   --input "${HAND_CALIBRATION_FILE}"
@@ -470,7 +484,7 @@ if [[ -n "${REQUESTED_FPS}" ]]; then
   printf '  note: ignoring requested FPS=%s; real RGB timebase is authoritative\n' "${REQUESTED_FPS}"
 fi
 
-printf '\n[2/12] Build/apply RTAB-Map camera pose\n'
+printf '\n[2/14] Build/apply RTAB-Map camera pose\n'
 if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   if [[ ! -s "${RTABMAP_DB}" ]]; then
     printf '  ERROR: RTABMAP_DB not found or empty: %s\n' "${RTABMAP_DB}" >&2
@@ -518,7 +532,7 @@ else
   printf '  skip: USE_RTABMAP_POSE=%s\n' "${USE_RTABMAP_POSE}"
 fi
 
-printf '\n[3/12] LocateAnything bbox detector\n'
+printf '\n[3/14] LocateAnything bbox detector\n'
 locate_cache_args=(
   --input "$(stage_manifest extract)"
   --input "${LOCATE_MODEL}/config.json"
@@ -567,7 +581,7 @@ else
   stage_cache_write locate "${locate_cache_args[@]}"
 fi
 
-printf '\n[4/12] Track/stabilize left and right hand bboxes\n'
+printf '\n[4/14] Track/stabilize left and right hand bboxes\n'
 track_bbox_cache_args=(
   --input "$(stage_manifest locate)"
   --code "${ROOT}/preprocess/TrackDualHandBboxes.py"
@@ -602,7 +616,7 @@ else
   stage_cache_write track_bbox "${track_bbox_cache_args[@]}"
 fi
 
-printf '\n[5/12] HaMeR from stable bbox, handedness=%s\n' "${HAMER_HANDEDNESS}"
+printf '\n[5/14] HaMeR from stable bbox, handedness=%s\n' "${HAMER_HANDEDNESS}"
 POSE_STAGE_MANIFEST="$(stage_manifest extract)"
 if [[ "${USE_RTABMAP_POSE}" == "1" ]]; then
   POSE_STAGE_MANIFEST="$(stage_manifest rtabmap_pose)"
@@ -656,7 +670,7 @@ else
   stage_cache_write hamer "${hamer_cache_args[@]}"
 fi
 
-printf '\n[6/12] Correct HaMeR wrist root with aligned depth\n'
+printf '\n[6/14] Correct HaMeR wrist root with aligned depth\n'
 depth_cache_args=(
   --input "$(stage_manifest hamer)"
   --input "$(stage_manifest extract)"
@@ -693,7 +707,7 @@ else
   stage_cache_write depth_root "${depth_cache_args[@]}"
 fi
 
-printf '\n[7/12] Build left/right visual + /hand_frame fusion inputs\n'
+printf '\n[7/14] Build left/right visual + /hand_frame fusion inputs\n'
 fusion_cache_args=(
   --input "$(stage_manifest depth_root)"
   --input "${POSE_STAGE_MANIFEST}"
@@ -884,7 +898,7 @@ else
   printf '\n[calib] skip dedicated calibration video: USE_CALIB_VIDEO=%s\n' "${USE_CALIB_VIDEO}"
 fi
 
-printf '\n[8/12] Smooth left/right visual 21 keypoints\n'
+printf '\n[8/14] Smooth left/right visual 21 keypoints\n'
 visual_smooth_cache_args=(
   --input "$(stage_manifest fusion)"
   --code "${ROOT}/preprocess/VisualizeVisual2DSmooth.py"
@@ -950,7 +964,7 @@ else
   stage_cache_write visual_smooth "${visual_smooth_cache_args[@]}"
 fi
 
-printf '\n[9/12] Glove FK + visual-bone calibration + wristroot tracking\n'
+printf '\n[9/14] Glove FK + visual-bone calibration + wristroot tracking\n'
 ACTIVE_GLOVE_SIDES=()
 if fusion_has_calibration_data "${FUSION_LEFT_SUMMARY}" left; then
   ACTIVE_GLOVE_SIDES+=(left)
@@ -1247,7 +1261,7 @@ else
   stage_cache_write glove_fk_trajectory "${glove_cache_args[@]}"
 fi
 
-printf '\n[10/12] Collect user-facing outputs\n'
+printf '\n[10/14] Collect user-facing outputs\n'
 collect_cache_args=(
   --input "$(stage_manifest locate)"
   --input "$(stage_manifest track_bbox)"
@@ -1316,7 +1330,7 @@ else
 fi
 
 
-printf '\n[11/12] Dual-UR5e MuJoCo replay + Mink safety simulation\n'
+printf '\n[11/14] Dual-UR5e MuJoCo replay + Mink safety simulation\n'
 if [[ "${RUN_ROBOT_SIMULATION}" == "1" ]]; then
   if [[ ! -x "${SIMULATION_PYTHON}" ]]; then
     printf 'Error: MuJoCo Python is unavailable: %s\n' "${SIMULATION_PYTHON}" >&2
@@ -1384,7 +1398,88 @@ else
   printf '  skip: RUN_ROBOT_SIMULATION=%s\n' "${RUN_ROBOT_SIMULATION}"
 fi
 
-printf '\n[12/12] Generate review web visualization\n'
+printf '\n[12/14] Score Mink feasibility + export camera-relative actions\n'
+if [[ "${EXPORT_TRAINING_ACTIONS}" == "1" ]]; then
+  action_cache_args=(
+    --input "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl"
+    --code "${ROOT}/scripts/score_mink_quality.py"
+    --code "${ROOT}/scripts/export_camera_relative_actions.py"
+    --param "horizon=${ACTION_HORIZON_FRAMES}"
+    --param "origin=${ACTION_ORIGIN}"
+    --param "required_sides=${ACTION_REQUIRED_SIDES}"
+    --output "${CAMERA_RELATIVE_ACTIONS}"
+    --output "${CAMERA_RELATIVE_ACTIONS_SUMMARY}"
+  )
+  action_simulation_args=()
+  if [[ -n "${REVIEW_SIMULATION_SUMMARY}" && -f "${REVIEW_SIMULATION_SUMMARY}" && -n "${REVIEW_SIMULATION_NPZ}" && -f "${REVIEW_SIMULATION_NPZ}" ]]; then
+    action_cache_args+=(
+      --input "${REVIEW_SIMULATION_SUMMARY}"
+      --input "${REVIEW_SIMULATION_NPZ}"
+      --output "${MINK_TRAINING_QUALITY}"
+    )
+    action_simulation_args+=(--simulation_quality "${MINK_TRAINING_QUALITY}")
+  fi
+  if stage_cache_hit training_action_export "${action_cache_args[@]}"; then
+    printf '  skip valid cache: %s\n' "$(stage_manifest training_action_export)"
+  else
+    if [[ ${#action_simulation_args[@]} -gt 0 ]]; then
+      "${SIMULATION_PYTHON}" "${ROOT}/scripts/score_mink_quality.py" \
+        --summary "${REVIEW_SIMULATION_SUMMARY}" \
+        --npz "${REVIEW_SIMULATION_NPZ}" \
+        --output "${MINK_TRAINING_QUALITY}"
+    else
+      printf '  warning: Mink summary/NPZ unavailable; actions are exported but marked ineligible\n'
+    fi
+    "${SIMULATION_PYTHON}" "${ROOT}/scripts/export_camera_relative_actions.py" \
+      --trajectory "${OUTPUT_DIR}/data/trajectory_wristroot_track_cameraoptical.jsonl" \
+      --output "${CAMERA_RELATIVE_ACTIONS}" \
+      --summary_output "${CAMERA_RELATIVE_ACTIONS_SUMMARY}" \
+      --horizon "${ACTION_HORIZON_FRAMES}" \
+      --origin "${ACTION_ORIGIN}" \
+      --required_sides "${ACTION_REQUIRED_SIDES}" \
+      "${action_simulation_args[@]}"
+    stage_cache_write training_action_export "${action_cache_args[@]}"
+  fi
+else
+  printf '  skip: EXPORT_TRAINING_ACTIONS=%s\n' "${EXPORT_TRAINING_ACTIONS}"
+fi
+
+printf '\n[13/14] Export controller-neutral 14D hardware trajectory (offline only)\n'
+if [[ "${EXPORT_HARDWARE_TRAJECTORY}" == "1" ]]; then
+  if [[ -n "${REVIEW_SIMULATION_SUMMARY}" && -f "${REVIEW_SIMULATION_SUMMARY}" && -n "${REVIEW_SIMULATION_NPZ}" && -f "${REVIEW_SIMULATION_NPZ}" ]]; then
+    hardware_cache_args=(
+      --input "${REVIEW_SIMULATION_SUMMARY}"
+      --input "${REVIEW_SIMULATION_NPZ}"
+      --input "${SIMULATION_CONFIG}"
+      --code "${ROOT}/scripts/export_dual_ur5e_hardware_trajectory.py"
+      --output "${HARDWARE_TRAJECTORY_NPZ}"
+      --output "${HARDWARE_TRAJECTORY_JSON}"
+      --output "${END_EFFECTOR_TRAJECTORY_NPZ}"
+      --output "${END_EFFECTOR_TRAJECTORY_JSON}"
+      --output "${HARDWARE_PREFLIGHT}"
+    )
+    if stage_cache_hit hardware_trajectory_export "${hardware_cache_args[@]}"; then
+      printf '  skip valid cache: %s\n' "$(stage_manifest hardware_trajectory_export)"
+    else
+      "${SIMULATION_PYTHON}" "${ROOT}/scripts/export_dual_ur5e_hardware_trajectory.py" \
+        --npz "${REVIEW_SIMULATION_NPZ}" \
+        --summary "${REVIEW_SIMULATION_SUMMARY}" \
+        --config "${SIMULATION_CONFIG}" \
+        --output_npz "${HARDWARE_TRAJECTORY_NPZ}" \
+        --output_json "${HARDWARE_TRAJECTORY_JSON}" \
+        --output_ee_npz "${END_EFFECTOR_TRAJECTORY_NPZ}" \
+        --output_ee_json "${END_EFFECTOR_TRAJECTORY_JSON}" \
+        --preflight_output "${HARDWARE_PREFLIGHT}"
+      stage_cache_write hardware_trajectory_export "${hardware_cache_args[@]}"
+    fi
+  else
+    printf '  warning: Mink summary/NPZ unavailable; 14D hardware trajectory was not exported\n'
+  fi
+else
+  printf '  skip: EXPORT_HARDWARE_TRAJECTORY=%s\n' "${EXPORT_HARDWARE_TRAJECTORY}"
+fi
+
+printf '\n[14/14] Generate review web visualization\n'
 review_simulation_args=()
 if [[ -n "${REVIEW_SIMULATION_VIDEO}" ]]; then
   review_simulation_args+=(--simulation_video "${REVIEW_SIMULATION_VIDEO}")

@@ -1,0 +1,128 @@
+{
+  "model_path": "simulation/linglong_h/assets/urdf/linglong-h.urdf",
+  "robot_model": "linglong_h",
+  "output_suffix": "linglong_h",
+  "layout_name": "linglong_h_camera_parallel_fixed_wrist_yaw_horizontal_omnipicker",
+  "layout_status": "validated over 606 source frames and all 2685 retimed control frames: both wrist cameras start upward on continuous non-flipping branches, both OmniPickers use identical native mounts, and the position-only 18 mm Mink audit passes",
+  "base_position_m": [0.0, 0.0, 0.33999992141285856],
+  "base_positions_m": {
+    "left": [0.0, 0.0, 0.33999992141285856],
+    "right": [0.0, 0.0, 0.33999992141285856]
+  },
+  "base_rpy_deg": [0.0, 0.0, 90.0],
+  "waist_home_q_rad": [-0.55, 1.1, -0.20093414960113415, 0.0],
+  "home_q_rad_by_side": {
+    "left": [2.5858340996731686, 3.109183828882201, 2.405571436825424, 1.5707963269999998, -1.570768417608634, -1.3778117841008577, -1.0819593317474943],
+    "right": [2.8261325186749144, -2.9664020723246214, -2.494010910118625, 0.9620597114160412, 0.2553440893300008, -1.0817323088905322, -0.6065221753590293]
+  },
+  "fixed_wrist_yaw_q_rad_by_side": {
+    "left": -1.0819593317474943,
+    "right": -0.6065221753590293
+  },
+  "initial_parallel_gripper_orientation": {
+    "enabled": true,
+    "tcp_forward_world": [0.17364817766693041, 0.984807753012208, 0.0],
+    "jaw_axis_world_by_side": {
+      "left": [0.984807753012208, -0.17364817766693041, 0.0],
+      "right": [0.984807753012208, -0.17364817766693041, 0.0]
+    },
+    "description": "both OmniPicker forward axes target the same world direction, both jaw lines are parallel, and both directed wrist-camera +Z axes point upward"
+  },
+  "task_anchor_positions_m": {
+    "left": [-0.225, 0.50, 0.88],
+    "right": [0.225, 0.50, 0.88]
+  },
+  "base_waist_search": {
+    "grounded_base_z_m": 0.33999992141285856,
+    "base_forward_m": 0.0,
+    "waist_extension_rad": 0.55,
+    "waist_lean_deg": 20.0,
+    "waist_parameterization": "[-extension, 2*extension, -extension+lean, waist_yaw]",
+    "initial_tcp_horizontal_separation_m": 0.45,
+    "initial_forward_yaw_deg": 80.0,
+    "initial_max_tcp_forward_axis_angle_deg": 5.8381088612953524,
+    "initial_max_jaw_axis_angle_deg": 5.0089130083592615,
+    "initial_max_parallel_axis_error_deg": 7.3314207929586255,
+    "initial_jaw_line_parallel_error_deg": 7.041792633857324,
+    "initial_max_camera_up_axis_error_deg": 7.731373730453582,
+    "initial_tcp_above_table_m": 0.13,
+    "initial_min_arm_table_clearance_m": 0.038655376742587344,
+    "minimum_tcp_above_table_m": 0.12,
+    "minimum_environment_clearance_m": 0.03053000466172073,
+    "minimum_cross_arm_clearance_m": 0.19640853744501574,
+    "minimum_joint_margin_deg": 0.0,
+    "maximum_tcp_error_m": 0.0024777387963417744,
+    "validated_source_frames": 606,
+    "report": "simulation/linglong_h/base_pose_search_outputs/directed_same_roll_mount_tcp45cm_13cm_all_606_report.json",
+    "full_replay_summary": "simulation/linglong_h/outputs/linglong_camera_both_up_tcp45cm_13cm_mink18mm_linglong_h_summary.json"
+  },
+  "wrist_camera_adjustment": {
+    "enabled": true,
+    "method": "remove only the three native-gripper components from each fused wrist mesh, preserve identical native [0.063, 0, 0] +X OmniPicker connections, choose an alternate right-arm IK branch whose directed wrist-camera +Z axis points upward, lock the resulting wrist_yaw coordinates, then solve the remaining six arm joints",
+    "initial_camera_up_axis_error_deg_by_side": {"left": 7.731373730453582, "right": 0.000018191590511038928},
+    "trajectory_camera_up_axis_error_max_deg_by_side": {"left": 30.51401260884573, "right": 19.991488969551366},
+    "trajectory_camera_rotation_step_max_deg_by_side": {"left": 0.5544635517080674, "right": 0.6592661003042322},
+    "trajectory_camera_angular_speed_max_deg_s_by_side": {"left": 33.26299059622316, "right": 39.55023198057641},
+    "original_wrist_meshes_restored": false,
+    "native_gripper_mesh_components_removed_per_side": 3,
+    "gripper_transform_unchanged": true,
+    "status": "validated: both cameras start upward, remain on the same non-inverted branch, and rotate smoothly without frame-to-frame flips"
+  },
+  "tcp_offset_m": [0.14, 0.0, 0.0],
+  "input_coordinate": "leveled_first_camera",
+  "leveled_first_camera": {"gravity_up_world": [0.0, 0.0, 1.0]},
+  "camera_optical_to_robot": [[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]],
+  "translation_scale": 1.0,
+  "action_conditioning": {"enabled": true, "acceleration_weight": 1.0, "jerk_weight": 1.0, "endpoint_weight": 1000000.0, "command_fps": 60.0},
+  "static_lock": {"enabled": true, "window_frames": 15, "max_net_displacement_m": 0.010, "max_radius_m": 0.010, "min_candidate_frames": 4, "transition_frames": 6},
+  "relative_workspace_min_m": [-0.25, -0.25, -0.20],
+  "relative_workspace_max_m": [0.25, 0.30, 0.25],
+  "max_target_speed_mps": 0.8,
+  "max_joint_speed_rad_s": 2.0,
+  "ik_iterations": 100,
+  "ik_damping": 0.04,
+  "ik_step_limit_rad": 0.12,
+  "ik_posture_gain": 0.03,
+  "ik_tolerance_m": 0.00005,
+  "ik_orientation_mode": "position_only",
+  "ik_orientation_weight_m_per_rad": 0.20,
+  "ik_orientation_tolerance_rad": 0.002,
+  "joint_conditioning": {"enabled": true, "binomial_passes": 1, "preserve_endpoints": true},
+  "time_scaling": {"enabled": true, "max_tcp_translation_speed_mps": 0.25, "max_tcp_angular_speed_rad_s": 0.8, "max_joint_speed_rad_s": 1.0, "max_joint_acceleration_rad_s2": 2.5, "acceleration_iterations": 100, "resample_constraint_iterations": 20, "endpoint_hold_sec": 1.0, "constraint_tolerance": 0.001},
+  "table_geometry": {"enabled": true, "legs_enabled": true, "top_height_m": 0.75, "minimum_tcp_height_m": 0.83, "thickness_m": 0.03, "length_m": 1.20, "width_m": 0.60, "center_xy_m": [0.0, 0.55], "rgba": [0.58, 0.61, 0.65, 1.0]},
+  "mink_collision": {
+    "enabled": true,
+    "mode": "position_only_with_fixed_terminal_wrist_yaw",
+    "minimum_distance_m": 0.018,
+    "detection_distance_m": 0.12,
+    "source_frames": 606,
+    "retimed_control_frames": 2685,
+    "minimum_clearance_m": 0.019342813578583445,
+    "minimum_clearance_frame": 2392,
+    "recovery_frames": 0,
+    "failed_frames": 0,
+    "joint_speed_max_rad_s": 0.48904399616747046,
+    "joint_acceleration_max_rad_s2": 2.5008849737045895,
+    "verdict": "PASS",
+    "summary": "simulation/linglong_h/outputs/linglong_camera_both_up_tcp45cm_13cm_mink18mm_linglong_h_summary.json"
+  },
+  "safety_audit": {"enabled": false},
+  "gripper_mapping": {"enabled": true, "minimum_pinch_span_m": 0.004},
+  "robot_gripper": {
+    "enabled": true,
+    "type": "agibot_omnipicker",
+    "model_path": "simulation/linglong_h/omnipicker.xml",
+    "canonical_convention": "0=open, 1=closed",
+    "open_joint_rad": 0.78539816339,
+    "linglong_mount_position_m": [0.063, 0.0, 0.0],
+    "linglong_mount_quaternion_wxyz": [0.5, 0.5, 0.5, 0.5],
+    "linglong_mount_quaternion_wxyz_by_side": {
+      "left": [0.5, 0.5, 0.5, 0.5],
+      "right": [0.5, 0.5, 0.5, 0.5]
+    },
+    "mount_status": "both sides inherit the same native wrist-local [0.063, 0, 0] +X connection and identical mount quaternion; camera uprightness is solved through the arm IK branch rather than by flipping either OmniPicker; physical hardware adapter transform still requires verification"
+  },
+  "render_width": 960,
+  "render_height": 540,
+  "render_fps": 60.0
+}

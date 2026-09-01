@@ -134,7 +134,7 @@ def write_summary(session: Path, rows: List[Dict[str, Any]], dry_run: bool) -> P
             "web": "outputs/web/index.html plus web/rgb_frames, web/tactile_hand.png, and optional web/robot_simulation.mp4 (trajectory/tactile use Canvas)",
             "simulation": "outputs/simulation with source replay, final Mink trajectory, safety summary, and rendered MP4",
             "videos": sorted(KEEP_OUTPUT_VIDEOS),
-            "data": ["trajectory_wristroot_track_cameraoptical.jsonl", "locate_bboxes.json", "stable_bboxes.json"],
+            "data": ["trajectory_wristroot_track_cameraoptical.jsonl", "camera_relative_actions.jsonl", "locate_bboxes.json", "stable_bboxes.json"],
         },
     }
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

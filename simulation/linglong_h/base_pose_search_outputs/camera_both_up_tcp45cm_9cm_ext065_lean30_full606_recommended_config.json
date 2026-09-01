@@ -1,0 +1,69 @@
+{
+  "extends": "../config.json",
+  "layout_name": "camera_both_up_tcp45cm_9cm_ext065_lean30_full606_recommended",
+  "layout_status": "base + waist keyframe search recommendation; full replay validation required",
+  "base_position_m": [
+    0.0,
+    0.0,
+    0.33999992141285856
+  ],
+  "base_positions_m": {
+    "left": [
+      0.0,
+      0.0,
+      0.33999992141285856
+    ],
+    "right": [
+      0.0,
+      0.0,
+      0.33999992141285856
+    ]
+  },
+  "waist_home_q_rad": [
+    -0.65,
+    1.3,
+    -0.1264012244017012,
+    0.0
+  ],
+  "home_q_rad_by_side": {
+    "left": [
+      2.6399479684178186,
+      3.107368095927542,
+      2.9670597279999997,
+      1.4694722888485592,
+      -1.0242772381538447,
+      -1.3962634019999998,
+      -1.0819593317474943
+    ],
+    "right": [
+      2.7314477251015674,
+      -3.067845326632423,
+      -2.5764128707754934,
+      1.306011240742642,
+      0.14226742217037203,
+      -1.3962634019999998,
+      -0.6065221753590293
+    ]
+  },
+  "task_anchor_positions_m": {
+    "left": [
+      -0.225,
+      0.5,
+      0.84
+    ],
+    "right": [
+      0.225,
+      0.5,
+      0.84
+    ]
+  },
+  "base_waist_search": {
+    "report": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/base_pose_search_outputs/camera_both_up_tcp45cm_9cm_ext065_lean30_full606_report.json",
+    "feasible": false,
+    "validated_frame_count": 606,
+    "full_trajectory_validated": false,
+    "score": 989.4074036393649,
+    "waist_extension_rad": 0.65,
+    "waist_lean_deg": 30.0
+  }
+}

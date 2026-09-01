@@ -1248,6 +1248,13 @@ def solve_pose_ik(
 ) -> tuple[float, float]:
     site_id = end_effector_site_id(model, side)
     qpos_ids, dof_ids = joint_addresses(model, side)
+    fixed_wrist_yaw = (config.get("fixed_wrist_yaw_q_rad_by_side") or {}).get(side)
+    active = np.ones(len(qpos_ids), dtype=bool)
+    if fixed_wrist_yaw is not None:
+        active[-1] = False
+        data.qpos[qpos_ids[-1]] = float(fixed_wrist_yaw)
+    active_qpos_ids = qpos_ids[active]
+    active_dof_ids = dof_ids[active]
     damping = float(config["ik_damping"])
     orientation_weight = float(config.get("ik_orientation_weight_m_per_rad", 0.25))
     position_tolerance = float(config["ik_tolerance_m"])
@@ -1274,15 +1281,15 @@ def solve_pose_ik(
         )
         if target_rotation is None:
             error = position_error
-            jacobian = jacobian_position[:, dof_ids]
+            jacobian = jacobian_position[:, active_dof_ids]
         else:
             error = np.concatenate(
                 [position_error, orientation_weight * rotation_error]
             )
             jacobian = np.vstack(
                 [
-                    jacobian_position[:, dof_ids],
-                    orientation_weight * jacobian_rotation[:, dof_ids],
+                    jacobian_position[:, active_dof_ids],
+                    orientation_weight * jacobian_rotation[:, active_dof_ids],
                 ]
             )
         inverse = np.linalg.solve(
@@ -1291,15 +1298,18 @@ def solve_pose_ik(
         )
         pseudo_inverse = jacobian.T @ inverse
         delta = pseudo_inverse @ error
-        nullspace = np.eye(len(dof_ids)) - pseudo_inverse @ jacobian
+        nullspace = np.eye(len(active_dof_ids)) - pseudo_inverse @ jacobian
         delta += nullspace @ (
-            float(config["ik_posture_gain"]) * (home - data.qpos[qpos_ids])
+            float(config["ik_posture_gain"])
+            * (home[active] - data.qpos[active_qpos_ids])
         )
         norm = float(np.linalg.norm(delta))
         limit = float(config["ik_step_limit_rad"])
         if norm > limit:
             delta *= limit / norm
-        data.qpos[qpos_ids] += delta
+        data.qpos[active_qpos_ids] += delta
+        if fixed_wrist_yaw is not None:
+            data.qpos[qpos_ids[-1]] = float(fixed_wrist_yaw)
         clamp_joint_ranges(model, data.qpos, side)
     mujoco.mj_forward(model, data)
     position_error_norm = float(
@@ -2173,7 +2183,9 @@ def build_gripper_commands(
     pinch_weight = float(settings.get("pinch_weight", 0.25))
     contact_weight = float(settings.get("contact_weight", 0.10))
     total_weight = max(flex_weight + pinch_weight + contact_weight, 1e-9)
-    minimum_pinch_span = float(settings.get("minimum_pinch_span_m", 0.008))
+    # Keep precision thumb-index pinches: the recorded glove signal can have
+    # only a few millimetres of calibrated travel even when the grasp is clear.
+    minimum_pinch_span = float(settings.get("minimum_pinch_span_m", 0.004))
     minimum_score_span = float(settings.get("minimum_score_span", 0.15))
     source_dt = float(np.median(np.diff(source_times))) if len(source_times) > 1 else 1 / 30
     maximum_step = float(settings.get("max_normalized_speed_per_sec", 1.5)) * source_dt
@@ -2787,9 +2799,10 @@ def main() -> None:
     name = args.name or trajectory_path.parents[2].name
     output_dir = Path(args.output_dir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    npz_path = output_dir / f"{name}_dual_ur5e.npz"
-    summary_path = output_dir / f"{name}_dual_ur5e_summary.json"
-    video_path = output_dir / f"{name}_dual_ur5e.mp4"
+    output_suffix = str(config.get("output_suffix", "dual_ur5e"))
+    npz_path = output_dir / f"{name}_{output_suffix}.npz"
+    summary_path = output_dir / f"{name}_{output_suffix}_summary.json"
+    video_path = output_dir / f"{name}_{output_suffix}.mp4"
     gripper_svg_path = output_dir / f"{name}_gripper_commands.svg"
     if gripper_artifacts:
         write_gripper_svg(gripper_svg_path, times, gripper_artifacts)
@@ -2809,6 +2822,9 @@ def main() -> None:
         )
     np.savez_compressed(
         npz_path,
+        joint_names=np.asarray(
+            [model.joint(index).name for index in range(model.njnt)]
+        ),
         times_sec=times,
         source_times_sec=source_times,
         qpos_rad=qpos,
@@ -2885,6 +2901,7 @@ def main() -> None:
         right_omnipicker_outer_joint_rad=omnipicker_outer_joint["right"],
     )
     summary = {
+        "robot_model": str(config.get("robot_model", "dual_ur5e")),
         "trajectory": str(trajectory_path),
         "source_frames": len(rows),
         "frames": len(times),
@@ -2892,7 +2909,10 @@ def main() -> None:
         "mount_layout": {
             "name": config.get("layout_name", "independent_floor_mount"),
             "status": config.get("layout_status"),
-            "base_positions_m": config["base_positions_m"],
+            "base_positions_m": config.get(
+                "base_positions_m",
+                {"robot": config.get("base_position_m", [0.0, 0.0, 0.0])},
+            ),
             "base_rpy_deg": config.get("base_rpy_deg"),
             "base_quaternion_wxyz": config.get("base_quaternion_wxyz"),
             "home_q_rad_by_side": {

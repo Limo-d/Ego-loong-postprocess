@@ -385,6 +385,11 @@ BAG_SESSION=/home/lenovo/Ego-loong-postprocess/datatsets/bag_0703/2026-07-03T015
 | `REVIEW_HAND_DISPLAY_ROTATE_DEG` | `45` | 网页 3D 手部显示旋转参数；当前默认开启 `wrist -> middle_mcp` 竖直对齐时主要用于兼容旧命令 |
 | `REVIEW_RGB_WORKERS` | `8` | review web 并行导出 RGB JPEG 的线程数；轨迹和触觉由浏览器 Canvas 实时绘制，不再生成逐帧 JPEG |
 | `RUN_ROBOT_SIMULATION` | `1` | 自动运行双 UR5e replay、Mink 全轨迹安全求解和 MuJoCo 视频渲染；设为 `0` 可跳过 |
+| `EXPORT_TRAINING_ACTIONS` | `1` | 输出 Mink 训练质量分数和相机坐标系相对末端动作 |
+| `EXPORT_HARDWARE_TRAJECTORY` | `1` | Mink 结果可用时，导出控制器无关的双臂 14 维离线轨迹和 preflight；不连接真机 |
+| `ACTION_HORIZON_FRAMES` | `1` | 动作目标相对当前帧的未来帧间隔 |
+| `ACTION_ORIGIN` | `wrist` | 末端动作原点；可选 `wrist` 或 `palm` |
+| `ACTION_REQUIRED_SIDES` | `auto` | 训练样本要求的手；可选 `auto`、`left`、`right`、`both` |
 | `SIMULATION_PYTHON` | `.venv-mujoco/bin/python` | 安装了 MuJoCo/Mink 的 Python；缺失时先运行 `simulation/dual_ur5e/setup.sh` |
 | `SIMULATION_CONFIG` | 批量验证推荐配置 | 机器人布局、桌面、碰撞距离、速度和加速度等仿真配置 |
 | `SIMULATION_CAMERA_CONFIG` | `viewer_camera.json` | 自动渲染视频使用的 MuJoCo 相机配置 |
@@ -423,6 +428,7 @@ outputs/videos/02_stable_bbox.mp4
 outputs/videos/04_dual_visual_21kpts_2d_smooth.mp4
 
 outputs/data/trajectory_wristroot_track_cameraoptical.jsonl
+outputs/data/camera_relative_actions.jsonl
 outputs/data/locate_bboxes.json
 outputs/data/stable_bboxes.json
 
@@ -432,7 +438,13 @@ outputs/summary.json
 outputs/simulation/*_source_dual_ur5e.npz
 outputs/simulation/*_mink_dual_ur5e.npz
 outputs/simulation/*_mink_dual_ur5e_summary.json
+outputs/simulation/*_mink_training_quality.json
 outputs/simulation/*_mink_dual_ur5e.mp4
+outputs/hardware/dual_ur5e_hardware_trajectory.npz
+outputs/hardware/dual_ur5e_hardware_trajectory.json
+outputs/hardware/dual_ur5e_end_effector_trajectory.npz
+outputs/hardware/dual_ur5e_end_effector_trajectory.json
+outputs/hardware/preflight_report.json
 ```
 
 `outputs/summary.json` 是单个 session 的统一机器可读报告。主管道通过退出钩子生成它，因此正常完成、质量门禁失败或中途异常都会尽量留下当前状态。内容包括：
@@ -442,6 +454,8 @@ outputs/simulation/*_mink_dual_ur5e.mp4
 - 左右手匹配率、视觉覆盖率、深度应用率、标定误差和腕部残差；
 - RTAB-Map 覆盖率、插值间隔和缺失位姿；
 - Mink/安全审计、最小间距、误差、恢复帧和失败帧；
+- Mink 训练质量分数、训练资格、相对动作数量和合格率；
+- 14 维双臂离线轨迹、preflight 指标和仍待真机确认的 blocker；
 - 网页与关键产物状态，以及各缓存阶段完成情况；
 - 完整 `quality_report` 指标，便于未来增加统计项而不修改历史格式。
 
@@ -520,6 +534,129 @@ outputs/web/tactile_hand.png
 统计失败率、定位失败帧和回看动作；`PASS` 也不代表允许直接下发真实机器人，
 因为负载、抓取物、线缆和未建模环境仍不在当前检查范围内。每个 session 的
 仿真阶段有独立内容缓存，输入轨迹、配置、模型资产或仿真代码未变化时会跳过。
+
+### LingLong-H 并列仿真后端
+
+`simulation/linglong_h/` 提供与双 UR5e 并列的 LingLong-H 运动学回放。它读取
+相同的最终双手轨迹，复用坐标对齐、轨迹调理、静止锁定、统一重定时以及
+MuJoCo 视频/NPZ/summary 输出，但不会替换或改变默认 UR5e 主管道：
+
+```bash
+MUJOCO_GL=egl .venv-mujoco/bin/python simulation/linglong_h/replay_trajectory.py \
+  --session postprocess_data/SESSION \
+  --video
+```
+
+默认模型和所需网格已单独放在 `simulation/linglong_h/assets/`，不再依赖
+`/home/lenovo/linglong-h` 外部目录；也可通过 `simulation/linglong_h/config.json`
+的 `model_path` 修改。目前使用双臂 position-only IK；两侧腕部均挂载仓库内的
+AgiBot OmniPicker，并复用双 UR5e 后端的 `0=张开、1=闭合` 规范映射。当前安装
+变换将 OmniPicker 局部 `+Z` 对齐腕部局部 `+X`，但仍需在真机转接件上复核。
+LingLong-H 碰撞约束 Mink 和专用安全审计尚未启用，当前结果只用于可视化和
+运动学可达性检查。
+
+默认 LingLong-H 姿态不是手工摆放：`search_base_waist_pose.py` 会先根据底盘
+网格到 MuJoCo 地面的有符号距离求落地高度，再联合搜索底座前后位置、腰部
+伸展高度和躯干前倾角。初始位姿同时约束 OmniPicker 实际 TCP 前向轴（局部
+`+Z`）和指爪开合轴（局部 `+Y`）平行桌面，因此整个夹爪水平；不要求上臂或
+前臂连杆水平。最终配置不修改 URDF 或腕部 STL：校准时先隐藏夹爪，镜像旋转
+左右 `wrist_yaw_joint` 使腕部摄像头与桌面平行，并固定在左侧
+`-1.08195933 rad`、右侧 `+1.08206886 rad`；随后在原始法兰位置将智元夹爪
+水平装回。IK 只用其余六个手臂关节补偿法兰位移，因此相机角度不会漂移。
+
+最终初始 TCP 为 `[-0.35, 0.50, 0.88] m` 和 `[0.35, 0.50, 0.88] m`，
+底座 `z=0.340 m`、`y=-0.20 m`，腰部 extension `0.15 rad`、前倾
+`32.5°`。全部 606 源帧验证通过：最大 TCP 误差约 `0.117 mm`，最小环境
+间隙 `10.61 mm`，最小关节限位余量 `18.00°`。近景检查确认夹爪位于原始
+法兰上，且没有重复突出的法兰盘。
+
+### Mink 训练筛选与相机相对动作
+
+仿真完成后，主管道默认额外生成：
+
+```text
+outputs/simulation/<session>_mink_training_quality.json
+outputs/data/camera_relative_actions.jsonl
+outputs/summaries/camera_relative_actions_summary.json
+```
+
+Mink 质量文件同时包含 episode 级和源 RGB 帧级结果。总分由求解成功率、
+安全间距、末端跟踪误差、恢复比例和运动约束五部分组成；`eligible` 是硬筛选，
+`training_weight` 可直接用于采样或 loss 加权。默认最低分为 `0.60`。Mink
+`PASS` 仍可能有接近安全阈值的低分帧，因此训练导出不会把 PASS 简化成全帧等权。
+
+动作 JSONL 的每一行对应 `current -> current + ACTION_HORIZON_FRAMES`。
+`actions.left/right.delta_camera` 是在**当前头戴相机 optical 坐标系**中表达的
+末端增量：`x` 向右、`y` 向下、`z` 向前。每只手同时提供平移、旋转矩阵、
+rotation 6D、四元数和旋转向量；`target_pose_in_current_camera` 用于复算校验。
+只有基础轨迹有效、所需手姿态存在、Mink episode 与首尾帧均合格时，记录的
+`quality.eligible` 才为 `true`。
+
+对已有的一个处理结果单独重建评分和动作，不重新运行前面的后处理：
+
+```bash
+SESSION=/path/to/postprocess_data/SESSION
+SIM_NAME=SESSION
+
+.venv-mujoco/bin/python scripts/score_mink_quality.py \
+  --summary "$SESSION/outputs/simulation/${SIM_NAME}_mink_dual_ur5e_summary.json" \
+  --npz "$SESSION/outputs/simulation/${SIM_NAME}_mink_dual_ur5e.npz" \
+  --output "$SESSION/outputs/simulation/${SIM_NAME}_mink_training_quality.json"
+
+.venv-mujoco/bin/python scripts/export_camera_relative_actions.py \
+  --trajectory "$SESSION/outputs/data/trajectory_wristroot_track_cameraoptical.jsonl" \
+  --simulation_quality "$SESSION/outputs/simulation/${SIM_NAME}_mink_training_quality.json" \
+  --output "$SESSION/outputs/data/camera_relative_actions.jsonl" \
+  --summary_output "$SESSION/outputs/summaries/camera_relative_actions_summary.json"
+```
+
+如果 `RUN_ROBOT_SIMULATION=0`，仍会导出动作结构，但由于缺少 Mink 依据，
+所有记录都会标记为不可训练；也可以用 `EXPORT_TRAINING_ACTIONS=0` 完全关闭。
+
+### 双臂 14 维真机轨迹（离线导出）
+
+Mink 求解通过后，主管道默认从最终机器人关节轨迹导出：
+
+```text
+[左臂 6 关节 rad, 左夹爪 normalized, 右臂 6 关节 rad, 右夹爪 normalized]
+```
+
+每次会同时导出两类轨迹，并且每类都提供 NPZ 和 JSON：
+
+- `dual_ur5e_hardware_trajectory.*`：上述 14 维关节空间轨迹；
+- `dual_ur5e_end_effector_trajectory.*`：用最终 Mink `qpos` 在相同 MuJoCo
+  模型中执行 FK 得到的左右 TCP 实际位姿，位置单位为米、四元数顺序为 `xyzw`。
+
+关节轨迹每帧严格为 14 维。夹爪项来自连续的
+`left/right_gripper_position_command`，范围为 `[0, 1]`，其中 `0` 为全开、`1`
+为全闭；它表达带有限开合速度的夹爪位置意图，
+不是 OmniPicker 仿真模型内部的 8 个关节。NPZ 保存完整的左右臂位置、速度、
+加速度、jerk、夹爪速度、关节名和单位；JSON 保存带时间戳的 14 维位置点，
+便于控制侧解析。`preflight_report.json` 检查维度、有限值、时间单调性、Mink
+与安全审计判定、关节速度/加速度、首尾速度和夹爪范围，并记录文件 SHA-256。
+
+对已有 Mink 结果单独导出：
+
+```bash
+SESSION=/path/to/postprocess_data/SESSION
+SIM_NAME=SESSION
+
+.venv-mujoco/bin/python scripts/export_dual_ur5e_hardware_trajectory.py \
+  --npz "$SESSION/outputs/simulation/${SIM_NAME}_mink_dual_ur5e.npz" \
+  --summary "$SESSION/outputs/simulation/${SIM_NAME}_mink_dual_ur5e_summary.json" \
+  --output_npz "$SESSION/outputs/hardware/dual_ur5e_hardware_trajectory.npz" \
+  --output_json "$SESSION/outputs/hardware/dual_ur5e_hardware_trajectory.json" \
+  --output_ee_npz "$SESSION/outputs/hardware/dual_ur5e_end_effector_trajectory.npz" \
+  --output_ee_json "$SESSION/outputs/hardware/dual_ur5e_end_effector_trajectory.json" \
+  --preflight_output "$SESSION/outputs/hardware/preflight_report.json"
+```
+
+这里的 PASS 仅表示**离线导出与仿真检查通过**。报告会保持
+`hardware_execution_authorized: false` 和 `safe_to_send: false`。真正下发前仍须
+完成实际机器人关节顺序/正负号、双基座外参、TCP/负载、夹爪驱动映射、真实环境、
+起始位姿过渡和双臂实时安全监督；当前仓库不会连接 ROS 控制器或自动发送命令。
+末端 JSON 中的坐标系为 `mujoco_world`，不能在未标定变换的情况下直接当成任一
+真机 `base_link`；ROS 侧必须先应用对应的世界坐标系到左右机器人基座的外参。
 
 仅运行普通后处理、不需要仿真时：
 

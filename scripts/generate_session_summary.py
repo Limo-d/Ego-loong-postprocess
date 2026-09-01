@@ -96,15 +96,31 @@ def build_summary(args: argparse.Namespace) -> dict[str, Any]:
     rtabmap = load_json(summaries / "rtabmap_trajectory_summary.json")
     rtabmap_apply = load_json(summaries / "rtabmap_apply_summary.json")
     manifest = load_json(outputs / "manifest.json")
+    action_export = load_json(summaries / "camera_relative_actions_summary.json")
+    hardware_dir = outputs / "hardware"
+    hardware_trajectory_path = hardware_dir / "dual_ur5e_hardware_trajectory.json"
+    hardware_npz_path = hardware_dir / "dual_ur5e_hardware_trajectory.npz"
+    end_effector_trajectory_path = hardware_dir / "dual_ur5e_end_effector_trajectory.json"
+    end_effector_npz_path = hardware_dir / "dual_ur5e_end_effector_trajectory.npz"
+    hardware_preflight_path = hardware_dir / "preflight_report.json"
+    hardware_trajectory = load_json(hardware_trajectory_path)
+    end_effector_trajectory = load_json(end_effector_trajectory_path)
+    hardware_preflight = load_json(hardware_preflight_path)
 
     simulation_dir = outputs / "simulation"
     simulation_summaries = sorted(simulation_dir.glob("*_mink_dual_ur5e_summary.json"))
     simulation_path = simulation_summaries[-1] if simulation_summaries else simulation_dir / "mink_summary.json"
     simulation = load_json(simulation_path)
+    training_quality_paths = sorted(simulation_dir.glob("*_mink_training_quality.json"))
+    training_quality_path = training_quality_paths[-1] if training_quality_paths else simulation_dir / "mink_training_quality.json"
+    training_quality = load_json(training_quality_path)
     simulation_npz = simulation_dir / "missing.npz"
     if simulation is not None and simulation.get("npz"):
         candidate = Path(str(simulation["npz"])).expanduser()
         simulation_npz = candidate if candidate.is_absolute() else session / candidate
+    if not simulation_npz.is_file():
+        simulation_npzs = sorted(simulation_dir.glob("*_mink_dual_ur5e.npz"))
+        simulation_npz = simulation_npzs[-1] if simulation_npzs else simulation_npz
     simulation_video = None
     if simulation is not None and simulation.get("video"):
         candidate = Path(str(simulation["video"])).expanduser()
@@ -156,11 +172,19 @@ def build_summary(args: argparse.Namespace) -> dict[str, Any]:
         "manifest": artifact(outputs / "manifest.json", session),
         "trajectory": artifact(outputs / "data" / "trajectory_wristroot_track_cameraoptical.jsonl", session),
         "quality_report": artifact(quality_path, session),
+        "camera_relative_actions": artifact(outputs / "data" / "camera_relative_actions.jsonl", session),
+        "camera_relative_actions_summary": artifact(summaries / "camera_relative_actions_summary.json", session),
+        "mink_training_quality": artifact(training_quality_path, session),
         "simulation_npz": artifact(simulation_npz, session),
         "simulation_summary": artifact(simulation_path, session),
         "simulation_video": artifact(simulation_video, session),
         "review_web": artifact(outputs / "web" / "index.html", session),
         "review_simulation_video": artifact(outputs / "web" / "robot_simulation.mp4", session),
+        "hardware_trajectory_npz": artifact(hardware_npz_path, session),
+        "hardware_trajectory_json": artifact(hardware_trajectory_path, session),
+        "hardware_preflight": artifact(hardware_preflight_path, session),
+        "end_effector_trajectory_npz": artifact(end_effector_npz_path, session),
+        "end_effector_trajectory_json": artifact(end_effector_trajectory_path, session),
     }
 
     return {
@@ -227,6 +251,38 @@ def build_summary(args: argparse.Namespace) -> dict[str, Any]:
             "recovery_frames": get(simulation, "recovery_frames", default=[]),
             "motion_metrics": get(simulation, "motion_metrics", default={}),
             "safety_audit": get(simulation, "safety_audit", default={}),
+            "training_quality_score": get(training_quality, "episode", "score"),
+            "training_eligible": get(training_quality, "episode", "eligible"),
+            "training_weight": get(training_quality, "episode", "training_weight"),
+        },
+        "training_actions": {
+            "available": action_export is not None,
+            "method": get(action_export, "method"),
+            "horizon_frames": get(action_export, "horizon_frames"),
+            "origin": get(action_export, "origin"),
+            "required_sides": get(action_export, "required_sides", default=[]),
+            "records": get(action_export, "records"),
+            "eligible_records": get(action_export, "eligible_records"),
+            "eligible_ratio": get(action_export, "eligible_ratio"),
+            "coordinate_convention": get(action_export, "coordinate_convention", default={}),
+        },
+        "hardware_export": {
+            "available": hardware_trajectory is not None and hardware_preflight is not None,
+            "offline_preflight_pass": get(hardware_preflight, "offline_preflight_pass"),
+            "hardware_execution_authorized": get(hardware_preflight, "hardware_execution_authorized", default=False),
+            "verdict": get(hardware_preflight, "verdict", default="NOT_AVAILABLE"),
+            "frame_count": get(hardware_trajectory, "frame_count"),
+            "duration_sec": get(hardware_trajectory, "duration_sec"),
+            "action_dimension": len(get(hardware_trajectory, "joint_names_14d", default=[]) or []),
+            "layout": get(hardware_trajectory, "layout"),
+            "arm_speed_max_rad_s": get(hardware_preflight, "metrics", "arm_speed_max_rad_s"),
+            "arm_acceleration_max_rad_s2": get(hardware_preflight, "metrics", "arm_acceleration_max_rad_s2"),
+            "minimum_simulation_clearance_m": get(hardware_preflight, "metrics", "minimum_simulation_clearance_m"),
+            "hardware_blockers": get(hardware_preflight, "hardware_blockers", default=[]),
+            "end_effector_available": end_effector_trajectory is not None,
+            "end_effector_coordinate_frame": get(end_effector_trajectory, "coordinate_frame"),
+            "end_effector_tcp_site_names": get(end_effector_trajectory, "tcp_site_names", default={}),
+            "fk_to_ik_target_position_error_max_m": get(hardware_preflight, "metrics", "fk_to_ik_target_position_error_max_m"),
         },
         "web": {
             "available": artifacts["review_web"]["exists"],

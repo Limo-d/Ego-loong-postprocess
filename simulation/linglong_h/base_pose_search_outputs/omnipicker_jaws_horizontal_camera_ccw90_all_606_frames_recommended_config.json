@@ -1,0 +1,69 @@
+{
+  "extends": "../config.json",
+  "layout_name": "omnipicker_jaws_horizontal_camera_ccw90_all_606_frames_recommended",
+  "layout_status": "base + waist keyframe search recommendation; full replay validation required",
+  "base_position_m": [
+    0.0,
+    -0.3,
+    0.33999992141285856
+  ],
+  "base_positions_m": {
+    "left": [
+      0.0,
+      -0.3,
+      0.33999992141285856
+    ],
+    "right": [
+      0.0,
+      -0.3,
+      0.33999992141285856
+    ]
+  },
+  "waist_home_q_rad": [
+    -0.0,
+    0.0,
+    0.6981317007977318,
+    0.0
+  ],
+  "home_q_rad_by_side": {
+    "left": [
+      1.4537073074331914,
+      1.6187417582572763,
+      1.7040982112072875,
+      0.05928689836904852,
+      0.20347558277809322,
+      -0.3968472440190113,
+      0.4888370763543614
+    ],
+    "right": [
+      1.4709095570691793,
+      -1.6233314467883266,
+      -1.7259731199993114,
+      0.07663226063508116,
+      -0.20927586798968056,
+      -0.41866035883691854,
+      -0.48872749108216595
+    ]
+  },
+  "task_anchor_positions_m": {
+    "left": [
+      -0.35,
+      0.5,
+      0.835
+    ],
+    "right": [
+      0.35,
+      0.5,
+      0.835
+    ]
+  },
+  "base_waist_search": {
+    "report": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/base_pose_search_outputs/omnipicker_jaws_horizontal_camera_ccw90_all_606_frames_report.json",
+    "feasible": true,
+    "validated_frame_count": 606,
+    "full_trajectory_validated": false,
+    "score": 1000.542176579985,
+    "waist_extension_rad": 0.0,
+    "waist_lean_deg": 40.0
+  }
+}

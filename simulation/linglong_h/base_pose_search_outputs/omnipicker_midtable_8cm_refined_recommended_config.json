@@ -1,0 +1,67 @@
+{
+  "extends": "../config.json",
+  "layout_name": "omnipicker_midtable_8cm_refined_recommended",
+  "layout_status": "base + waist keyframe search recommendation; full replay validation required",
+  "base_position_m": [
+    0.0,
+    -0.3,
+    0.33999992141285856
+  ],
+  "base_positions_m": {
+    "left": [
+      0.0,
+      -0.3,
+      0.33999992141285856
+    ],
+    "right": [
+      0.0,
+      -0.3,
+      0.33999992141285856
+    ]
+  },
+  "waist_home_q_rad": [
+    -0.05,
+    0.1,
+    0.5608652381980153,
+    0.0
+  ],
+  "home_q_rad_by_side": {
+    "left": [
+      1.6884896157176246,
+      1.9725865730051173,
+      1.5138471464026984,
+      -0.02271944701128393,
+      -1.1641040528467455,
+      -0.7419827989729417,
+      0.6576756273310655
+    ],
+    "right": [
+      1.688854174919642,
+      -1.968231660596933,
+      -1.516996812039495,
+      -0.025062913255434593,
+      1.1695406819719958,
+      -0.7375513165828017,
+      -0.6469771670682474
+    ]
+  },
+  "task_anchor_positions_m": {
+    "left": [
+      -0.35,
+      0.5,
+      0.83
+    ],
+    "right": [
+      0.35,
+      0.5,
+      0.83
+    ]
+  },
+  "base_waist_search": {
+    "report": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/base_pose_search_outputs/omnipicker_midtable_8cm_refined_report.json",
+    "feasible": false,
+    "score": 800.1895729800179,
+    "waist_extension_rad": 0.05,
+    "waist_lean_deg": 35.0
+  }
+}

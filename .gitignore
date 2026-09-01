@@ -46,6 +46,8 @@ venv/
 /.docker-assets/
 /third_party/mujoco_menagerie/
 /simulation/dual_ur5e/outputs/
+/simulation/linglong_h/outputs/
+/simulation/linglong_h/base_pose_search_outputs/search_smoke_*
 
 # Local scratch and backup files
 *.bak

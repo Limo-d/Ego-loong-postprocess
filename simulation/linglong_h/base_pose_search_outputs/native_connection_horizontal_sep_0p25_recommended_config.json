@@ -1,0 +1,69 @@
+{
+  "extends": "../config.json",
+  "layout_name": "native_connection_horizontal_sep_0p25_recommended",
+  "layout_status": "base + waist keyframe search recommendation; full replay validation required",
+  "base_position_m": [
+    0.0,
+    -0.25,
+    0.33999992141285856
+  ],
+  "base_positions_m": {
+    "left": [
+      0.0,
+      -0.25,
+      0.33999992141285856
+    ],
+    "right": [
+      0.0,
+      -0.25,
+      0.33999992141285856
+    ]
+  },
+  "waist_home_q_rad": [
+    -0.1,
+    0.2,
+    0.6853981633974483,
+    0.0
+  ],
+  "home_q_rad_by_side": {
+    "left": [
+      1.773521135446392,
+      2.3410723161382117,
+      2.9670597279999997,
+      0.5658965378264785,
+      -0.20140420984787902,
+      -1.3962634019999998,
+      -1.0819593317474943
+    ],
+    "right": [
+      1.7733094427590503,
+      -2.341202379021936,
+      -2.9670597279999997,
+      0.566057221867945,
+      0.20136673772131064,
+      -1.3962634019999998,
+      1.0820688607294306
+    ]
+  },
+  "task_anchor_positions_m": {
+    "left": [
+      -0.25,
+      0.5,
+      0.88
+    ],
+    "right": [
+      0.25,
+      0.5,
+      0.88
+    ]
+  },
+  "base_waist_search": {
+    "report": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/base_pose_search_outputs/native_connection_horizontal_sep_0p25_report.json",
+    "feasible": false,
+    "validated_frame_count": 24,
+    "full_trajectory_validated": false,
+    "score": 997.3568899982317,
+    "waist_extension_rad": 0.1,
+    "waist_lean_deg": 45.0
+  }
+}

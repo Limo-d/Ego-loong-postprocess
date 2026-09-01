@@ -1,0 +1,69 @@
+{
+  "extends": "../config.json",
+  "layout_name": "wrist_camera_parallel_gripper_horizontal_fixed_yaw_recommended",
+  "layout_status": "base + waist keyframe search recommendation; full replay validation required",
+  "base_position_m": [
+    0.0,
+    -0.25,
+    0.33999992141285856
+  ],
+  "base_positions_m": {
+    "left": [
+      0.0,
+      -0.25,
+      0.33999992141285856
+    ],
+    "right": [
+      0.0,
+      -0.25,
+      0.33999992141285856
+    ]
+  },
+  "waist_home_q_rad": [
+    -0.1,
+    0.2,
+    0.5108652381980153,
+    0.0
+  ],
+  "home_q_rad_by_side": {
+    "left": [
+      0.574823184575083,
+      2.078116987492931,
+      0.7054744805766312,
+      0.4502129927201199,
+      -0.0947259132840932,
+      -0.6834120650262345,
+      -1.0819593317474943
+    ],
+    "right": [
+      0.6067216928384269,
+      -2.0833750676059597,
+      -0.7440339264347076,
+      0.49452879903475305,
+      0.07378833011133426,
+      -0.7378310385749247,
+      1.0820688607294306
+    ]
+  },
+  "task_anchor_positions_m": {
+    "left": [
+      -0.35,
+      0.5,
+      0.87
+    ],
+    "right": [
+      0.35,
+      0.5,
+      0.87
+    ]
+  },
+  "base_waist_search": {
+    "report": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/base_pose_search_outputs/wrist_camera_parallel_gripper_horizontal_fixed_yaw_report.json",
+    "feasible": true,
+    "validated_frame_count": 24,
+    "full_trajectory_validated": false,
+    "score": 1000.0520992178768,
+    "waist_extension_rad": 0.1,
+    "waist_lean_deg": 35.0
+  }
+}

@@ -1,0 +1,426 @@
+{
+  "source_config": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/config.json",
+  "source_replay_npz": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/outputs/linglong_search_source_linglong_h.npz",
+  "grounding": {
+    "original_base_z_m": 0.33999992141285856,
+    "original_base_ground_clearance_m": 0.0,
+    "grounded_base_z_m": 0.33999992141285856
+  },
+  "keyframes": [
+    0,
+    132,
+    204,
+    222,
+    245,
+    269,
+    279,
+    298,
+    314,
+    322,
+    326,
+    334,
+    350,
+    421,
+    447,
+    471,
+    481,
+    490,
+    499,
+    506,
+    514,
+    537,
+    574,
+    588,
+    607,
+    628,
+    653,
+    678,
+    702,
+    716,
+    735,
+    758,
+    779,
+    795,
+    816,
+    836,
+    850,
+    861,
+    869,
+    876,
+    882,
+    887,
+    891,
+    896,
+    902,
+    935,
+    951,
+    969,
+    985,
+    995,
+    1006,
+    1044,
+    1066,
+    1097,
+    1133,
+    1188,
+    1196,
+    1252,
+    1299,
+    1339,
+    1364,
+    1387,
+    1404,
+    1422,
+    1433,
+    1446,
+    1457,
+    1463,
+    1471,
+    1495,
+    1513,
+    1522,
+    1533,
+    1556,
+    1606,
+    1650,
+    1671,
+    1688,
+    1763,
+    1822,
+    1853,
+    1907,
+    1920,
+    1932,
+    1939,
+    1945,
+    1954,
+    1970,
+    1985,
+    2012,
+    2023,
+    2045,
+    2081,
+    2095,
+    2131,
+    2177,
+    2212,
+    2254,
+    2269,
+    2291,
+    2310,
+    2325,
+    2342,
+    2351,
+    2360,
+    2374,
+    2385,
+    2403,
+    2423,
+    2438,
+    2451,
+    2460,
+    2468,
+    2477,
+    2493,
+    2500,
+    2512,
+    2541,
+    2568,
+    2586,
+    2607,
+    2632,
+    2677,
+    2713,
+    2742,
+    2765,
+    2789,
+    2806,
+    2814,
+    2824,
+    2830,
+    2838,
+    2850,
+    2863,
+    2871,
+    2894,
+    2906,
+    2916,
+    2940,
+    2961,
+    2976,
+    2982,
+    2987,
+    2994,
+    3004,
+    3046,
+    3071,
+    3100,
+    3118,
+    3140,
+    3149,
+    3155,
+    3160,
+    3166,
+    3180,
+    3195,
+    3208,
+    3224,
+    3266,
+    3326
+  ],
+  "constraints": {
+    "position_tolerance_m": 0.005,
+    "max_initial_tcp_angle_deg": 10.0,
+    "initial_tcp_above_table_m": 0.09,
+    "initial_tcp_center_y_m": 0.5,
+    "initial_tcp_half_separation_m": 0.08,
+    "minimum_initial_tcp_above_table_m": 0.08,
+    "minimum_initial_arm_table_clearance_m": 0.0,
+    "horizontal_deadband_deg": 5.0,
+    "horizontal_penalty_weight": 2.0
+  },
+  "target_z_shifts_m": {
+    "left": -0.16559631539365116,
+    "right": -0.16559631539365116
+  },
+  "target_xy_shifts_m": {
+    "left": [
+      0.3483401788634645,
+      0.24891697524385104
+    ],
+    "right": [
+      -0.34834017886346463,
+      0.24896697524385114
+    ]
+  },
+  "tcp_height_clamp_counts": {
+    "left": 0,
+    "right": 496
+  },
+  "candidate_count": 1,
+  "feasible_candidate_count": 1,
+  "best": {
+    "index": 0,
+    "base_forward_m": -0.1,
+    "grounded_base_z_m": 0.33999992141285856,
+    "waist_extension_rad": 0.2,
+    "waist_lean_deg": 30.0,
+    "waist_home_q_rad": [
+      -0.2,
+      0.4,
+      0.3235987755982988,
+      0.0
+    ],
+    "feasible": true,
+    "feasible_target_ratio": 1.0,
+    "position_error_mean_m": 2.566646316101632e-05,
+    "position_error_max_m": 0.00012199200089556736,
+    "environment_clearance_min_m": 0.03219401710375524,
+    "closest_environment_pair": [
+      "table_top",
+      "right_wrist_yaw_link"
+    ],
+    "cross_arm_clearance_min_m": 0.012667758711559842,
+    "closest_cross_arm_pair": [
+      "left_omnipicker_inner_link4",
+      "right_omnipicker_outer_link4"
+    ],
+    "joint_margin_min_deg": 16.316345292426004,
+    "jacobian_condition_max": 3.311154341798263,
+    "initial_posture": {
+      "arm_horizontal_angle_deg": {
+        "left": 37.60060987892658,
+        "right": 37.60061022768614
+      },
+      "upper_arm_horizontal_angle_deg": {
+        "left": 24.852252621878524,
+        "right": 25.49770032305511
+      },
+      "forearm_horizontal_angle_deg": {
+        "left": 45.03543397508377,
+        "right": 43.8855195474118
+      },
+      "tcp_forward_axis_horizontal_angle_deg": {
+        "left": 2.275428765577585e-05,
+        "right": 4.0106140144697996e-05
+      },
+      "jaw_axis_horizontal_angle_deg": {
+        "left": 1.4680756291208314e-05,
+        "right": 8.251186806804386e-06
+      },
+      "tcp_height_above_table_m": {
+        "left": 0.09000000093470617,
+        "right": 0.08999998096439821
+      },
+      "arm_table_clearance_m": {
+        "left": 0.04600006888134134,
+        "right": 0.04600010950057576
+      },
+      "tcp_positions_m": {
+        "left": [
+          -0.08000000039839993,
+          0.4999999995686829,
+          0.8400000009347062
+        ],
+        "right": [
+          0.08000007402178964,
+          0.5000000515691193,
+          0.8399999809643982
+        ]
+      }
+    },
+    "initial_tcp_horizontal": true,
+    "initial_table_safe": true,
+    "score": 1000.524338353527,
+    "first_frame_home_q_rad_by_side": {
+      "left": [
+        1.5664724958584777,
+        2.5804058963559844,
+        0.9166042827621382,
+        0.5955641993642053,
+        -1.6953363807752952,
+        -1.0094240534167476,
+        -1.0819593317474943
+      ],
+      "right": [
+        1.5843170690870292,
+        -2.570525424841253,
+        -0.9681682958187677,
+        0.5982053833266483,
+        1.655608950494338,
+        -0.9847569087183583,
+        1.0820688607294306
+      ]
+    },
+    "initial_tcp_positions_m": {
+      "left": [
+        -0.08000000039839993,
+        0.4999999995686829,
+        0.8400000009347062
+      ],
+      "right": [
+        0.08000007402178964,
+        0.5000000515691193,
+        0.8399999809643982
+      ]
+    },
+    "waist_yaw_position_m": [
+      8.451572774959006e-18,
+      0.0155,
+      0.857120596278959
+    ]
+  },
+  "candidates": [
+    {
+      "index": 0,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.3235987755982988,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.566646316101632e-05,
+      "position_error_max_m": 0.00012199200089556736,
+      "environment_clearance_min_m": 0.03219401710375524,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.012667758711559842,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 16.316345292426004,
+      "jacobian_condition_max": 3.311154341798263,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 37.60060987892658,
+          "right": 37.60061022768614
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 24.852252621878524,
+          "right": 25.49770032305511
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 45.03543397508377,
+          "right": 43.8855195474118
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.275428765577585e-05,
+          "right": 4.0106140144697996e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.4680756291208314e-05,
+          "right": 8.251186806804386e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000093470617,
+          "right": 0.08999998096439821
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600006888134134,
+          "right": 0.04600010950057576
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000039839993,
+            0.4999999995686829,
+            0.8400000009347062
+          ],
+          "right": [
+            0.08000007402178964,
+            0.5000000515691193,
+            0.8399999809643982
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.524338353527,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.5664724958584777,
+          2.5804058963559844,
+          0.9166042827621382,
+          0.5955641993642053,
+          -1.6953363807752952,
+          -1.0094240534167476,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.5843170690870292,
+          -2.570525424841253,
+          -0.9681682958187677,
+          0.5982053833266483,
+          1.655608950494338,
+          -0.9847569087183583,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000039839993,
+          0.4999999995686829,
+          0.8400000009347062
+        ],
+        "right": [
+          0.08000007402178964,
+          0.5000000515691193,
+          0.8399999809643982
+        ]
+      },
+      "waist_yaw_position_m": [
+        8.451572774959006e-18,
+        0.0155,
+        0.857120596278959
+      ]
+    }
+  ]
+}

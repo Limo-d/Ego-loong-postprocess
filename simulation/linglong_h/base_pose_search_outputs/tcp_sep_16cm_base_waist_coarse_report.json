@@ -1,0 +1,5563 @@
+{
+  "source_config": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/config.json",
+  "source_replay_npz": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/outputs/linglong_search_source_linglong_h.npz",
+  "grounding": {
+    "original_base_z_m": 0.33999992141285856,
+    "original_base_ground_clearance_m": 0.0,
+    "grounded_base_z_m": 0.33999992141285856
+  },
+  "keyframes": [
+    0,
+    222,
+    245,
+    279,
+    314,
+    326,
+    350,
+    471,
+    490,
+    506,
+    537,
+    588,
+    628,
+    678,
+    716,
+    758,
+    795,
+    836,
+    861,
+    876,
+    887,
+    896,
+    935,
+    969,
+    1006,
+    1044,
+    1188,
+    1196,
+    1299,
+    1364,
+    1433,
+    1446,
+    1457,
+    1513,
+    1533,
+    1688,
+    1763,
+    1853,
+    1907,
+    1932,
+    1945,
+    1985,
+    2012,
+    2023,
+    2045,
+    2212,
+    2269,
+    2310,
+    2342,
+    2360,
+    2385,
+    2403,
+    2423,
+    2451,
+    2468,
+    2493,
+    2512,
+    2568,
+    2607,
+    2632,
+    2677,
+    2742,
+    2789,
+    2814,
+    2838,
+    2863,
+    2894,
+    2916,
+    2961,
+    2982,
+    2994,
+    3071,
+    3118,
+    3149,
+    3155,
+    3160,
+    3180,
+    3208,
+    3266,
+    3326
+  ],
+  "constraints": {
+    "position_tolerance_m": 0.005,
+    "max_initial_tcp_angle_deg": 10.0,
+    "initial_tcp_above_table_m": 0.09,
+    "initial_tcp_center_y_m": 0.5,
+    "initial_tcp_half_separation_m": 0.08,
+    "minimum_initial_tcp_above_table_m": 0.08,
+    "minimum_initial_arm_table_clearance_m": 0.0,
+    "horizontal_deadband_deg": 5.0,
+    "horizontal_penalty_weight": 2.0
+  },
+  "target_z_shifts_m": {
+    "left": -0.16559631539365116,
+    "right": -0.16559631539365116
+  },
+  "target_xy_shifts_m": {
+    "left": [
+      0.3483401788634645,
+      0.24891697524385104
+    ],
+    "right": [
+      -0.34834017886346463,
+      0.24896697524385114
+    ]
+  },
+  "tcp_height_clamp_counts": {
+    "left": 0,
+    "right": 496
+  },
+  "candidate_count": 48,
+  "feasible_candidate_count": 22,
+  "best": {
+    "index": 27,
+    "base_forward_m": -0.1,
+    "grounded_base_z_m": 0.33999992141285856,
+    "waist_extension_rad": 0.2,
+    "waist_lean_deg": 30.0,
+    "waist_home_q_rad": [
+      -0.2,
+      0.4,
+      0.3235987755982988,
+      0.0
+    ],
+    "feasible": true,
+    "feasible_target_ratio": 1.0,
+    "position_error_mean_m": 2.6190348997943817e-05,
+    "position_error_max_m": 0.0001219953892125397,
+    "environment_clearance_min_m": 0.032606353255281495,
+    "closest_environment_pair": [
+      "table_top",
+      "right_wrist_yaw_link"
+    ],
+    "cross_arm_clearance_min_m": 0.013305839350137766,
+    "closest_cross_arm_pair": [
+      "left_omnipicker_inner_link4",
+      "right_omnipicker_outer_link4"
+    ],
+    "joint_margin_min_deg": 16.713701449446962,
+    "jacobian_condition_max": 3.31115726276378,
+    "initial_posture": {
+      "arm_horizontal_angle_deg": {
+        "left": 37.60060987892658,
+        "right": 37.60061022768614
+      },
+      "upper_arm_horizontal_angle_deg": {
+        "left": 24.852252621878524,
+        "right": 25.49770032305511
+      },
+      "forearm_horizontal_angle_deg": {
+        "left": 45.03543397508377,
+        "right": 43.8855195474118
+      },
+      "tcp_forward_axis_horizontal_angle_deg": {
+        "left": 2.275428765577585e-05,
+        "right": 4.0106140144697996e-05
+      },
+      "jaw_axis_horizontal_angle_deg": {
+        "left": 1.4680756291208314e-05,
+        "right": 8.251186806804386e-06
+      },
+      "tcp_height_above_table_m": {
+        "left": 0.09000000093470617,
+        "right": 0.08999998096439821
+      },
+      "arm_table_clearance_m": {
+        "left": 0.04600006888134134,
+        "right": 0.04600010950057576
+      },
+      "tcp_positions_m": {
+        "left": [
+          -0.08000000039839993,
+          0.4999999995686829,
+          0.8400000009347062
+        ],
+        "right": [
+          0.08000007402178964,
+          0.5000000515691193,
+          0.8399999809643982
+        ]
+      }
+    },
+    "initial_tcp_horizontal": true,
+    "initial_table_safe": true,
+    "score": 1000.5427828620925,
+    "first_frame_home_q_rad_by_side": {
+      "left": [
+        1.5664724958584777,
+        2.5804058963559844,
+        0.9166042827621382,
+        0.5955641993642053,
+        -1.6953363807752952,
+        -1.0094240534167476,
+        -1.0819593317474943
+      ],
+      "right": [
+        1.5843170690870292,
+        -2.570525424841253,
+        -0.9681682958187677,
+        0.5982053833266483,
+        1.655608950494338,
+        -0.9847569087183583,
+        1.0820688607294306
+      ]
+    },
+    "initial_tcp_positions_m": {
+      "left": [
+        -0.08000000039839993,
+        0.4999999995686829,
+        0.8400000009347062
+      ],
+      "right": [
+        0.08000007402178964,
+        0.5000000515691193,
+        0.8399999809643982
+      ]
+    },
+    "waist_yaw_position_m": [
+      8.451572774959006e-18,
+      0.0155,
+      0.857120596278959
+    ]
+  },
+  "candidates": [
+    {
+      "index": 27,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.3235987755982988,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.6190348997943817e-05,
+      "position_error_max_m": 0.0001219953892125397,
+      "environment_clearance_min_m": 0.032606353255281495,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.013305839350137766,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 16.713701449446962,
+      "jacobian_condition_max": 3.31115726276378,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 37.60060987892658,
+          "right": 37.60061022768614
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 24.852252621878524,
+          "right": 25.49770032305511
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 45.03543397508377,
+          "right": 43.8855195474118
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.275428765577585e-05,
+          "right": 4.0106140144697996e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.4680756291208314e-05,
+          "right": 8.251186806804386e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000093470617,
+          "right": 0.08999998096439821
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600006888134134,
+          "right": 0.04600010950057576
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000039839993,
+            0.4999999995686829,
+            0.8400000009347062
+          ],
+          "right": [
+            0.08000007402178964,
+            0.5000000515691193,
+            0.8399999809643982
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.5427828620925,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.5664724958584777,
+          2.5804058963559844,
+          0.9166042827621382,
+          0.5955641993642053,
+          -1.6953363807752952,
+          -1.0094240534167476,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.5843170690870292,
+          -2.570525424841253,
+          -0.9681682958187677,
+          0.5982053833266483,
+          1.655608950494338,
+          -0.9847569087183583,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000039839993,
+          0.4999999995686829,
+          0.8400000009347062
+        ],
+        "right": [
+          0.08000007402178964,
+          0.5000000515691193,
+          0.8399999809643982
+        ]
+      },
+      "waist_yaw_position_m": [
+        8.451572774959006e-18,
+        0.0155,
+        0.857120596278959
+      ]
+    },
+    {
+      "index": 24,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.42359877559829884,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.7709811077561137e-05,
+      "position_error_max_m": 0.00013091784287554638,
+      "environment_clearance_min_m": 0.03160474501284526,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.01205401995888028,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 3.02832020137217,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 32.00133213673872,
+          "right": 32.00133213617274
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 15.265249661260723,
+          "right": 15.284305125030588
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 40.38496830625019,
+          "right": 40.35339196690976
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.5685901981196984e-05,
+          "right": 1.595743710205131e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.0135474600126166e-05,
+          "right": 1.025204504773567e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000066176572,
+          "right": 0.09000000066791469
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600004729852014,
+          "right": 0.04600005321904859
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000043399998,
+            0.4999999996211871,
+            0.8400000006617657
+          ],
+          "right": [
+            0.08000000043472572,
+            0.4999999996193909,
+            0.8400000006679147
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.5287357467805,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.3827718032170253,
+          2.4965516145292974,
+          0.8938820399032676,
+          0.4079372921488816,
+          -1.6593136655731344,
+          -0.9091526603454129,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.3834169501154565,
+          -2.496438376888879,
+          -0.8952175290191401,
+          0.4082391846614666,
+          1.6585128721272664,
+          -0.9084672747173682,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000043399998,
+          0.4999999996211871,
+          0.8400000006617657
+        ],
+        "right": [
+          0.08000000043472572,
+          0.4999999996193909,
+          0.8400000006679147
+        ]
+      },
+      "waist_yaw_position_m": [
+        -2.7200464103316344e-18,
+        0.015499999999999917,
+        0.8049093777176731
+      ]
+    },
+    {
+      "index": 19,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.3981317007977318,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.7333318432803933e-05,
+      "position_error_max_m": 0.00013600415486790673,
+      "environment_clearance_min_m": 0.033300520495406216,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.014800345580081016,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 15.89046961837105,
+      "jacobian_condition_max": 3.471835195815556,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 35.52624094834082,
+          "right": 35.526241542115955
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 26.66969327026708,
+          "right": 26.71212394629931
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 40.3562998132194,
+          "right": 40.291255197104405
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 3.0909836950604584e-05,
+          "right": 5.249708508101436e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.3111387391564574e-05,
+          "right": 2.822870004712555e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999151979954,
+          "right": 0.0899999631072258
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600008724029158,
+          "right": 0.04600013550345916
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000003760868413,
+            0.5000000241078261,
+            0.8399999915197995
+          ],
+          "right": [
+            0.08000015080592005,
+            0.5000000991559647,
+            0.8399999631072258
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.5198660729948,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.4304169984066983,
+          2.582610074018517,
+          1.076405986891703,
+          0.6538886693622551,
+          -1.634286564225666,
+          -0.9085301862647888,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.4316160323441418,
+          -2.5823413730993545,
+          -1.0796014320416671,
+          0.6542242849210501,
+          1.6319216790750686,
+          -0.9071181615348088,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000003760868413,
+          0.5000000241078261,
+          0.8399999915197995
+        ],
+        "right": [
+          0.08000015080592005,
+          0.5000000991559647,
+          0.8399999631072258
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2731816429200082e-17,
+        -0.05151606216240945,
+        0.8830681662200697
+      ]
+    },
+    {
+      "index": 16,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.4981317007977318,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.8497280385982446e-05,
+      "position_error_max_m": 0.00014250433993634175,
+      "environment_clearance_min_m": 0.03224350182819158,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0126766370584578,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 3.210604518969372,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 30.355230001382296,
+          "right": 30.355229974710646
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 17.45687526654379,
+          "right": 16.148944026081693
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 36.65082344286195,
+          "right": 38.63850104151619
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.1944890895911705e-05,
+          "right": 1.4356741728383516e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 8.246387568353799e-06,
+          "right": 9.436387032122264e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.0899999944464065,
+          "right": 0.09000000062451374
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000063235913546,
+          "right": 0.04600004319683415
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000003250614833,
+            0.5000000221277647,
+            0.8399999944464065
+          ],
+          "right": [
+            0.08000000044405284,
+            0.49999999954812735,
+            0.8400000006245137
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.5178119231729,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.2545946841181752,
+          2.5056807351069432,
+          1.0204002811234427,
+          0.47842276595485367,
+          -1.6360359433100153,
+          -0.8277026913233547,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.2211017334685494,
+          -2.5228709834770746,
+          -0.9352967433495273,
+          0.4749585134308513,
+          1.6963905188904473,
+          -0.8711570376273226,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000003250614833,
+          0.5000000221277647,
+          0.8399999944464065
+        ],
+        "right": [
+          0.08000000044405284,
+          0.49999999954812735,
+          0.8400000006245137
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        -0.05151606216240945,
+        0.8340249943652376
+      ]
+    },
+    {
+      "index": 22,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.29813170079773177,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.822766179410715e-05,
+      "position_error_max_m": 0.0001340558890932218,
+      "environment_clearance_min_m": 0.033938832846393985,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.01671903867225332,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 12.725033510234049,
+      "jacobian_condition_max": 3.9206469230082646,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 39.78582331529904,
+          "right": 39.78582206353021
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 39.35306749662017,
+          "right": 35.49540570309396
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 39.32060718424258,
+          "right": 44.88092640633157
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 8.715150601539454e-05,
+          "right": 5.452905798921368e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.9070698193389372e-06,
+          "right": 1.0684059742012977e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999992190020334,
+          "right": 0.08999996342320316
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000208814984456,
+          "right": 0.04600013823229954
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000028107363343,
+            0.5000001618843726,
+            0.8399999219002033
+          ],
+          "right": [
+            0.0800001132860927,
+            0.5000000652261029,
+            0.8399999634232032
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4851263133586,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.6739660090449182,
+          2.6523743838195286,
+          1.3977608494800875,
+          0.8466944216853847,
+          -1.4420594056121732,
+          -0.8860172100575486,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.5772133593663094,
+          -2.6825442687605956,
+          -1.068184797523365,
+          0.845902071089467,
+          1.7170845345305867,
+          -1.006114434071749,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000028107363343,
+          0.5000001618843726,
+          0.8399999219002033
+        ],
+        "right": [
+          0.0800001132860927,
+          0.5000000652261029,
+          0.8399999634232032
+        ]
+      },
+      "waist_yaw_position_m": [
+        -1.7874590696465024e-17,
+        -0.05151606216240945,
+        0.9284532682067927
+      ]
+    },
+    {
+      "index": 8,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.5726646259971648,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.0432767070077774e-05,
+      "position_error_max_m": 0.00016718867175113359,
+      "environment_clearance_min_m": 0.03303079853792201,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.014465284495849476,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 16.325840994633992,
+      "jacobian_condition_max": 3.450237619098726,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 26.56776057589356,
+          "right": 26.567760442936862
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 15.798604849298789,
+          "right": 14.815643488937946
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 33.63837698361245,
+          "right": 35.02076034154093
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.479681570317687e-05,
+          "right": 1.1400805600369226e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.6347351074321102e-06,
+          "right": 7.357108042234188e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.089999986643025,
+          "right": 0.09000000052782442
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600006845612304,
+          "right": 0.046000034198734
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000008159218466,
+            0.5000000533721086,
+            0.839999986643025
+          ],
+          "right": [
+            0.08000000046530711,
+            0.4999999994479019,
+            0.8400000005278244
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.46019983149,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.034750072764548,
+          2.5390638580185545,
+          1.0372209399228365,
+          0.5394165116555518,
+          -1.7036318101693513,
+          -0.761440852906649,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.011276451797884,
+          -2.550058733261659,
+          -0.975378319868474,
+          0.5353745812866038,
+          1.7494530205219574,
+          -0.7919064245834457,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000008159218466,
+          0.5000000533721086,
+          0.839999986643025
+        ],
+        "right": [
+          0.08000000046530711,
+          0.4999999994479019,
+          0.8400000005278244
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.555489236362064e-17,
+        -0.1230437336395161,
+        0.8545958376971764
+      ]
+    },
+    {
+      "index": 30,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.22359877559829883,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.7138525481182185e-05,
+      "position_error_max_m": 0.00011861403660379257,
+      "environment_clearance_min_m": 0.0336763369572729,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.017799081429916812,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 9.178676027477799,
+      "jacobian_condition_max": 3.781088579655203,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 42.19318938452972,
+          "right": 42.19318938396585
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 35.25630041163855,
+          "right": 35.273406667561765
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 48.973375498210714,
+          "right": 48.940463420046825
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 3.291170577611042e-05,
+          "right": 3.322737735870752e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.017087095360027e-05,
+          "right": 2.029915535507905e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000132437247,
+          "right": 0.09000000133199015
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600009979623476,
+          "right": 0.04600010058520776
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000037521196,
+            0.49999999947443696,
+            0.8400000013243725
+          ],
+          "right": [
+            0.08000000037492988,
+            0.49999999947293655,
+            0.8400000013319902
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4535374540545,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.7491309025975326,
+          2.6764812286560495,
+          0.9470380560463849,
+          0.8043759652110917,
+          -1.7687529257800583,
+          -1.0932277934054158,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.749709293642547,
+          -2.676412549447977,
+          -0.9487616797960678,
+          0.8047509428617166,
+          1.7673647945471764,
+          -1.0925318179370447,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000037521196,
+          0.49999999947443696,
+          0.8400000013243725
+        ],
+        "right": [
+          0.08000000037492988,
+          0.49999999947293655,
+          0.8400000013319902
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.497202527569244e-18,
+        0.015499999999999972,
+        0.9061637681337911
+      ]
+    },
+    {
+      "index": 31,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.3981317007977318,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.1955769841288518e-05,
+      "position_error_max_m": 0.00010097917523068171,
+      "environment_clearance_min_m": 0.0304605304817146,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.006543123167146395,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 14.271818560544636,
+      "jacobian_condition_max": 2.7789885405532404,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 43.22177901259286,
+          "right": 43.22177901200625
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 22.985133154090363,
+          "right": 23.00014448108566
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 46.72946006583916,
+          "right": 46.69982317007731
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.7720643257862903e-05,
+          "right": 1.8022003864332006e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.4043713783370393e-05,
+          "right": 1.4163410444294356e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000077525294,
+          "right": 0.09000000078216441
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600005220499126,
+          "right": 0.04600006041464216
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000037412551,
+            0.49999999978958776,
+            0.8400000007752529
+          ],
+          "right": [
+            0.08000000037402102,
+            0.49999999978796555,
+            0.8400000007821644
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4479565801571,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.387218189983525,
+          2.486752427442587,
+          0.904320414845923,
+          0.4100408050505373,
+          -1.471849233850228,
+          -1.0456043760809646,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.3878420343205182,
+          -2.4866168769208823,
+          -0.9055958859569639,
+          0.41022237460944805,
+          1.4711367556574482,
+          -1.044973054427551,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000037412551,
+          0.49999999978958776,
+          0.8400000007752529
+        ],
+        "right": [
+          0.08000000037402102,
+          0.49999999978796555,
+          0.8400000007821644
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2731816429200082e-17,
+        0.04848393783759056,
+        0.8830681662200697
+      ]
+    },
+    {
+      "index": 5,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.6726646259971647,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.374137693708893e-05,
+      "position_error_max_m": 0.00017811913988073142,
+      "environment_clearance_min_m": 0.03189531759259646,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.013057945447575544,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 3.2213716884720984,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 20.89744759848225,
+          "right": 20.897447426672368
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 14.731386812566777,
+          "right": 8.953244326141789
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 21.249887698749166,
+          "right": 28.069701309829284
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.8134232461754334e-05,
+          "right": 1.9467086579878712e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 6.757659360251673e-06,
+          "right": 1.4008220943726745e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999416842752,
+          "right": 0.08999999053454233
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000051194257645,
+          "right": 0.0460000535272883
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000004968418914,
+            0.5000000312858777,
+            0.8399999941684275
+          ],
+          "right": [
+            0.080000085808367,
+            0.500000057361364,
+            0.8399999905345423
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4468920304803,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.0405781410856152,
+          2.429580880217689,
+          1.3762204035453858,
+          0.4112755359447054,
+          -1.4868981304741415,
+          -0.4846153544813302,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.8984183844533843,
+          -2.4690621598430753,
+          -1.0671018447190415,
+          0.40974427819754605,
+          1.6817183967804488,
+          -0.6377894165677789,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000004968418914,
+          0.5000000312858777,
+          0.8399999941684275
+        ],
+        "right": [
+          0.080000085808367,
+          0.500000057361364,
+          0.8399999905345423
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        -0.12304373363951607,
+        0.8055526658423442
+      ]
+    },
+    {
+      "index": 28,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.4981317007977318,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.4688766807265167e-05,
+      "position_error_max_m": 0.00011562980907675214,
+      "environment_clearance_min_m": 0.02976807590945363,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0004197038545877007,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.5948170940301947,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 37.62698793879051,
+          "right": 37.62698793818059
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 14.354640538291093,
+          "right": 14.369103589298833
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 41.58933803493842,
+          "right": 41.56434169901515
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.1790326992626819e-05,
+          "right": 1.2071395380389062e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.0056187349598476e-05,
+          "right": 1.0174958933471113e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000055645352,
+          "right": 0.09000000056286184
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600003402870112,
+          "right": 0.046000041598317276
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000042848535,
+            0.4999999998171478,
+            0.8400000005564535
+          ],
+          "right": [
+            0.08000000042883075,
+            0.49999999981516735,
+            0.8400000005628618
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4254689685158,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.213835322085927,
+          2.4046585149710347,
+          0.8880194887128923,
+          0.22248927135665697,
+          -1.4492488037260982,
+          -0.9352495776598728,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.2144291662256994,
+          -2.4045610807540156,
+          -0.8890663873684568,
+          0.22267571014253373,
+          1.4487818887345567,
+          -0.9347088307931903,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000042848535,
+          0.4999999998171478,
+          0.8400000005564535
+        ],
+        "right": [
+          0.08000000042883075,
+          0.49999999981516735,
+          0.8400000005628618
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        0.04848393783759056,
+        0.8340249943652376
+      ]
+    },
+    {
+      "index": 2,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.7726646259971648,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.686395434372986e-05,
+      "position_error_max_m": 0.00018805566520267754,
+      "environment_clearance_min_m": 0.0314747015250606,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.012388615385537064,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 3.133207007867746,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 14.355362347643787,
+          "right": 14.355362857501904
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 1.834739693255492,
+          "right": 0.6303497190281973
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 22.673922432603046,
+          "right": 24.09726232570296
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 3.002345934925765e-05,
+          "right": 9.335008656488047e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.559340150755277e-05,
+          "right": 4.373676290915165e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999998478081528,
+          "right": 0.08999999656539537
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000076032868376,
+          "right": 0.046000024494381904
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000024980965734,
+            0.5000001688347891,
+            0.8399999847808153
+          ],
+          "right": [
+            0.08000006077484109,
+            0.5000000407386783,
+            0.8399999965653954
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4162958479019,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.7408189154983268,
+          2.4157988772850567,
+          1.0665530536114116,
+          0.30186353863196125,
+          -1.7097285171466543,
+          -0.5167374327886138,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.7126994337804023,
+          -2.4267862196930294,
+          -1.0071467882766925,
+          0.29783939287648753,
+          1.7458887561078098,
+          -0.5487748155280358,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000024980965734,
+          0.5000001688347891,
+          0.8399999847808153
+        ],
+        "right": [
+          0.08000006077484109,
+          0.5000000407386783,
+          0.8399999965653954
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2926105458509484e-17,
+        -0.1230437336395161,
+        0.7533414472810585
+      ]
+    },
+    {
+      "index": 17,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.6726646259971647,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.8633251790661595e-05,
+      "position_error_max_m": 0.00014119334599932808,
+      "environment_clearance_min_m": 0.03020182127296367,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0038823200349326326,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.5844494611079685,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 26.22257875552416,
+          "right": 26.222578754877837
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 5.2161297673204725,
+          "right": 5.228061470051849
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 33.04388301180528,
+          "right": 33.027073808108874
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 4.273686895642023e-06,
+          "right": 4.5366159889199674e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 3.860054996779707e-06,
+          "right": 3.978333079426855e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000026380894,
+          "right": 0.09000000026954036
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600001324921804,
+          "right": 0.04600001403615662
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.0800000004695656,
+            0.4999999997603579,
+            0.8400000002638089
+          ],
+          "right": [
+            0.08000000047171683,
+            0.4999999997585981,
+            0.8400000002695404
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.4133262453751,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.8298823884249298,
+          2.3337373368880345,
+          0.9218018346512368,
+          0.09634573037035953,
+          -1.536062997793947,
+          -0.7483097768118895,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.8303711313221439,
+          -2.3337619139669803,
+          -0.9225538648519266,
+          0.09658812875870079,
+          1.535800924080654,
+          -0.747938234928998,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.0800000004695656,
+          0.4999999997603579,
+          0.8400000002638089
+        ],
+        "right": [
+          0.08000000047171683,
+          0.4999999997585981,
+          0.8400000002695404
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        -0.02304373363951609,
+        0.8055526658423442
+      ]
+    },
+    {
+      "index": 34,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.29813170079773177,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.170235663578343e-05,
+      "position_error_max_m": 9.066785086405271e-05,
+      "environment_clearance_min_m": 0.03192202049132531,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.011731341944014276,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 7.1044405411752365,
+      "jacobian_condition_max": 3.041819381621125,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 47.62505680796734,
+          "right": 47.62505676797433
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 32.27769261516589,
+          "right": 32.065176151653716
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 50.891998414145135,
+          "right": 51.36091090042162
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.8616239434342177e-05,
+          "right": 2.6172383265302944e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.8134549908941397e-05,
+          "right": 1.8354335317914153e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999843806228,
+          "right": 0.09000000085890725
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000083845253455,
+          "right": 0.04600008759531527
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000790540479,
+            0.5000000058014041,
+            0.8399999984380623
+          ],
+          "right": [
+            0.08000000090831798,
+            0.5000000002163686,
+            0.8400000008589072
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.3912030946855,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.5627824266724275,
+          2.5655221193579214,
+          0.9460968794908082,
+          0.6043284659774387,
+          -1.5159360800918453,
+          -1.133665808502632,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.555601161184218,
+          -2.5703665745282,
+          -0.9249008667407145,
+          0.6049922803797638,
+          1.5318745532649132,
+          -1.143508277008318,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000790540479,
+          0.5000000058014041,
+          0.8399999984380623
+        ],
+        "right": [
+          0.08000000090831798,
+          0.5000000002163686,
+          0.8400000008589072
+        ]
+      },
+      "waist_yaw_position_m": [
+        -1.7874590696465024e-17,
+        0.04848393783759056,
+        0.9284532682067927
+      ]
+    },
+    {
+      "index": 45,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.1235987755982988,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.081600860003199e-05,
+      "position_error_max_m": 7.796275770251166e-05,
+      "environment_clearance_min_m": 0.030864410113257246,
+      "closest_environment_pair": [
+        "table_top",
+        "left_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.01329298956383819,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 5.596723648975239,
+      "jacobian_condition_max": 3.220177922231795,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 54.07851416552862,
+          "right": 54.07851514170886
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 46.24811564684065,
+          "right": 47.23086541573891
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 53.38325445842047,
+          "right": 51.50642628374232
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 9.467656851061573e-05,
+          "right": 0.00010676892060926023
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.7399437989010996e-05,
+          "right": 1.721223794638162e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999993988044652,
+          "right": 0.08999992609383733
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600024371587995,
+          "right": 0.04600026975091565
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000015444898245,
+            0.500000106577433,
+            0.8399999398804465
+          ],
+          "right": [
+            0.08000019738058756,
+            0.5000001310866368,
+            0.8399999260938373
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.3911425985011,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          2.0229141343638526,
+          2.6303715815025073,
+          1.1905109620444452,
+          0.8219802699926075,
+          -1.4003848182968015,
+          -1.1857692321493138,
+          -1.0819593317474943
+        ],
+        "right": [
+          2.0591789485666876,
+          -2.617538061265716,
+          -1.301576313345987,
+          0.8140128641210772,
+          1.3150269128995797,
+          -1.1465585757577101,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000015444898245,
+          0.500000106577433,
+          0.8399999398804465
+        ],
+        "right": [
+          0.08000019738058756,
+          0.5000001310866368,
+          0.8399999260938373
+        ]
+      },
+      "waist_yaw_position_m": [
+        -3.069766663088559e-17,
+        0.11549999999999998,
+        0.9515488701205143
+      ]
+    },
+    {
+      "index": 14,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.7726646259971648,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.149459880940902e-05,
+      "position_error_max_m": 0.00015888184410784123,
+      "environment_clearance_min_m": 0.029570093772267717,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0022153849406976595,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.5091982773397326,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 18.27082668158218,
+          "right": 18.27082668086771
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 1.8020111185893655,
+          "right": 1.7956597065128928
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 27.0731756724642,
+          "right": 27.06521000111751
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.1024087924858603e-07,
+          "right": 4.546189847582459e-08
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 4.81626106151585e-07,
+          "right": 3.6215089850357355e-07
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000007692865,
+          "right": 0.09000000008246167
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04599999718803116,
+          "right": 0.04599999820918831
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.0800000004780524,
+            0.49999999977507226,
+            0.8400000000769287
+          ],
+          "right": [
+            0.08000000048095661,
+            0.49999999977276766,
+            0.8400000000824617
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.3551131255764,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.6489968673312139,
+          2.2685608348481034,
+          0.9181537759387819,
+          -0.03301041724671231,
+          -1.586115728057182,
+          -0.6155178082756964,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.6493494489151448,
+          -2.2686831561309893,
+          -0.9185983708648684,
+          -0.03274957171132282,
+          1.5860322900466213,
+          -0.6153396113954959,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.0800000004780524,
+          0.49999999977507226,
+          0.8400000000769287
+        ],
+        "right": [
+          0.08000000048095661,
+          0.49999999977276766,
+          0.8400000000824617
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2926105458509484e-17,
+        -0.023043733639516117,
+        0.7533414472810585
+      ]
+    },
+    {
+      "index": 39,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.3235987755982988,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.153591149409339e-05,
+      "position_error_max_m": 9.589453684342236e-05,
+      "environment_clearance_min_m": 0.030064116266052536,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0011736492447192934,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 11.871480888793206,
+      "jacobian_condition_max": 2.6846006617681106,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 45.827729169994946,
+          "right": 45.82772916940447
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 23.15469970096727,
+          "right": 23.168970708888722
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 48.35917877502552,
+          "right": 48.329074967113804
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.979287588579478e-05,
+          "right": 2.009905755215227e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.5144292706557955e-05,
+          "right": 1.5264052038721637e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000084228266,
+          "right": 0.09000000084935389
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000058704640856,
+          "right": 0.046000069622884124
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000035804662,
+            0.49999999984556004,
+            0.8400000008422827
+          ],
+          "right": [
+            0.08000000035785072,
+            0.4999999998439323,
+            0.8400000008493539
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.3526489978732,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.566449948165561,
+          2.4850312613141208,
+          0.8673988131295672,
+          0.3835487967170739,
+          -1.4261347814546013,
+          -1.0802274262667284,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.5670814297557174,
+          -2.4848572333682766,
+          -0.8686728768672949,
+          0.38370081625604646,
+          1.4254455471314929,
+          -1.0795895382356298,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000035804662,
+          0.49999999984556004,
+          0.8400000008422827
+        ],
+        "right": [
+          0.08000000035785072,
+          0.4999999998439323,
+          0.8400000008493539
+        ]
+      },
+      "waist_yaw_position_m": [
+        8.451572774959006e-18,
+        0.1155,
+        0.857120596278959
+      ]
+    },
+    {
+      "index": 42,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.22359877559829883,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.0889623885680496e-05,
+      "position_error_max_m": 8.34363581209082e-05,
+      "environment_clearance_min_m": 0.031094495348215505,
+      "closest_environment_pair": [
+        "table_top",
+        "left_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.009837524101620925,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 4.034934609512514,
+      "jacobian_condition_max": 2.9559901363317462,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 50.46612189222577,
+          "right": 50.466121891628774
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 33.156898048861805,
+          "right": 33.17015884614605
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 53.526589112856435,
+          "right": 53.49382775105022
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.901047948574569e-05,
+          "right": 2.9350594933239854e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.97178147452185e-05,
+          "right": 1.984279564409648e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000115769413,
+          "right": 0.09000000116554452
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600008700132052,
+          "right": 0.04600009934677214
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.0800000002855562,
+            0.4999999998021739,
+            0.8400000011576941
+          ],
+          "right": [
+            0.08000000028487632,
+            0.49999999980090887,
+            0.8400000011655445
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.3172341901741,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.7529313635870905,
+          2.573706567368957,
+          0.8899081947543239,
+          0.6005023359839803,
+          -1.4976791828248561,
+          -1.1887534417131522,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.7535489071978956,
+          -2.573540008945047,
+          -0.8914166003009907,
+          0.6006836939116201,
+          1.4966779106831516,
+          -1.1880716237959186,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.0800000002855562,
+          0.4999999998021739,
+          0.8400000011576941
+        ],
+        "right": [
+          0.08000000028487632,
+          0.49999999980090887,
+          0.8400000011655445
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.497202527569244e-18,
+        0.11549999999999998,
+        0.9061637681337911
+      ]
+    },
+    {
+      "index": 23,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.47266462599716474,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.169318171040741e-05,
+      "position_error_max_m": 0.00013668167746083164,
+      "environment_clearance_min_m": 0.032735350359224036,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.01153056736872481,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 6.087388779039609,
+      "jacobian_condition_max": 2.9279728438548207,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 38.176512749350984,
+          "right": 38.17651274888853
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 66.22413126867622,
+          "right": 66.2626581736068
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 3.276254189491839,
+          "right": 3.260685292927679
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.1058814639398684e-05,
+          "right": 2.08741073422878e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.4906428036996474e-06,
+          "right": 2.413626715309944e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999989985286,
+          "right": 0.08999999990020591
+        },
+        "arm_table_clearance_m": {
+          "left": 0.045999916763501014,
+          "right": 0.04599991768965639
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000082615587,
+            0.49999999931520794,
+            0.8399999998998529
+          ],
+          "right": [
+            0.08000000082530155,
+            0.4999999993201866,
+            0.8399999999002059
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.2851876522509,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -0.8196739566899363,
+          0.41182826268209144,
+          -0.20134841163744951,
+          -0.06186536112049227,
+          -0.3921026242298346,
+          -0.07507819305074058,
+          -1.0819593317474943
+        ],
+        "right": [
+          -0.8193648384783488,
+          -0.4110488405443929,
+          0.20058566763185312,
+          -0.062088829348753864,
+          0.39136835007797977,
+          -0.0747214991080299,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000082615587,
+          0.49999999931520794,
+          0.8399999998998529
+        ],
+        "right": [
+          0.08000000082530155,
+          0.4999999993201866,
+          0.8399999999002059
+        ]
+      },
+      "waist_yaw_position_m": [
+        -5.051514762044467e-18,
+        -0.023043733639516062,
+        0.8999809396838995
+      ]
+    },
+    {
+      "index": 33,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.1235987755982988,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.9155128666974232e-05,
+      "position_error_max_m": 0.00012234145687710945,
+      "environment_clearance_min_m": 0.03501411623252981,
+      "closest_environment_pair": [
+        "table_top",
+        "left_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.012876956311725677,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 1.8963662889629636,
+      "jacobian_condition_max": 4.438837467766965,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 45.923328141949405,
+          "right": 45.92332814135051
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 46.97161385412027,
+          "right": 46.98631595084638
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 51.980855082772166,
+          "right": 51.95358571689104
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 5.06244995840517e-05,
+          "right": 5.098222257833655e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.8706189965559145e-05,
+          "right": 2.8850110788471577e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.0900000020160967,
+          "right": 0.09000000202508274
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600015428591031,
+          "right": 0.04600015520649892
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000039319452,
+            0.4999999992793233,
+            0.8400000020160967
+          ],
+          "right": [
+            0.08000000039285149,
+            0.49999999927791894,
+            0.8400000020250827
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.263277462532,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.9371676734907923,
+          2.795232102054923,
+          0.9941998750049829,
+          1.0450123302980916,
+          -1.8767236258712472,
+          -1.1564955409164503,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.9376374067137958,
+          -2.795253120964427,
+          -0.9960679723222889,
+          1.0454349496894497,
+          1.875048772779387,
+          -1.1559248471574988,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000039319452,
+          0.4999999992793233,
+          0.8400000020160967
+        ],
+        "right": [
+          0.08000000039285149,
+          0.49999999927791894,
+          0.8400000020250827
+        ]
+      },
+      "waist_yaw_position_m": [
+        -3.069766663088559e-17,
+        0.015499999999999972,
+        0.9515488701205143
+      ]
+    },
+    {
+      "index": 12,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.42359877559829884,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.7183705158566934e-05,
+      "position_error_max_m": 0.0002219573752017424,
+      "environment_clearance_min_m": 0.03272896177142792,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.015741537152186687,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 9.68333798478863,
+      "jacobian_condition_max": 4.125678983280201,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 26.326717519882465,
+          "right": 26.326718261777064
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 19.14017175536679,
+          "right": 19.540018789902327
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 34.53656602880099,
+          "right": 33.987354758237565
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.068725459227608e-05,
+          "right": 3.450926235526046e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 9.86063239216107e-06,
+          "right": 3.465312127510959e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999815395654,
+          "right": 0.08999997807671978
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600006189492555,
+          "right": 0.046000090754730764
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000001294342678,
+            0.5000000064785112,
+            0.8399999981539565
+          ],
+          "right": [
+            0.0800001086263065,
+            0.5000000624334217,
+            0.8399999780767198
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.2262056405621,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.4267535673840197,
+          2.656449652357341,
+          0.9898368488043221,
+          0.7397063845357894,
+          -1.8546864046434877,
+          -0.7812464874986276,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.4357259375334916,
+          -2.6527929645926642,
+          -1.0181517000455258,
+          0.7431229888021041,
+          1.8309911588032908,
+          -0.7691407804393902,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000001294342678,
+          0.5000000064785112,
+          0.8399999981539565
+        ],
+        "right": [
+          0.0800001086263065,
+          0.5000000624334217,
+          0.8399999780767198
+        ]
+      },
+      "waist_yaw_position_m": [
+        -2.7200464103316344e-18,
+        -0.08450000000000009,
+        0.8049093777176731
+      ]
+    },
+    {
+      "index": 11,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.47266462599716474,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.612524496581153e-05,
+      "position_error_max_m": 0.0001740687927335377,
+      "environment_clearance_min_m": 0.03501458901155574,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.010016387518225053,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 3.1522008949753797,
+      "jacobian_condition_max": 3.6758525348328934,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 31.361745246942927,
+          "right": 31.36174596278118
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 65.86865114265528,
+          "right": 64.82472787815848
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 3.421058247446523,
+          "right": 3.8582123360429073
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.604780091854412e-05,
+          "right": 1.4622878587501634e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.339895084778866e-06,
+          "right": 2.1304198628224747e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999997769792245,
+          "right": 0.08999997139383487
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04599991400025871,
+          "right": 0.045999913012538585
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000004869412793,
+            0.5000000080263226,
+            0.8399999776979225
+          ],
+          "right": [
+            0.08000006340940799,
+            0.5000000115673486,
+            0.8399999713938349
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.1578644926606,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -1.1602031237390928,
+          0.3119961736568779,
+          -0.24827470354371964,
+          0.3022816497132615,
+          -0.36410481101127623,
+          -0.07839552914722503,
+          -1.0819593317474943
+        ],
+        "right": [
+          -1.1724977177650524,
+          -0.3261823388568163,
+          0.27198643395376576,
+          0.31523542156052226,
+          0.38514599945076794,
+          -0.08841004565158628,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000004869412793,
+          0.5000000080263226,
+          0.8399999776979225
+        ],
+        "right": [
+          0.08000006340940799,
+          0.5000000115673486,
+          0.8399999713938349
+        ]
+      },
+      "waist_yaw_position_m": [
+        -5.051514762044467e-18,
+        -0.12304373363951604,
+        0.8999809396838995
+      ]
+    },
+    {
+      "index": 15,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.3235987755982988,
+        0.0
+      ],
+      "feasible": true,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 4.0257529544014064e-05,
+      "position_error_max_m": 0.000259891435621562,
+      "environment_clearance_min_m": 0.03290129789326413,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.012746510057416442,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 5.456103669361907,
+      "jacobian_condition_max": 4.736505033804539,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 31.37478603813571,
+          "right": 31.374786037650416
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 28.671174974948197,
+          "right": 28.691474678098793
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 38.875483198123725,
+          "right": 38.84623098126439
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.7707649045835974e-05,
+          "right": 2.798673646104522e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.642092470445918e-05,
+          "right": 1.6544435574817547e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000120179874,
+          "right": 0.09000000120838836
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600008454618154,
+          "right": 0.046000085215990416
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000051547103,
+            0.49999999902988707,
+            0.8400000012017987
+          ],
+          "right": [
+            0.08000000051600649,
+            0.4999999990277982,
+            0.8400000012083884
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 1000.0363442715832,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.5913938529028564,
+          2.755702287808793,
+          0.9735744111466198,
+          0.9303075510212531,
+          -1.9355914350206893,
+          -0.8763228344657611,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.591939869292962,
+          -2.7557105328683633,
+          -0.9753456765284118,
+          0.9308052826875031,
+          1.9340625946338692,
+          -0.8756853222517448,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000051547103,
+          0.49999999902988707,
+          0.8400000012017987
+        ],
+        "right": [
+          0.08000000051600649,
+          0.4999999990277982,
+          0.8400000012083884
+        ]
+      },
+      "waist_yaw_position_m": [
+        8.451572774959006e-18,
+        -0.0845,
+        0.857120596278959
+      ]
+    },
+    {
+      "index": 4,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.4981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 5.358478023980959e-05,
+      "position_error_max_m": 0.00035633793319169365,
+      "environment_clearance_min_m": 0.032929664163210526,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.00643826233431388,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.8644073405002819,
+      "jacobian_condition_max": 4.594921182046474,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 25.12326137162781,
+          "right": 25.123265566848165
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 55.90711761614884,
+          "right": 57.540071187369094
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 1.8707588401318918,
+          "right": 0.9742733540817906
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.6333565547661996e-05,
+          "right": 9.268014241085646e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.034804436937529e-06,
+          "right": 6.8513751532598e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999997220624323,
+          "right": 0.0899999332339586
+        },
+        "arm_table_clearance_m": {
+          "left": 0.0459999073961358,
+          "right": 0.045999895227671006
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.0800000675118402,
+            0.5000000147764488,
+            0.8399999722062432
+          ],
+          "right": [
+            0.08000015293173295,
+            0.5000000311967614,
+            0.8399999332339586
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 999.6891017030377,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -1.2356045274305465,
+          0.2685640997938685,
+          -0.28129477675685294,
+          0.5234986031319553,
+          -0.36980151927111055,
+          -0.04287343722504288,
+          -1.0819593317474943
+        ],
+        "right": [
+          -1.2146641546801669,
+          -0.24406517201065,
+          0.23183572992410253,
+          0.4970977295237375,
+          0.3236764279904616,
+          -0.022328579338526625,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.0800000675118402,
+          0.5000000147764488,
+          0.8399999722062432
+        ],
+        "right": [
+          0.08000015293173295,
+          0.5000000311967614,
+          0.8399999332339586
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        -0.15151606216240943,
+        0.8340249943652376
+      ]
+    },
+    {
+      "index": 7,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.3981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 5.925506407827377e-05,
+      "position_error_max_m": 0.0005021583027541358,
+      "environment_clearance_min_m": 0.03151912741820151,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.006100110434290296,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.061539564388837,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 29.756162002889738,
+          "right": 29.756166481597724
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 56.30743104581506,
+          "right": 55.670815715160074
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 12.652185816827147,
+          "right": 13.026232603395218
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 7.579011133690918e-06,
+          "right": 1.450062994511654e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 7.177447573654293e-06,
+          "right": 8.97590818308208e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999998667767006,
+          "right": 0.08999994037422554
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04599995580338234,
+          "right": 0.04599994174465607
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000003258795364,
+            0.50000000560258,
+            0.8399999866776701
+          ],
+          "right": [
+            0.08000014347794215,
+            0.500000031636125,
+            0.8399999403742255
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 999.3617526938879,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -1.243441616243809,
+          0.23176256771705966,
+          -0.3420750382264638,
+          0.7808731772435767,
+          -0.3839369832973778,
+          -0.2894619093686542,
+          -1.0819593317474943
+        ],
+        "right": [
+          -1.2527357742024812,
+          -0.23966330696112606,
+          0.3672858707388892,
+          0.7921715046566994,
+          0.40588612239796995,
+          -0.29798808329455334,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000003258795364,
+          0.50000000560258,
+          0.8399999866776701
+        ],
+        "right": [
+          0.08000014347794215,
+          0.500000031636125,
+          0.8399999403742255
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2731816429200082e-17,
+        -0.15151606216240943,
+        0.8830681662200697
+      ]
+    },
+    {
+      "index": 18,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.22359877559829883,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 6.053952053172945e-05,
+      "position_error_max_m": 0.0010059147279299484,
+      "environment_clearance_min_m": 0.031335612218433395,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.00958208510933467,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.453318700620844,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 35.67113250250233,
+          "right": 35.671132501985625
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 40.19225968316902,
+          "right": 40.2081519051898
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 41.11924485527843,
+          "right": 41.09791048553488
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 4.5216904083880055e-05,
+          "right": 4.552976859497046e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.6922706190556845e-05,
+          "right": 2.7061652823141855e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.0900000019792977,
+          "right": 0.09000000198723668
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600013737585663,
+          "right": 0.046000138150062986
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000060907135,
+            0.49999999859803324,
+            0.8400000019792977
+          ],
+          "right": [
+            0.08000000060941541,
+            0.4999999985956127,
+            0.8400000019872367
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 998.3864408800165,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.7784298236998037,
+          2.881063163573146,
+          1.0261192807983999,
+          1.1836142497390354,
+          -1.998726619618664,
+          -0.9250731042432973,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.7788413799024578,
+          -2.8811698414406934,
+          -1.0280348521374132,
+          1.1841067124916418,
+          1.9969491049295114,
+          -0.9246109691835013,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000060907135,
+          0.49999999859803324,
+          0.8400000019792977
+        ],
+        "right": [
+          0.08000000060941541,
+          0.4999999985956127,
+          0.8400000019872367
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.497202527569244e-18,
+        -0.08450000000000003,
+        0.9061637681337911
+      ]
+    },
+    {
+      "index": 36,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.42359877559829884,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.465902432012073e-05,
+      "position_error_max_m": 0.00011296441397628505,
+      "environment_clearance_min_m": 0.0290587218789593,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.004814410299405676,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.504875273661753,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 39.86943427830436,
+          "right": 39.86943427769805
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 13.843087008797067,
+          "right": 13.85738249329919
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 42.84383807219405,
+          "right": 42.81803041448526
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.3410082789173903e-05,
+          "right": 1.3692481939203669e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.1010513201604839e-05,
+          "right": 1.1129890526887391e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000061278746,
+          "right": 0.09000000061913849
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600003906240513,
+          "right": 0.04600004002709457
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000042885308,
+            0.4999999998727111,
+            0.8400000006127875
+          ],
+          "right": [
+            0.08000000042974771,
+            0.4999999998711282,
+            0.8400000006191385
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.3715449605128,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.3780586966928168,
+          2.3980137667105565,
+          0.8476401405794033,
+          0.17755128027226832,
+          -1.4025905299839052,
+          -0.9623385238951134,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.3786691436899798,
+          -2.3978748835880284,
+          -0.8486980705629134,
+          0.17771174353362443,
+          1.4021429087953456,
+          -0.9617822277162686,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000042885308,
+          0.4999999998727111,
+          0.8400000006127875
+        ],
+        "right": [
+          0.08000000042974771,
+          0.4999999998711282,
+          0.8400000006191385
+        ]
+      },
+      "waist_yaw_position_m": [
+        -2.7200464103316344e-18,
+        0.11549999999999992,
+        0.8049093777176731
+      ]
+    },
+    {
+      "index": 25,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.5981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.7276524499460995e-05,
+      "position_error_max_m": 0.00013411740921816804,
+      "environment_clearance_min_m": 0.02939437854198057,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.0032773065007035904,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.470808010193786,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 30.583876351135714,
+          "right": 30.583876350464596
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 6.136858406712417,
+          "right": 6.149228900896679
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 35.972490941317744,
+          "right": 35.95381700624591
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 6.868153517468151e-06,
+          "right": 7.135715878262044e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 5.9892074952317405e-06,
+          "right": 6.109882108338322e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000036444722,
+          "right": 0.09000000037051725
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600001933992736,
+          "right": 0.046000024477115514
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000047608954,
+            0.49999999983117926,
+            0.8400000003644472
+          ],
+          "right": [
+            0.08000000047777828,
+            0.4999999998292261,
+            0.8400000003705173
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.3480347091731,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.0294052982156907,
+          2.3239641564349554,
+          0.8729130548163225,
+          0.047527868540903837,
+          -1.465366785724135,
+          -0.8128237575436508,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.029932711638031,
+          -2.323939791903334,
+          -0.8737244343665292,
+          0.04774054944334654,
+          1.465100187656421,
+          -0.8124137938516398,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000047608954,
+          0.49999999983117926,
+          0.8400000003644472
+        ],
+        "right": [
+          0.08000000047777828,
+          0.4999999998292261,
+          0.8400000003705173
+        ]
+      },
+      "waist_yaw_position_m": [
+        1.0103029524088924e-17,
+        0.0484839378375905,
+        0.7818137758039517
+      ]
+    },
+    {
+      "index": 35,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.47266462599716474,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.3930928365515786e-05,
+      "position_error_max_m": 0.00010250996320587533,
+      "environment_clearance_min_m": 0.028839591529847608,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.008772392052561565,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 16.554703022909468,
+      "jacobian_condition_max": 2.4512954781191176,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 47.22173257775662,
+          "right": 47.22173257718258
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 19.436246999590324,
+          "right": 19.446729434391774
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 44.446387761536066,
+          "right": 44.42694636217868
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.0652370639280922e-05,
+          "right": 1.0950919758012047e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.2317186972902629e-05,
+          "right": 1.2436250464903374e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000058338409,
+          "right": 0.09000000059001145
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600002987952845,
+          "right": 0.04600002999945718
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000040476969,
+            0.4999999999477819,
+            0.8400000005833841
+          ],
+          "right": [
+            0.08000000040502564,
+            0.4999999999462239,
+            0.8400000005900115
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.3218435378631,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.1648047432285515,
+          2.4027672406072424,
+          0.9071820857882754,
+          0.20356213840066814,
+          -1.2595698334449577,
+          -0.9967991646728932,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.1653303601314984,
+          -2.4026921772671854,
+          -0.9080386804844469,
+          0.20368883183161765,
+          1.2592439176615096,
+          -0.9963820858231185,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000040476969,
+          0.4999999999477819,
+          0.8400000005833841
+        ],
+        "right": [
+          0.08000000040502564,
+          0.4999999999462239,
+          0.8400000005900115
+        ]
+      },
+      "waist_yaw_position_m": [
+        -5.051514762044467e-18,
+        0.07695626636048394,
+        0.8999809396838995
+      ]
+    },
+    {
+      "index": 32,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.5726646259971648,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.7037116270777368e-05,
+      "position_error_max_m": 0.00012207026290437361,
+      "environment_clearance_min_m": 0.02800872186384784,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.011274322318434251,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.3499702289936666,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 41.56309360613016,
+          "right": 41.56309360550135
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 12.033576217180496,
+          "right": 12.042203100596453
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 39.258716249249574,
+          "right": 39.24469948745144
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 6.2118908475191746e-06,
+          "right": 6.491821635255944e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 8.73655505072312e-06,
+          "right": 8.85786315239866e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.0900000004147643,
+          "right": 0.09000000042111445
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000017011080696,
+          "right": 0.04600001664055131
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000046396488,
+            0.4999999999645352,
+            0.8400000004147643
+          ],
+          "right": [
+            0.08000000046495342,
+            0.49999999996280003,
+            0.8400000004211144
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.2785439524044,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.0085295939849945,
+          2.3214179652452507,
+          0.8962028930061846,
+          0.02275845126159217,
+          -1.26491828283247,
+          -0.8846706354484377,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.0089834183857953,
+          -2.321419898978701,
+          -0.8968510727513638,
+          0.02292382669543791,
+          1.2647505602703064,
+          -0.8843654717255119,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000046396488,
+          0.4999999999645352,
+          0.8400000004147643
+        ],
+        "right": [
+          0.08000000046495342,
+          0.49999999996280003,
+          0.8400000004211144
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.555489236362064e-17,
+        0.07695626636048389,
+        0.8545958376971764
+      ]
+    },
+    {
+      "index": 46,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.29813170079773177,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.13048958824611e-05,
+      "position_error_max_m": 8.069281657381215e-05,
+      "environment_clearance_min_m": 0.029271606619125756,
+      "closest_environment_pair": [
+        "table_top",
+        "left_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.006389428611427388,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 9.596464936192163,
+      "jacobian_condition_max": 2.5739335294809016,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 57.04933688677042,
+          "right": 57.04933325709782
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 33.520987682631294,
+          "right": 33.29954749289224
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 48.35722801556768,
+          "right": 48.78555948936774
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 6.969322790271687e-05,
+          "right": 3.8457774711307923e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.877313840589005e-05,
+          "right": 2.386466955419993e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999995073348366,
+          "right": 0.08999998959207367
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600017136315815,
+          "right": 0.04600010416043653
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000013234928731,
+            0.5000001044272128,
+            0.8399999507334837
+          ],
+          "right": [
+            0.08000003038048964,
+            0.5000000242544607,
+            0.8399999895920737
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.2542175785942,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.662487347729654,
+          2.4612564704779616,
+          1.0962091055772452,
+          0.42155048624928526,
+          -1.1099323549850966,
+          -1.0801855282934705,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.651973587910074,
+          -2.4673780499169045,
+          -1.0751957494516835,
+          0.42538956389904414,
+          1.121399109771519,
+          -1.0892550205805107,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000013234928731,
+          0.5000001044272128,
+          0.8399999507334837
+        ],
+        "right": [
+          0.08000003038048964,
+          0.5000000242544607,
+          0.8399999895920737
+        ]
+      },
+      "waist_yaw_position_m": [
+        -1.7874590696465024e-17,
+        0.14848393783759056,
+        0.9284532682067927
+      ]
+    },
+    {
+      "index": 43,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.3981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.4161527342694487e-05,
+      "position_error_max_m": 9.503846284164336e-05,
+      "environment_clearance_min_m": 0.02811312039000768,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.011164074624698194,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 13.870690669982872,
+      "jacobian_condition_max": 2.420398448694179,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 52.910577446540145,
+          "right": 52.910575242941086
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 23.722181463950715,
+          "right": 23.487152973473513
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 45.317091355324244,
+          "right": 45.75833075031301
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 3.963824664849843e-05,
+          "right": 2.103588323612439e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.4976060957715643e-05,
+          "right": 1.6398297780455375e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999997361795642,
+          "right": 0.08999999518083834
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600009712743547,
+          "right": 0.04600005632753246
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.0800000701401448,
+            0.5000000578789888,
+            0.8399999736179564
+          ],
+          "right": [
+            0.08000001470491326,
+            0.5000000121073243,
+            0.8399999951808383
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.251986548472,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.4421656130677478,
+          2.4125536860668984,
+          0.9545162016993175,
+          0.22390052696883103,
+          -1.1425440316206763,
+          -1.0154526213770867,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.4323863509948047,
+          -2.419800356028871,
+          -0.9359973341249993,
+          0.22748702182067176,
+          1.151791687841544,
+          -1.024886762350039,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.0800000701401448,
+          0.5000000578789888,
+          0.8399999736179564
+        ],
+        "right": [
+          0.08000001470491326,
+          0.5000000121073243,
+          0.8399999951808383
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2731816429200082e-17,
+        0.14848393783759056,
+        0.8830681662200697
+      ]
+    },
+    {
+      "index": 40,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.4981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.7631055822646548e-05,
+      "position_error_max_m": 0.00011541375666908602,
+      "environment_clearance_min_m": 0.02677957574562462,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.014516212198640327,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.3184911699715736,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 47.33405851061112,
+          "right": 47.334058933730375
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 14.338731186152115,
+          "right": 14.403795792704612
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 41.616863595103034,
+          "right": 41.50447328263598
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 8.506855210336206e-06,
+          "right": 1.1715948376821303e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.093412021568278e-05,
+          "right": 1.1061186221803689e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000052052781,
+          "right": 0.08999999714754581
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600002238782175,
+          "right": 0.046000029891445804
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000045831902,
+            0.5000000000429285,
+            0.8400000005205278
+          ],
+          "right": [
+            0.08000000849539589,
+            0.500000006782388,
+            0.8399999971475458
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.2472095630087,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.2304560490247762,
+          2.3556579662051145,
+          0.8603403881920451,
+          0.02703885150617961,
+          -1.1802268196223051,
+          -0.9358450061886523,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.2329910209630808,
+          -2.353961093084763,
+          -0.8646625632481207,
+          0.026502572160201684,
+          1.1784519097396315,
+          -0.9334135386929479,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000045831902,
+          0.5000000000429285,
+          0.8400000005205278
+        ],
+        "right": [
+          0.08000000849539589,
+          0.500000006782388,
+          0.8399999971475458
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        0.14848393783759056,
+        0.8340249943652376
+      ]
+    },
+    {
+      "index": 47,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.47266462599716474,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 2.967117231705563e-05,
+      "position_error_max_m": 0.00011122921573944014,
+      "environment_clearance_min_m": 0.024769872479865507,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.018777838879624878,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 17.751244081257216,
+      "jacobian_condition_max": 2.30113751438711,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 57.438731208059046,
+          "right": 57.438729337898884
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 21.252267717421162,
+          "right": 21.46497385615535
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 41.276874555472055,
+          "right": 40.92875444934613
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.503581472710639e-05,
+          "right": 1.0168090807910719e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.491024991098958e-05,
+          "right": 1.4295128040261898e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999998698788048,
+          "right": 0.08999999572792561
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000028848392716,
+          "right": 0.0460000232817818
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000002622616995,
+            0.5000000200800332,
+            0.8399999869878805
+          ],
+          "right": [
+            0.08000000965255495,
+            0.5000000071123095,
+            0.8399999957279256
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.1878845111198,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.2151101723002875,
+          2.3936169706342367,
+          0.9248559012021623,
+          0.025515080212007667,
+          -0.9631726757011764,
+          -0.9284872457424554,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.2250618038178034,
+          -2.385715436717126,
+          -0.9400927208436944,
+          0.022045349724031466,
+          0.9570741751452903,
+          -0.9209464696438592,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000002622616995,
+          0.5000000200800332,
+          0.8399999869878805
+        ],
+        "right": [
+          0.08000000965255495,
+          0.5000000071123095,
+          0.8399999957279256
+        ]
+      },
+      "waist_yaw_position_m": [
+        -5.051514762044467e-18,
+        0.17695626636048395,
+        0.8999809396838995
+      ]
+    },
+    {
+      "index": 44,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.5726646259971648,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.699434640345109e-05,
+      "position_error_max_m": 0.00014448865165685303,
+      "environment_clearance_min_m": 0.025038500440524247,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.020933565908703197,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link2"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.3085481500752443,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 52.10590690558531,
+          "right": 52.10590453564585
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 14.01354728798571,
+          "right": 13.874295289814388
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 36.18955017870762,
+          "right": 36.39649720151921
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 9.198269163888666e-06,
+          "right": 3.3816449888032884e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.154915407410131e-05,
+          "right": 9.841800051183866e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999998895381311,
+          "right": 0.08999999879619514
+        },
+        "arm_table_clearance_m": {
+          "left": 0.0460000128338891,
+          "right": 0.04600000391497749
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000001901171773,
+            0.5000000140150301,
+            0.8399999889538131
+          ],
+          "right": [
+            0.08000000312354143,
+            0.5000000021550509,
+            0.8399999987961951
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 900.1074953689213,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.065463426767539,
+          2.310216660508884,
+          0.9097732786838435,
+          -0.17189236383068784,
+          -0.9952878024700241,
+          -0.8175874761766513,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.059853997934857,
+          -2.3152892566459213,
+          -0.9016306968647229,
+          -0.16959378322877655,
+          0.9983108242144847,
+          -0.822127136505004,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000001901171773,
+          0.5000000140150301,
+          0.8399999889538131
+        ],
+        "right": [
+          0.08000000312354143,
+          0.5000000021550509,
+          0.8399999987961951
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.555489236362064e-17,
+        0.1769562663604839,
+        0.8545958376971764
+      ]
+    },
+    {
+      "index": 20,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.5726646259971648,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.5882136334675164e-05,
+      "position_error_max_m": 0.00015656770181824488,
+      "environment_clearance_min_m": -0.0005987437474916923,
+      "closest_environment_pair": [
+        "table_top",
+        "left_elbow_link"
+      ],
+      "cross_arm_clearance_min_m": 0.013075330772846254,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 8.00096143893593,
+      "jacobian_condition_max": 2.8252258007271736,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 32.8258079265651,
+          "right": 32.825807925712546
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 61.30464545367509,
+          "right": 61.351409930891165
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 4.563936357193041,
+          "right": 4.58651223127424
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.7371827056488917e-05,
+          "right": 2.7186038129809606e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 7.880112321149488e-06,
+          "right": 7.796968402770247e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.0899999996613452,
+          "right": 0.08999999966408845
+        },
+        "arm_table_clearance_m": {
+          "left": 0.021029654560129025,
+          "right": 0.020992567254743303
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000094180552,
+            0.49999999929126615,
+            0.8399999996613452
+          ],
+          "right": [
+            0.08000000093636114,
+            0.4999999992956714,
+            0.8399999996640884
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 899.9659992437944,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -0.895130228545375,
+          0.5003977873957575,
+          -0.2070179774269766,
+          -0.20594012649390503,
+          -0.49682117033592577,
+          0.10457417174258564,
+          -1.0819593317474943
+        ],
+        "right": [
+          -0.8947579298802065,
+          -0.4995652185648134,
+          0.20620709447522143,
+          -0.20624408443604733,
+          0.49602115461636925,
+          0.10509122509043713,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000094180552,
+          0.49999999929126615,
+          0.8399999996613452
+        ],
+        "right": [
+          0.08000000093636114,
+          0.4999999992956714,
+          0.8399999996640884
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.555489236362064e-17,
+        -0.023043733639516117,
+        0.8545958376971764
+      ]
+    },
+    {
+      "index": 26,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.7726646259971648,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.908373616210882e-05,
+      "position_error_max_m": 0.00017508789563567314,
+      "environment_clearance_min_m": -0.005693417156179774,
+      "closest_environment_pair": [
+        "table_top",
+        "waist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.014175066885856112,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.4469197582490594,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 24.408582803342192,
+          "right": 24.40858280245993
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 1.970921131270621,
+          "right": 1.9745635703387217
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 27.285411485739292,
+          "right": 27.289996447957133
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.1728423094901668e-06,
+          "right": 1.9054834869016232e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.995359442637349e-07,
+          "right": 4.334749318568947e-07
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000006307152,
+          "right": 0.09000000006929276
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04599998966376073,
+          "right": 0.045999990659303935
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000053352202,
+            0.49999999996589595,
+            0.8400000000630715
+          ],
+          "right": [
+            0.08000000053811364,
+            0.499999999964018,
+            0.8400000000692928
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 899.8062859520088,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.634631768871617,
+          2.1457445733689497,
+          0.8745233684670224,
+          -0.30950008222655956,
+          -1.3858470874832103,
+          -0.6202645762017847,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.6347540505434127,
+          -2.146020471897456,
+          -0.8745598678413328,
+          -0.30922975004324127,
+          1.3859448198598987,
+          -0.6203670955890666,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000053352202,
+          0.49999999996589595,
+          0.8400000000630715
+        ],
+        "right": [
+          0.08000000053811364,
+          0.499999999964018,
+          0.8400000000692928
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2926105458509484e-17,
+        0.07695626636048389,
+        0.7533414472810585
+      ]
+    },
+    {
+      "index": 37,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.5981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.318476269078295e-05,
+      "position_error_max_m": 0.0001481244358944356,
+      "environment_clearance_min_m": -0.015917910194559143,
+      "closest_environment_pair": [
+        "table_top",
+        "waist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.016083248105926217,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.297150166921106,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 39.75581478441284,
+          "right": 39.75581514594189
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 6.426488897753416,
+          "right": 6.502237914249839
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 35.53770692022715,
+          "right": 35.42481795653628
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 1.032863482133455e-05,
+          "right": 1.22795586749035e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 7.565604453236503e-06,
+          "right": 7.870290596543176e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999289256477,
+          "right": 0.0899999907729272
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000022750932276,
+          "right": 0.04600002714662588
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000001632045442,
+            0.5000000128707168,
+            0.8399999928925648
+          ],
+          "right": [
+            0.08000002080846427,
+            0.5000000164673111,
+            0.8399999907729272
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 899.7391856680895,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.0503454369039384,
+          2.255509317092089,
+          0.8527700935999798,
+          -0.17536346159605629,
+          -1.2162855459466895,
+          -0.8032738576770875,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.0530619154487288,
+          -2.2538371243400235,
+          -0.8570182100316245,
+          -0.17581931673305398,
+          1.2149021889147666,
+          -0.8007926461535722,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000001632045442,
+          0.5000000128707168,
+          0.8399999928925648
+        ],
+        "right": [
+          0.08000002080846427,
+          0.5000000164673111,
+          0.8399999907729272
+        ]
+      },
+      "waist_yaw_position_m": [
+        1.0103029524088924e-17,
+        0.1484839378375905,
+        0.7818137758039517
+      ]
+    },
+    {
+      "index": 41,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.6726646259971647,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 4.8698839212802414e-05,
+      "position_error_max_m": 0.0001858997538613219,
+      "environment_clearance_min_m": -0.009696586603209508,
+      "closest_environment_pair": [
+        "table_top",
+        "waist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.019482260795532592,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link2"
+      ],
+      "joint_margin_min_deg": 18.002021160852586,
+      "jacobian_condition_max": 2.5687002270572465,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 44.45078872378629,
+          "right": 44.45078872334462
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 6.491082320922478,
+          "right": 6.493626537343133
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 31.284204113214983,
+          "right": 31.28076277698003
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 8.953003739779508e-07,
+          "right": 6.388628150190605e-07
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 5.799174031610231e-06,
+          "right": 5.9280521778442315e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000025652266,
+          "right": 0.09000000026231603
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04599999301383628,
+          "right": 0.045999995474308775
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000063466359,
+            0.5000000002219877,
+            0.8400000002565227
+          ],
+          "right": [
+            0.08000000063828186,
+            0.5000000002211857,
+            0.840000000262316
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 899.6913150410528,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.8858368597732461,
+          2.2206330377096806,
+          0.88226835298534,
+          -0.36132757239991115,
+          -1.0661828725349154,
+          -0.7093413982732127,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.8861081388856639,
+          -2.2208009080159616,
+          -0.8825597803867605,
+          -0.36111089287109255,
+          1.0662099866590713,
+          -0.7092650404166598,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000063466359,
+          0.5000000002219877,
+          0.8400000002565227
+        ],
+        "right": [
+          0.08000000063828186,
+          0.5000000002211857,
+          0.840000000262316
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        0.17695626636048392,
+        0.8055526658423442
+      ]
+    },
+    {
+      "index": 38,
+      "base_forward_m": 0.0,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.7726646259971648,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 7.076867115880798e-05,
+      "position_error_max_m": 0.0002339035813820684,
+      "environment_clearance_min_m": -0.06190778280712801,
+      "closest_environment_pair": [
+        "table_top",
+        "waist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.020112501200618624,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 9.215702652317823,
+      "jacobian_condition_max": 3.019797888794245,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 33.32752702104886,
+          "right": 33.32752702040647
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 0.5805341695240398,
+          "right": 0.5846734195003839
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 25.560686743427663,
+          "right": 25.565748330274932
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 3.997867177193838e-06,
+          "right": 3.737038580620528e-06
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.6395187678240438e-06,
+          "right": 1.7843223075702555e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000010370945,
+          "right": 0.09000000011027154
+        },
+        "arm_table_clearance_m": {
+          "left": 0.045999982736650416,
+          "right": 0.04599998359754787
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.0800000007101794,
+            0.5000000002041054,
+            0.8400000001037095
+          ],
+          "right": [
+            0.08000000071715072,
+            0.5000000002035044,
+            0.8400000001102715
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 898.8902644544272,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.6780045719615502,
+          2.1054181276327633,
+          0.8639443150815886,
+          -0.5447069504601061,
+          -1.1766693244691548,
+          -0.5816383769669012,
+          -1.0819593317474943
+        ],
+        "right": [
+          0.6781149542835058,
+          -2.105774359671834,
+          -0.8640031736453526,
+          -0.5444130467089973,
+          1.1767712307519909,
+          -0.5817518982117054,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.0800000007101794,
+          0.5000000002041054,
+          0.8400000001037095
+        ],
+        "right": [
+          0.08000000071715072,
+          0.5000000002035044,
+          0.8400000001102715
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.2926105458509484e-17,
+        0.1769562663604839,
+        0.7533414472810585
+      ]
+    },
+    {
+      "index": 13,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.5981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 3.7153177592085773e-05,
+      "position_error_max_m": 0.00017862728399858986,
+      "environment_clearance_min_m": -0.0128278666579071,
+      "closest_environment_pair": [
+        "table_top",
+        "right_elbow_link"
+      ],
+      "cross_arm_clearance_min_m": 0.011935411702213228,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 12.621714400319167,
+      "jacobian_condition_max": 3.0520919653131853,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 24.180980185285986,
+          "right": 24.180976257854912
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 49.24928125810782,
+          "right": 56.51484275447501
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 5.60938119149256,
+          "right": 10.073675393495229
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.5351122852576255e-05,
+          "right": 2.9410620857725082e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.4924106625401868e-06,
+          "right": 8.548027840548767e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999995327261867,
+          "right": 0.08999998853772118
+        },
+        "arm_table_clearance_m": {
+          "left": 0.009740210421428116,
+          "right": -0.001825716228585332
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000014911904631,
+            0.500000063259096,
+            0.8399999532726187
+          ],
+          "right": [
+            0.08000003603563743,
+            0.5000000127348564,
+            0.8399999885377212
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": false,
+      "score": 799.8801509865217,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -1.1255068397075767,
+          0.5872619671583351,
+          -0.4472637834200027,
+          0.03612635402288181,
+          -0.6934346120467568,
+          0.12851391497828632,
+          -1.0819593317474943
+        ],
+        "right": [
+          -1.0270122136494626,
+          -0.49227404379649786,
+          0.2795361497727674,
+          -0.05011663176428153,
+          0.5623404376674653,
+          0.23061690553816327,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000014911904631,
+          0.500000063259096,
+          0.8399999532726187
+        ],
+        "right": [
+          0.08000003603563743,
+          0.5000000127348564,
+          0.8399999885377212
+        ]
+      },
+      "waist_yaw_position_m": [
+        1.0103029524088924e-17,
+        -0.051516062162409504,
+        0.7818137758039517
+      ]
+    },
+    {
+      "index": 1,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.5981317007977318,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 4.5048261202994665e-05,
+      "position_error_max_m": 0.0002641218886686651,
+      "environment_clearance_min_m": -0.003957215971645556,
+      "closest_environment_pair": [
+        "table_top",
+        "left_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.001624970084165633,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 3.08207720482961,
+      "jacobian_condition_max": 5.815370077224956,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 19.775076687510694,
+          "right": 19.775080241969526
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 2.185666292085315,
+          "right": 16.426123094628466
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 42.520764958418496,
+          "right": 22.737122935069376
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 8.487987797226576e-05,
+          "right": 5.053199740085931e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.8915190204251666e-06,
+          "right": 8.585336518246844e-06
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000002003997187,
+          "right": 0.0899999531687875
+        },
+        "arm_table_clearance_m": {
+          "left": -0.0013443573997719007,
+          "right": 0.04600011476481414
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000002304351242,
+            0.5000000150754148,
+            0.8400000200399719
+          ],
+          "right": [
+            0.08000035534659429,
+            0.50000020727847,
+            0.8399999531687875
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": false,
+      "score": 799.4984445677298,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          0.9134467496059107,
+          2.769442017669561,
+          0.6215866941090953,
+          -0.06699523603630157,
+          1.7323306474997495,
+          0.9553710217587943,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.2086730230093246,
+          -2.601439022963692,
+          -1.3066616638707182,
+          0.7116830803347317,
+          1.6326955192286094,
+          -0.5181611199127893,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000002304351242,
+          0.5000000150754148,
+          0.8400000200399719
+        ],
+        "right": [
+          0.08000035534659429,
+          0.50000020727847,
+          0.8399999531687875
+        ]
+      },
+      "waist_yaw_position_m": [
+        1.0103029524088924e-17,
+        -0.15151606216240948,
+        0.7818137758039517
+      ]
+    },
+    {
+      "index": 29,
+      "base_forward_m": -0.1,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 50.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.6726646259971647,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 1.0,
+      "position_error_mean_m": 5.129162368193948e-05,
+      "position_error_max_m": 0.0002115903399528095,
+      "environment_clearance_min_m": -0.053800533532099785,
+      "closest_environment_pair": [
+        "table_top",
+        "left_elbow_link"
+      ],
+      "cross_arm_clearance_min_m": 0.014337824394284989,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_inner_link4",
+        "right_omnipicker_outer_link4"
+      ],
+      "joint_margin_min_deg": 5.317987260025394,
+      "jacobian_condition_max": 3.278227861186108,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 34.098694249126005,
+          "right": 34.098694247047625
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 48.01229193914511,
+          "right": 48.039443526082
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 7.735869903982468,
+          "right": 7.754353907693569
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 2.977974652881903e-05,
+          "right": 2.9587309370218726e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.1489507960324209e-05,
+          "right": 1.1398591259289445e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.08999999950748494,
+          "right": 0.08999999951218507
+        },
+        "arm_table_clearance_m": {
+          "left": -0.0020606591992349266,
+          "right": -0.00213844195499091
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000148937059,
+            0.4999999992364146,
+            0.8399999995074849
+          ],
+          "right": [
+            0.08000000147581303,
+            0.4999999992408899,
+            0.8399999995121851
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": false,
+      "score": 799.2819955181943,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          -0.6318759305644545,
+          0.6992725354895636,
+          -0.0928205031058315,
+          -0.60048756698081,
+          -0.6558652684876485,
+          0.1771778683119626,
+          -1.0819593317474943
+        ],
+        "right": [
+          -0.6316404964957971,
+          -0.6986055946411004,
+          0.09233648436878743,
+          -0.600631863087927,
+          0.6554007994775854,
+          0.17760066497002888,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000148937059,
+          0.4999999992364146,
+          0.8399999995074849
+        ],
+        "right": [
+          0.08000000147581303,
+          0.4999999992408899,
+          0.8399999995121851
+        ]
+      },
+      "waist_yaw_position_m": [
+        2.1274648709379564e-17,
+        0.07695626636048392,
+        0.8055526658423442
+      ]
+    },
+    {
+      "index": 10,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 40.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.29813170079773177,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 0.9625,
+      "position_error_mean_m": 0.0007559136687336834,
+      "position_error_max_m": 0.028062303298047923,
+      "environment_clearance_min_m": 0.028752586445207843,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0052305872037324294,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.415856974940833,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 33.694776113872614,
+          "right": 33.69478056069294
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 40.32308804101717,
+          "right": 40.876992410658794
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 38.10239014879383,
+          "right": 37.4325184466346
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 4.750951310919234e-05,
+          "right": 6.637313593779537e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 2.870823646007311e-05,
+          "right": 2.366238566420206e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09000000166841682,
+          "right": 0.08999994405936407
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04600014365635353,
+          "right": 0.046000150870586065
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000000173501311,
+            0.49999999854823163,
+            0.8400000016684168
+          ],
+          "right": [
+            0.08000013003558179,
+            0.5000000417956887,
+            0.8399999440593641
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 906.7043934264436,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.5954046400062283,
+          2.932271588866034,
+          1.0674263564066935,
+          1.2821625529956722,
+          -2.010787278013776,
+          -0.8594576586948458,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.6059882215147148,
+          -2.9301603737997297,
+          -1.1539672266992294,
+          1.2895928610170138,
+          1.9258085242640055,
+          -0.8448173734934112,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000000173501311,
+          0.49999999854823163,
+          0.8400000016684168
+        ],
+        "right": [
+          0.08000013003558179,
+          0.5000000417956887,
+          0.8399999440593641
+        ]
+      },
+      "waist_yaw_position_m": [
+        -1.7874590696465024e-17,
+        -0.15151606216240943,
+        0.9284532682067927
+      ]
+    },
+    {
+      "index": 21,
+      "base_forward_m": -0.2,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.1235987755982988,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 0.9375,
+      "position_error_mean_m": 0.0017249152554430936,
+      "position_error_max_m": 0.04927491993123994,
+      "environment_clearance_min_m": 0.027384517023086415,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.004839996620551649,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.430018039781459,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 39.27406675581454,
+          "right": 39.27405642772015
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 53.5371224868558,
+          "right": 53.5299898838173
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 41.700235856292196,
+          "right": 41.69718080229178
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 0.6343179234354827,
+          "right": 0.6409146338677023
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 0.5450780915390985,
+          "right": 0.5510331116174196
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09003649008000536,
+          "right": 0.09003688894661876
+        },
+        "arm_table_clearance_m": {
+          "left": 0.04783695252811948,
+          "right": 0.04785596961320226
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000838539807607,
+            0.4999723443845776,
+            0.8400364900800054
+          ],
+          "right": [
+            0.08000847851957249,
+            0.4999720374405483,
+            0.8400368889466188
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 739.164745305466,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.9832930276052776,
+          3.0912362014109704,
+          1.5185628853917041,
+          1.5707963269999998,
+          -1.6823531362562707,
+          -0.9207965477174113,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.9831889063688115,
+          -3.0912706705190405,
+          -1.2225675825503286,
+          1.5707963269999998,
+          1.9781968747100365,
+          -0.9205502842750499,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000838539807607,
+          0.4999723443845776,
+          0.8400364900800054
+        ],
+        "right": [
+          0.08000847851957249,
+          0.4999720374405483,
+          0.8400368889466188
+        ]
+      },
+      "waist_yaw_position_m": [
+        -3.069766663088559e-17,
+        -0.08450000000000003,
+        0.9515488701205143
+      ]
+    },
+    {
+      "index": 0,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.1,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.1,
+        0.2,
+        0.42359877559829884,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 0.86875,
+      "position_error_mean_m": 0.008304927021207357,
+      "position_error_max_m": 0.12203120694141575,
+      "environment_clearance_min_m": 0.02658481776037702,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": 0.0016489689589044647,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.388523757860874,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 22.200866390888823,
+          "right": 22.20085950432468
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 26.424191797977443,
+          "right": 28.027198475534853
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 25.611960354760956,
+          "right": 23.891382175437332
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 6.110774853780234e-05,
+          "right": 3.920088388213698e-05
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 1.1756433247865235e-05,
+          "right": 1.563151706285158e-05
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.0899998956700444,
+          "right": 0.08999998449882551
+        },
+        "arm_table_clearance_m": {
+          "left": 0.046000091796311586,
+          "right": 0.04600010601640903
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08000029694290325,
+            0.5000001097067055,
+            0.8399998956700444
+          ],
+          "right": [
+            0.08000006005075501,
+            0.5000000219446951,
+            0.8399999844988255
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 624.9591469368456,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.5181293239396614,
+          2.944403324473041,
+          1.1268300896566932,
+          1.3067457150970572,
+          -1.9782617694410367,
+          -0.5827874671166359,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.547305051342606,
+          -2.940851285240549,
+          -1.3894148315058457,
+          1.3210037328931998,
+          1.7213837424757386,
+          -0.5441444410252828,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08000029694290325,
+          0.5000001097067055,
+          0.8399998956700444
+        ],
+        "right": [
+          0.08000006005075501,
+          0.5000000219446951,
+          0.8399999844988255
+        ]
+      },
+      "waist_yaw_position_m": [
+        -2.7200464103316344e-18,
+        -0.18450000000000005,
+        0.8049093777176731
+      ]
+    },
+    {
+      "index": 3,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.2,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.2,
+        0.4,
+        0.3235987755982988,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 0.7625,
+      "position_error_mean_m": 0.014357167836758122,
+      "position_error_max_m": 0.16538957726591005,
+      "environment_clearance_min_m": 0.030547013119466507,
+      "closest_environment_pair": [
+        "table_top",
+        "right_wrist_yaw_link"
+      ],
+      "cross_arm_clearance_min_m": -0.0050162247629929714,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.410479831599216,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 26.695427860023095,
+          "right": 26.69540972461866
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 34.85561683313946,
+          "right": 34.84667390440082
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 27.69458396113624,
+          "right": 27.69177889359066
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 3.1330353488756857,
+          "right": 3.144633111033654
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 3.127784510384664,
+          "right": 3.1407567102718956
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09022132675721317,
+          "right": 0.09022235011459234
+        },
+        "arm_table_clearance_m": {
+          "left": 0.05488474485674011,
+          "right": 0.05490925335162322
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08007869350989069,
+            0.4996807321110538,
+            0.8402213267572132
+          ],
+          "right": [
+            0.0800790767524739,
+            0.499679177420194,
+            0.8402223501145923
+          ]
+        }
+      },
+      "initial_tcp_horizontal": true,
+      "initial_table_safe": true,
+      "score": 331.96533239208145,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.6567069243415484,
+          3.083625579276605,
+          1.5689398275182735,
+          1.5707963269999998,
+          -1.585498449906743,
+          -0.534591030272966,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.656556628099242,
+          -3.0836739594757603,
+          -1.1983539080804366,
+          1.5707963269999998,
+          1.9559426202484633,
+          -0.5341512453482573,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08007869350989069,
+          0.4996807321110538,
+          0.8402213267572132
+        ],
+        "right": [
+          0.0800790767524739,
+          0.499679177420194,
+          0.8402223501145923
+        ]
+      },
+      "waist_yaw_position_m": [
+        8.451572774959006e-18,
+        -0.1845,
+        0.857120596278959
+      ]
+    },
+    {
+      "index": 6,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.3,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.3,
+        0.6,
+        0.22359877559829883,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 0.43125,
+      "position_error_mean_m": 0.03912834403364312,
+      "position_error_max_m": 0.21082587946331746,
+      "environment_clearance_min_m": -0.01685058116456506,
+      "closest_environment_pair": [
+        "table_top",
+        "right_omnipicker_outer_link4"
+      ],
+      "cross_arm_clearance_min_m": -0.01387936830006178,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link3",
+        "right_omnipicker_inner_link4"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.532459639450909,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 30.604677690084184,
+          "right": 30.604660055797027
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 31.344762126366362,
+          "right": 31.33449006330089
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 29.79812578823248,
+          "right": 29.80149573807653
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 17.458657343967566,
+          "right": 17.46350629229829
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 18.472286793741272,
+          "right": 18.49610691922873
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.09489228166190866,
+          "right": 0.09490233050191943
+        },
+        "arm_table_clearance_m": {
+          "left": 0.0563518279983135,
+          "right": 0.045829751205841096
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08186225229616678,
+            0.4924443684618277,
+            0.8448922816619087
+          ],
+          "right": [
+            0.08186628730366462,
+            0.4924282586835237,
+            0.8449023305019194
+          ]
+        }
+      },
+      "initial_tcp_horizontal": false,
+      "initial_table_safe": true,
+      "score": -117.71233717901752,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.595310965813175,
+          3.0796016410360876,
+          0.8791599340305354,
+          1.5707963269999998,
+          -2.1638984962528696,
+          -0.11379898683466676,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.5952577907455388,
+          -3.079652239967743,
+          -0.6622935810456292,
+          1.5707963269993312,
+          2.3808139070088634,
+          -0.11333127463977363,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08186225229616678,
+          0.4924443684618277,
+          0.8448922816619087
+        ],
+        "right": [
+          0.08186628730366462,
+          0.4924282586835237,
+          0.8449023305019194
+        ]
+      },
+      "waist_yaw_position_m": [
+        3.497202527569244e-18,
+        -0.1845,
+        0.9061637681337911
+      ]
+    },
+    {
+      "index": 9,
+      "base_forward_m": -0.3,
+      "grounded_base_z_m": 0.33999992141285856,
+      "waist_extension_rad": 0.4,
+      "waist_lean_deg": 30.0,
+      "waist_home_q_rad": [
+        -0.4,
+        0.8,
+        0.1235987755982988,
+        0.0
+      ],
+      "feasible": false,
+      "feasible_target_ratio": 0.05625,
+      "position_error_mean_m": 0.07972290840706533,
+      "position_error_max_m": 0.20538154209271164,
+      "environment_clearance_min_m": 0.024966887631399093,
+      "closest_environment_pair": [
+        "table_top",
+        "right_omnipicker_outer_link4"
+      ],
+      "cross_arm_clearance_min_m": -0.04589491833078903,
+      "closest_cross_arm_pair": [
+        "left_omnipicker_outer_link4",
+        "right_omnipicker_base_link"
+      ],
+      "joint_margin_min_deg": 0.0,
+      "jacobian_condition_max": 5.342608488918918,
+      "initial_posture": {
+        "arm_horizontal_angle_deg": {
+          "left": 33.97388919239235,
+          "right": 33.973885710927966
+        },
+        "upper_arm_horizontal_angle_deg": {
+          "left": 33.22701970939789,
+          "right": 33.229592214627054
+        },
+        "forearm_horizontal_angle_deg": {
+          "left": 32.730775215168734,
+          "right": 32.73717556612442
+        },
+        "tcp_forward_axis_horizontal_angle_deg": {
+          "left": 21.629223897287112,
+          "right": 21.613009197656478
+        },
+        "jaw_axis_horizontal_angle_deg": {
+          "left": 22.956405138688556,
+          "right": 22.96933279815255
+        },
+        "tcp_height_above_table_m": {
+          "left": 0.1085791621779355,
+          "right": 0.1085947939689268
+        },
+        "arm_table_clearance_m": {
+          "left": 0.06366366963595949,
+          "right": 0.055821399849327005
+        },
+        "tcp_positions_m": {
+          "left": [
+            -0.08647548529168046,
+            0.4737278698332891,
+            0.8585791621779355
+          ],
+          "right": [
+            0.08648109961583303,
+            0.4737054321845168,
+            0.8585947939689268
+          ]
+        }
+      },
+      "initial_tcp_horizontal": false,
+      "initial_table_safe": true,
+      "score": -490.6717153057001,
+      "first_frame_home_q_rad_by_side": {
+        "left": [
+          1.6285028236843537,
+          3.0746726778256197,
+          1.1535743389839637,
+          1.5707963269999998,
+          -1.8610282716500688,
+          -0.03649377101700319,
+          -1.0819593317474943
+        ],
+        "right": [
+          1.6286320657188422,
+          -3.074709808208083,
+          -1.1935168480578173,
+          1.5707963269991407,
+          1.8213904334580764,
+          -0.036571588583642574,
+          1.0820688607294306
+        ]
+      },
+      "initial_tcp_positions_m": {
+        "left": [
+          -0.08647548529168046,
+          0.4737278698332891,
+          0.8585791621779355
+        ],
+        "right": [
+          0.08648109961583303,
+          0.4737054321845168,
+          0.8585947939689268
+        ]
+      },
+      "waist_yaw_position_m": [
+        -3.069766663088559e-17,
+        -0.1845,
+        0.9515488701205143
+      ]
+    }
+  ]
+}

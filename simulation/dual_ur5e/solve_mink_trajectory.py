@@ -126,6 +126,7 @@ def main() -> None:
     parser.add_argument("--detection_distance_m", type=float, default=0.12)
     parser.add_argument("--position_tolerance_m", type=float, default=0.005)
     parser.add_argument("--orientation_tolerance_deg", type=float, default=5.0)
+    parser.add_argument("--orientation_cost", type=float, default=0.25)
     parser.add_argument("--early_position_tolerance_m", type=float, default=0.0002)
     parser.add_argument("--early_orientation_tolerance_deg", type=float, default=0.2)
     parser.add_argument("--recovery_starts", type=int, default=8)
@@ -151,7 +152,7 @@ def main() -> None:
             frame_name=model.site(replay.end_effector_site_id(model, side)).name,
             frame_type="site",
             position_cost=1.0,
-            orientation_cost=0.25,
+            orientation_cost=args.orientation_cost,
             gain=0.85,
             lm_damping=1e-4,
         )
@@ -199,12 +200,28 @@ def main() -> None:
     rng = np.random.default_rng(args.random_seed)
 
     for frame in range(length):
-        working = configuration.q.copy()
+        working = (
+            source_qpos[frame].copy()
+            if bool(config.get("mink_seed_from_source_each_frame", False))
+            else configuration.q.copy()
+        )
         working[frozen_qpos] = source_qpos[frame, frozen_qpos]
         configuration.update(q=working)
         set_targets(tasks, payload, frame)
         solver_error = None
-        for iteration in range(args.iterations_per_frame):
+        source_is_valid = False
+        if bool(config.get("mink_keep_valid_source_frames", False)):
+            source_is_valid, _, _ = frame_is_valid(
+                model,
+                configuration.data,
+                payload,
+                frame,
+                args.minimum_distance_m,
+                args.position_tolerance_m,
+                args.orientation_tolerance_deg,
+            )
+        iteration_budget = 0 if source_is_valid else args.iterations_per_frame
+        for iteration in range(iteration_budget):
             try:
                 velocity = mink.solve_ik(
                     configuration=configuration,
@@ -246,6 +263,28 @@ def main() -> None:
         if not valid or solver_error is not None:
             previous = qpos[frame - 1].copy() if frame > 0 else configuration.q.copy()
             candidates: list[tuple[float, np.ndarray]] = []
+            # The replay IK result is a deterministic, trajectory-continuous
+            # candidate and may already satisfy every Mink constraint.  Check
+            # it before launching expensive multistart recovery; older code
+            # accidentally tried only previous/home/random arm seeds.
+            source_candidate = source_qpos[frame].copy()
+            configuration.update(q=source_candidate)
+            source_valid, _, _ = frame_is_valid(
+                model,
+                configuration.data,
+                payload,
+                frame,
+                args.minimum_distance_m,
+                args.position_tolerance_m,
+                args.orientation_tolerance_deg,
+            )
+            if source_valid:
+                source_jump = float(
+                    np.linalg.norm(
+                        source_candidate[active_qpos] - previous[active_qpos]
+                    )
+                )
+                candidates.append((source_jump, source_candidate))
             for start in range(args.recovery_starts):
                 seed = source_qpos[frame].copy()
                 if start == 0:
