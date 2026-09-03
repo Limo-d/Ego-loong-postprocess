@@ -1,0 +1,56 @@
+{
+  "source_trajectory": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/outputs/linglong_sdk_near_home_tcp50cm_13cm_faster_mink18mm_linglong_h.npz",
+  "source_sha256": "177e95b7e07599f1d153ae59a43d7efe0fcdd7f8ce72dbd0286a181c59894360",
+  "config": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/config_sdk_near_home_tcp50cm_13cm.json",
+  "sdk_reference": "user@192.168.3.27:/home/user/sdk (inspected 2026-09-01)",
+  "frames": 2194,
+  "duration_sec": 43.85935413128892,
+  "sdk_rate_hz": 50.0,
+  "initial_transition_sec": 5.0,
+  "minimum_mink_clearance_m": 0.05121968777840694,
+  "sdk_joint_limits_pass": true,
+  "minimum_sdk_joint_margin": {
+    "joint": "waist_1_joint",
+    "rad": 0.06273353699999996,
+    "deg": 3.59436690402779
+  },
+  "all_sdk_joint_margins_rad": {
+    "waist_1_joint": 0.06273353699999996,
+    "waist_2_joint": 0.21273353699999992,
+    "waist_3_joint": 1.0662978564002836,
+    "waist_yaw_joint": 2.312561258,
+    "left_shoulder_pitch_joint": 2.5656605988232597,
+    "left_shoulder_roll_joint": 0.20859420937305628,
+    "left_shoulder_yaw_joint": 2.38535525754589,
+    "left_elbow_joint": 0.5083222859514205,
+    "left_wrist_roll_joint": 2.484826491234159,
+    "left_wrist_pitch_joint": 0.9732441238433471,
+    "left_wrist_yaw_joint": 1.0099962611891142,
+    "right_shoulder_pitch_joint": 2.553731674731822,
+    "right_shoulder_roll_joint": 0.30753009095769696,
+    "right_shoulder_yaw_joint": 2.4872785787485334,
+    "right_elbow_joint": 0.5098629508221777,
+    "right_wrist_roll_joint": 2.4843338649182014,
+    "right_wrist_pitch_joint": 0.9643582685292604,
+    "right_wrist_yaw_joint": 1.0055900716001127
+  },
+  "joint_csv": {
+    "path": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/sdk_exports/linglong_sdk_near_home_tcp50cm_13cm/joint/action/1.csv",
+    "rows": 2194,
+    "columns": 24
+  },
+  "eef_csv": {
+    "path": "/home/lenovo/Ego-loong-postprocess/simulation/linglong_h/sdk_exports/linglong_sdk_near_home_tcp50cm_13cm/eef/action/1.csv",
+    "rows": 2194,
+    "columns": 25
+  },
+  "cap_conversion": "sdk_cap = 1 - simulation_gripper_position_command",
+  "joint_export_status": "trajectory frames validated; first transition from live state is not collision-validated",
+  "eef_export_status": "format/FK reference only; controller-side IK branch is not collision-validated",
+  "hardware_release_blockers": [
+    "verify live joint order/signs against one static status sample",
+    "verify physical OmniPicker adapter/TCP calibration",
+    "validate the live-state to first-frame transition in simulation",
+    "perform reduced-speed dry run with hardware E-stop coverage"
+  ]
+}

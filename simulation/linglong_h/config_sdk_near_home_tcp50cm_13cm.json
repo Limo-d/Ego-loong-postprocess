@@ -1,0 +1,52 @@
+{
+  "extends": "config_sdk_limits.json",
+  "layout_name": "linglong_h_sdk_near_home_tcp50cm_13cm",
+  "layout_status": "SDK-near initial posture; 606 source frames and 3172 retimed frames validated with SDK limits and 18 mm Mink clearance",
+  "hardware_joint_limits": {
+    "solver_margin_deg": 0.5
+  },
+  "base_position_m": [0.0, 0.05406537446674564, 0.33999992141285856],
+  "base_positions_m": {
+    "left": [0.0, 0.05406537446674564, 0.33999992141285856],
+    "right": [0.0, 0.05406537446674564, 0.33999992141285856]
+  },
+  "waist_home_q_rad": [-0.15, 0.3, -0.06273353740028354, 0.0],
+  "home_q_rad_by_side": {
+    "left": [0.052436766254235434, 0.42813131141920063, -0.29797212678393653, -0.028296051295834502, -0.37006254352170914, -0.23025203118928234, 0.29900067781088574],
+    "right": [0.05577868088688761, -0.4158402460429799, 0.29689338706045243, -0.010656777287750557, 0.3588711245770476, -0.24610589299198424, -0.30340686739988715]
+  },
+  "fixed_wrist_yaw_q_rad_by_side": {
+    "left": 0.29900067781088574,
+    "right": -0.30340686739988715
+  },
+  "mink_input_already_retimed": false,
+  "initial_parallel_gripper_orientation": {
+    "enabled": false,
+    "description": "Use the SDK-near arm branch; horizontal/parallel posture was validated from FK rather than forcing a world yaw"
+  },
+  "task_anchor_positions_m": {
+    "left": [-0.248382177193449, 0.5006543419666853, 0.8808271354978385],
+    "right": [0.24919769695756788, 0.49934565800696074, 0.8766052980062438]
+  },
+  "sdk_near_home_search": {
+    "sdk_default_q_rad_by_side": {
+      "left": [0.056181, 0.469199, -0.287824, -0.116922, -0.433547, -0.090981, 0.300412],
+      "right": [0.0604, -0.465749, 0.286679, -0.113871, 0.425918, -0.083352, -0.304227]
+    },
+    "initial_sdk_delta_rms_deg": 4.258576610987156,
+    "initial_sdk_delta_max_deg": 9.325111167764522,
+    "initial_tcp_horizontal_separation_m": 0.4975815951309347,
+    "validated_source_frames": 606,
+    "maximum_tcp_error_m": 0.000136624257160228,
+    "minimum_environment_clearance_m": 0.06783152331826893,
+    "minimum_sdk_joint_margin_deg": 12.427329075747032,
+    "minimum_raw_sdk_joint_margin_final_deg": 3.59436690402779,
+    "mink_validated": true,
+    "mink_minimum_clearance_m": 0.0511780216740161,
+    "mink_output": "outputs/linglong_sdk_near_home_tcp50cm_13cm_retimed_mink18mm_linglong_h.npz",
+    "retimed_frame_count": 3172,
+    "retimed_duration_sec": 52.84942973905078,
+    "joint_speed_max_rad_s": 0.3316173146602045,
+    "joint_acceleration_max_rad_s2": 2.48968495023504
+  }
+}

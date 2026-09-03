@@ -33,7 +33,8 @@ def _install_backend() -> Any:
         config.setdefault("joint_conditioning", {})["enabled"] = False
         # replay_trajectory.py has already conditioned and retimed this input.
         # A second retiming pass can desynchronize interpolated targets from q.
-        config.setdefault("time_scaling", {})["enabled"] = False
+        if bool(config.get("mink_input_already_retimed", True)):
+            config.setdefault("time_scaling", {})["enabled"] = False
         return config
 
     backend.load_config = load_mink_config

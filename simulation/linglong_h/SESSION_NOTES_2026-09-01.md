@@ -402,3 +402,56 @@ task remains a comparison/commissioning export rather than collision-certified
 hardware output.  The first 5 s move from live robot state to trajectory frame
 zero is also not yet collision-validated and must be checked from the actual
 measured startup state.
+
+## Real-robot commissioning on 2026-09-02
+
+The SDK host remains reachable at `user@192.168.3.27`; its wired interface is
+`192.168.1.12/24`. The LingLong controller at `192.168.1.28` replied to all
+three pings with about `0.138 ms` average latency, and the SDK received valid
+state UDP packets. Chassis TCP ports `19204` and `19205` refused connections,
+so the chassis service was not listening; no chassis command was sent.
+
+The exported tasks and guarded playback script were deployed to:
+
+```text
+/home/user/ego_trajectory_replay/replay_on_robot.py
+/home/user/ego_trajectory_replay/preflight_report.json
+/home/user/ego_trajectory_replay/config/ego_joint/{action/1.csv,yaml/config.yaml}
+/home/user/ego_trajectory_replay/config/ego_eef/{action/1.csv,yaml/config.yaml}
+```
+
+Both server-side dry runs passed. The script defaults to validation only and
+requires `--execute --confirm RUN_LINGLONG_TRAJECTORY`; it uses `kStatus` for
+the first segment and `kCtrl` afterwards. `--initial-only` was added so row
+zero can be sent without playing the remaining trajectory.
+
+The robot was commanded to the joint CSV's initial pose using joint mode,
+`--initial-only`, speed `0.1`, a 50 s interpolation, robot enable-up, and
+autonomous mode. The SDK reported `frame 1/1` and `initial pose reached`.
+Immediate feedback showed maximum error `0.981 deg` and mean error `0.324 deg`.
+The robot was left enabled in autonomous mode at that pose.
+
+A later state check after a gripper experiment exposed a right-shoulder roll
+wrap: feedback `+173.725 deg` is near the target `-179.500 deg`, but its
+wrapped difference is still `-6.775 deg`. Other joints were within about
+`1.565 deg`; wrapped mean absolute error was `0.832 deg`.
+
+The gripper experiment attempted both caps `1.0` for 2 s, held 2 s, then both
+caps `0.0` for 2 s while using joint interpolation. SDK calls returned True,
+but the operator observed no opening and `sens.cap_rate` stayed `[0.0, 0.0]`.
+Therefore **do not treat SDK return True as gripper actuation success**. The
+SDK source confirms its convention is `0=closed, 1=open`; the remaining likely
+causes are controller/hardware gripper integration, mode handling, or command
+feedback routing. Also do not repeat the old joint-hold test: a live joint
+reported across the `+pi/-pi` boundary can be clamped to the wrong SDK range.
+Use a state-synchronized, wrap-normalized control snapshot or a dedicated
+gripper hardware interface before another actuation test.
+
+The straight live-to-initial bridge was sampled at 1001 points. With the
+reported closed-gripper state, the right gripper begins about `1.478 mm` from
+the modeled base and then moves away; left-to-torso minimum is `40.270 mm`,
+table clearances are `67.525 mm` left and `87.927 mm` right, and no inter-arm
+pair entered the `0.30 m` query range. Generic safety-audit self/interarm
+labels produced false positives because they classified LingLong's attached
+wrist/gripper and base/waist pairs using UR5-specific rules; use the adapted
+LingLong pair definitions above for future bridge checks.
